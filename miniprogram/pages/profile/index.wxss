@@ -1,0 +1,66 @@
+.profile-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 60rpx 0 48rpx;
+  gap: 16rpx;
+}
+.profile-avatar {
+  width: 160rpx;
+  height: 160rpx;
+  border-radius: 50%;
+  border: 6rpx solid var(--color-yellow);
+}
+.profile-name { font-size: 36rpx; font-weight: 700; }
+.profile-sub { font-size: 24rpx; color: var(--color-text-light); }
+
+.info-card { margin-bottom: 28rpx; }
+.info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 88rpx;
+}
+.info-label { font-size: 28rpx; font-weight: 500; }
+.info-edit { display: flex; align-items: center; gap: 8rpx; }
+.info-input {
+  font-size: 28rpx;
+  text-align: right;
+  min-width: 80rpx;
+  color: var(--color-text-light);
+}
+.info-unit { font-size: 24rpx; color: var(--color-text-light); }
+.info-picker {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  font-size: 28rpx;
+  color: var(--color-text-light);
+}
+.info-arrow { font-size: 36rpx; color: #CCCCCC; }
+.gender-row { display: flex; gap: 16rpx; }
+.gender-btn {
+  padding: 14rpx 32rpx;
+  border-radius: 100rpx;
+  background: #F5F2EB;
+  font-size: 26rpx;
+  color: var(--color-text-light);
+}
+.gender-btn.active {
+  background: var(--color-primary);
+  color: #FFFFFF;
+  font-weight: 600;
+}
+
+.menu-card { margin-bottom: 40rpx; }
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  min-height: 96rpx;
+}
+.menu-icon { font-size: 40rpx; }
+.menu-text { flex: 1; font-size: 28rpx; font-weight: 500; }
+.menu-arrow { font-size: 40rpx; color: #CCCCCC; }
+
+.save-profile-btn { margin: 0 0 40rpx; width: 100%; }

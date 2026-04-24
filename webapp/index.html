@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>我的健康</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ===== 首页 ===== -->
+<div id="page-home" class="page active">
+  <div class="page-scroll">
+    <div class="header">
+      <div>
+        <div class="greeting" id="greeting"></div>
+        <div class="username">健康达人</div>
+      </div>
+      <div class="avatar">🌿</div>
+    </div>
+
+    <div class="score-card card">
+      <div class="score-top">
+        <div>
+          <div class="score-label">今日健康评分</div>
+          <div class="score-date" id="today-date"></div>
+        </div>
+        <div class="score-circle">
+          <span class="score-num" id="health-score">--</span>
+          <span class="score-unit">分</span>
+        </div>
+      </div>
+      <div class="score-bar-bg">
+        <div class="score-bar-fill" id="score-bar"></div>
+      </div>
+      <div class="score-tip" id="score-tip">记录数据后查看评分</div>
+    </div>
+
+    <div class="section-title">快速记录</div>
+    <div class="quick-grid">
+      <div class="quick-item" onclick="goRecordType('weight')">
+        <div class="quick-icon" style="background:#FFE566">⚖️</div>
+        <div class="quick-name">体重</div>
+        <div class="quick-value" id="q-weight">--</div>
+      </div>
+      <div class="quick-item" onclick="goRecordType('steps')">
+        <div class="quick-icon" style="background:#B5EAD7">👟</div>
+        <div class="quick-name">步数</div>
+        <div class="quick-value" id="q-steps">--</div>
+      </div>
+      <div class="quick-item" onclick="goRecordType('sleep')">
+        <div class="quick-icon" style="background:#B5D4EA">😴</div>
+        <div class="quick-name">睡眠</div>
+        <div class="quick-value" id="q-sleep">--</div>
+      </div>
+      <div class="quick-item" onclick="goRecordType('water')">
+        <div class="quick-icon" style="background:#D4B5EA">💧</div>
+        <div class="quick-name">饮水</div>
+        <div class="quick-value" id="q-water">--</div>
+      </div>
+    </div>
+
+    <div class="section-title">最近指标</div>
+    <div id="recent-metrics" class="metrics-list"></div>
+  </div>
+</div>
+
+<!-- ===== 记录页 ===== -->
+<div id="page-record" class="page">
+  <div class="page-scroll">
+    <div class="page-title">健康记录</div>
+    <div class="type-scroll">
+      <div class="type-list" id="type-tabs"></div>
+    </div>
+
+    <div class="card form-card">
+      <div class="form-title" id="form-type-name"></div>
+      <div class="form-row">
+        <span class="form-label">日期</span>
+        <input class="form-date-input" type="date" id="record-date">
+      </div>
+      <div id="form-fields"></div>
+      <div class="form-row form-row-col">
+        <span class="form-label">备注</span>
+        <textarea class="form-textarea" id="record-note" placeholder="可选，记录当时状态..." maxlength="200"></textarea>
+      </div>
+      <button class="btn-primary" onclick="saveRecord()" style="width:100%;margin-top:16px">保存记录</button>
+    </div>
+
+    <div class="section-title">历史记录</div>
+    <div id="history-list" class="metrics-list"></div>
+  </div>
+</div>
+
+<!-- ===== 趋势页 ===== -->
+<div id="page-trends" class="page">
+  <div class="page-scroll">
+    <div class="page-title">健康趋势</div>
+    <div class="type-scroll">
+      <div class="type-list" id="trend-tabs"></div>
+    </div>
+    <div class="range-row" id="range-tabs"></div>
+
+    <div class="stats-row" id="trend-stats"></div>
+
+    <div class="card chart-card">
+      <div class="chart-header">
+        <span class="chart-title">趋势图</span>
+        <span class="chart-range" id="chart-range-label"></span>
+      </div>
+      <canvas id="trend-chart" width="600" height="280"></canvas>
+      <div class="chart-labels" id="chart-labels"></div>
+    </div>
+
+    <div class="section-title">详细数据</div>
+    <div id="trend-list" class="metrics-list"></div>
+  </div>
+</div>
+
+<!-- ===== 报告页 ===== -->
+<div id="page-reports" class="page">
+  <div class="page-scroll">
+    <div class="page-title">体检报告</div>
+
+    <div class="summary-row" id="report-summary"></div>
+
+    <div class="card upload-card" onclick="addReportManual()">
+      <div class="upload-icon">📋</div>
+      <div class="upload-text">
+        <div class="upload-title">手动录入报告</div>
+        <div class="upload-sub">逐项填写体检指标</div>
+      </div>
+      <div class="upload-btn">录入</div>
+    </div>
+
+    <div class="section-title">历年报告</div>
+    <div id="report-list" class="metrics-list"></div>
+  </div>
+</div>
+
+<!-- ===== 我的 ===== -->
+<div id="page-profile" class="page">
+  <div class="page-scroll">
+    <div class="profile-header">
+      <div class="profile-avatar">🌿</div>
+      <div class="profile-name">健康达人</div>
+      <div class="profile-sub">记录健康，掌握生活</div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px">
+      <div class="form-row">
+        <span class="form-label">身高</span>
+        <div style="display:flex;align-items:center;gap:6px">
+          <input class="info-input" type="number" id="p-height" placeholder="cm">
+          <span class="form-unit">cm</span>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="form-row">
+        <span class="form-label">出生年份</span>
+        <input class="info-input" type="number" id="p-birth" placeholder="1990">
+      </div>
+      <div class="divider"></div>
+      <div class="form-row">
+        <span class="form-label">性别</span>
+        <div class="gender-row">
+          <div class="gender-btn" id="g-male" onclick="setGender('male')">男</div>
+          <div class="gender-btn" id="g-female" onclick="setGender('female')">女</div>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="form-row">
+        <span class="form-label">下次体检日期</span>
+        <input class="info-input" type="date" id="p-checkup">
+      </div>
+    </div>
+    <button class="btn-primary" onclick="saveProfile()" style="width:100%">保存</button>
+
+    <div class="card" style="margin-top:16px">
+      <div class="menu-item" onclick="exportData()">
+        <span class="menu-icon">📤</span>
+        <span class="menu-text">导出全部数据（JSON）</span>
+        <span class="menu-arrow">›</span>
+      </div>
+      <div class="divider"></div>
+      <div class="menu-item" onclick="clearConfirm()">
+        <span class="menu-icon">🗑️</span>
+        <span class="menu-text" style="color:#E74C3C">清除全部数据</span>
+        <span class="menu-arrow">›</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 底部导航 ===== -->
+<nav class="tab-bar">
+  <div class="tab-item active" onclick="switchPage('home')" id="tab-home">
+    <div class="tab-icon">🏠</div>
+    <div class="tab-label">首页</div>
+  </div>
+  <div class="tab-item" onclick="switchPage('record')" id="tab-record">
+    <div class="tab-icon">✏️</div>
+    <div class="tab-label">记录</div>
+  </div>
+  <div class="tab-item" onclick="switchPage('trends')" id="tab-trends">
+    <div class="tab-icon">📈</div>
+    <div class="tab-label">趋势</div>
+  </div>
+  <div class="tab-item" onclick="switchPage('reports')" id="tab-reports">
+    <div class="tab-icon">📋</div>
+    <div class="tab-label">报告</div>
+  </div>
+  <div class="tab-item" onclick="switchPage('profile')" id="tab-profile">
+    <div class="tab-icon">🌿</div>
+    <div class="tab-label">我的</div>
+  </div>
+</nav>
+
+<!-- ===== 报告录入弹窗 ===== -->
+<div class="modal-overlay" id="report-modal" style="display:none">
+  <div class="modal-card">
+    <div class="modal-title">录入体检报告</div>
+    <div class="form-row">
+      <span class="form-label">日期</span>
+      <input type="date" id="rp-date" class="form-date-input">
+    </div>
+    <div class="divider"></div>
+    <div class="form-row">
+      <span class="form-label">医院</span>
+      <input type="text" id="rp-hospital" class="info-input" placeholder="医院名称">
+    </div>
+    <div class="divider"></div>
+    <div style="font-size:13px;color:#888;margin:12px 0 8px">主要指标（选填）</div>
+    <div id="report-metric-fields"></div>
+    <div style="font-size:13px;color:#888;margin:12px 0 8px">异常项目（逗号分隔）</div>
+    <input type="text" id="rp-abnormal" class="info-input" style="width:100%;box-sizing:border-box" placeholder="如：总胆固醇偏高, 尿酸偏高">
+    <div style="display:flex;gap:12px;margin-top:20px">
+      <button class="btn-ghost" onclick="closeModal()" style="flex:1">取消</button>
+      <button class="btn-primary" onclick="saveReport()" style="flex:1">保存</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

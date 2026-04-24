@@ -1,0 +1,82 @@
+<view class="page-container">
+
+  <!-- 类型选择器 -->
+  <scroll-view class="type-scroll" scroll-x>
+    <view class="type-list">
+      <view class="type-chip {{activeType === item.type ? 'active' : ''}}"
+            wx:for="{{typeList}}" wx:key="type"
+            bindtap="switchType" data-type="{{item.type}}"
+            style="{{activeType === item.type ? 'background:'+item.color : ''}}">
+        <text>{{item.emoji}} {{item.name}}</text>
+      </view>
+    </view>
+  </scroll-view>
+
+  <!-- 输入表单 -->
+  <view class="form-card card">
+    <view class="form-title">{{currentType.name}}记录</view>
+
+    <!-- 日期 -->
+    <view class="form-row">
+      <text class="form-label">日期</text>
+      <picker mode="date" value="{{recordDate}}" bindchange="onDateChange">
+        <view class="form-value-row">
+          <text class="form-value">{{recordDate}}</text>
+          <text class="form-arrow">›</text>
+        </view>
+      </picker>
+    </view>
+    <view class="divider"></view>
+
+    <!-- 动态字段 -->
+    <block wx:for="{{currentType.fields}}" wx:key="key">
+      <view class="form-row">
+        <text class="form-label">{{item.label}}</text>
+        <view class="form-input-wrap">
+          <input class="form-input"
+                 type="{{item.inputType || 'digit'}}"
+                 placeholder="{{item.placeholder}}"
+                 value="{{formData[item.key]}}"
+                 bindinput="onInput"
+                 data-key="{{item.key}}"/>
+          <text class="form-unit">{{item.unit}}</text>
+        </view>
+      </view>
+      <view class="divider"></view>
+    </block>
+
+    <!-- 备注 -->
+    <view class="form-row form-row-col">
+      <text class="form-label">备注</text>
+      <textarea class="form-textarea"
+                placeholder="可选，记录当时状态..."
+                value="{{formData.note}}"
+                bindinput="onNoteInput"
+                maxlength="200"/>
+    </view>
+  </view>
+
+  <!-- 历史记录 -->
+  <view class="section-title">历史记录</view>
+  <view class="history-list">
+    <view class="history-item card" wx:for="{{historyList}}" wx:key="_id">
+      <view class="history-left">
+        <text class="history-date">{{item.date}}</text>
+        <text class="history-note">{{item.note || '无备注'}}</text>
+      </view>
+      <view class="history-right">
+        <text class="history-value">{{item.displayValue}}</text>
+        <view class="badge badge-{{item.status}}">{{item.statusText}}</view>
+      </view>
+    </view>
+    <view class="empty-hint" wx:if="{{historyList.length === 0}}">
+      <text>暂无记录，快来添加吧 🌱</text>
+    </view>
+  </view>
+
+  <!-- 保存按钮 -->
+  <view class="save-wrap">
+    <button class="btn-primary save-btn" bindtap="saveRecord">保存记录</button>
+  </view>
+
+</view>

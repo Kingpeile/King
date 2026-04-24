@@ -1,0 +1,17 @@
+{
+  "appid": "touristappid",
+  "projectname": "personal-health",
+  "description": "个人健康管理小程序",
+  "miniprogramRoot": "miniprogram/",
+  "setting": {
+    "urlCheck": false,
+    "es6": true,
+    "enhance": true,
+    "postcss": true,
+    "minified": false,
+    "newFeature": true
+  },
+  "compileType": "miniprogram",
+  "libVersion": "3.3.4",
+  "condition": {}
+}
