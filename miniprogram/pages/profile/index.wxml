@@ -1,0 +1,57 @@
+<view class="page-container">
+  <view class="profile-header">
+    <image class="profile-avatar" src="{{userInfo.avatarUrl || '/images/default-avatar.png'}}" mode="aspectFill"/>
+    <text class="profile-name">{{userInfo.nickName || '健康达人'}}</text>
+    <text class="profile-sub">记录健康，掌握生活</text>
+  </view>
+
+  <view class="info-card card">
+    <view class="info-row">
+      <text class="info-label">身高</text>
+      <view class="info-edit">
+        <input class="info-input" type="digit" value="{{profile.height}}" placeholder="cm" bindinput="onHeightInput"/>
+        <text class="info-unit">cm</text>
+      </view>
+    </view>
+    <view class="divider"></view>
+    <view class="info-row">
+      <text class="info-label">出生年份</text>
+      <picker mode="date" fields="year" value="{{profile.birthYear}}" bindchange="onBirthChange">
+        <view class="info-picker">
+          <text>{{profile.birthYear || '选择年份'}}</text>
+          <text class="info-arrow">›</text>
+        </view>
+      </picker>
+    </view>
+    <view class="divider"></view>
+    <view class="info-row">
+      <text class="info-label">性别</text>
+      <view class="gender-row">
+        <view class="gender-btn {{profile.gender === 'male' ? 'active' : ''}}" bindtap="setGender" data-val="male">男</view>
+        <view class="gender-btn {{profile.gender === 'female' ? 'active' : ''}}" bindtap="setGender" data-val="female">女</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="menu-card card">
+    <view class="menu-item" bindtap="goPage" data-url="/pages/reports/index">
+      <text class="menu-icon">📋</text>
+      <text class="menu-text">我的体检报告</text>
+      <text class="menu-arrow">›</text>
+    </view>
+    <view class="divider"></view>
+    <view class="menu-item" bindtap="exportData">
+      <text class="menu-icon">📤</text>
+      <text class="menu-text">导出健康数据</text>
+      <text class="menu-arrow">›</text>
+    </view>
+    <view class="divider"></view>
+    <view class="menu-item" bindtap="setReminder">
+      <text class="menu-icon">⏰</text>
+      <text class="menu-text">体检提醒设置</text>
+      <text class="menu-arrow">›</text>
+    </view>
+  </view>
+
+  <button class="btn-primary save-profile-btn" bindtap="saveProfile">保存个人信息</button>
+</view>

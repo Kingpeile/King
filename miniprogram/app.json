@@ -1,0 +1,57 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/record/index",
+    "pages/trends/index",
+    "pages/reports/index",
+    "pages/profile/index"
+  ],
+  "window": {
+    "backgroundTextStyle": "light",
+    "navigationBarBackgroundColor": "#FFFDF5",
+    "navigationBarTitleText": "我的健康",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#FFFDF5"
+  },
+  "tabBar": {
+    "color": "#BBBBBB",
+    "selectedColor": "#FF9B6A",
+    "backgroundColor": "#FFFFFF",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页",
+        "iconPath": "images/tab-home.png",
+        "selectedIconPath": "images/tab-home-active.png"
+      },
+      {
+        "pagePath": "pages/record/index",
+        "text": "记录",
+        "iconPath": "images/tab-record.png",
+        "selectedIconPath": "images/tab-record-active.png"
+      },
+      {
+        "pagePath": "pages/trends/index",
+        "text": "趋势",
+        "iconPath": "images/tab-trends.png",
+        "selectedIconPath": "images/tab-trends-active.png"
+      },
+      {
+        "pagePath": "pages/reports/index",
+        "text": "报告",
+        "iconPath": "images/tab-reports.png",
+        "selectedIconPath": "images/tab-reports-active.png"
+      },
+      {
+        "pagePath": "pages/profile/index",
+        "text": "我的",
+        "iconPath": "images/tab-profile.png",
+        "selectedIconPath": "images/tab-profile-active.png"
+      }
+    ]
+  },
+  "sitemapLocation": "sitemap.json",
+  "style": "v2",
+  "componentFramework": "glass-easel"
+}

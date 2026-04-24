@@ -1,0 +1,84 @@
+/* 全局颜色变量 */
+page {
+  --color-bg: #FFFDF5;
+  --color-card: #FFFFFF;
+  --color-primary: #FF9B6A;
+  --color-yellow: #FFE566;
+  --color-mint: #B5EAD7;
+  --color-pink: #FFB5C8;
+  --color-blue: #B5D4EA;
+  --color-purple: #D4B5EA;
+  --color-text: #2D2D2D;
+  --color-text-light: #888888;
+  --color-border: #F0EDE6;
+  --radius-sm: 16rpx;
+  --radius-md: 24rpx;
+  --radius-lg: 36rpx;
+  --radius-xl: 48rpx;
+  --shadow: 0 4rpx 24rpx rgba(0,0,0,0.06);
+
+  background-color: var(--color-bg);
+  font-family: -apple-system, 'PingFang SC', 'Helvetica Neue', sans-serif;
+  color: var(--color-text);
+  font-size: 28rpx;
+}
+
+/* 通用卡片 */
+.card {
+  background: var(--color-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  padding: 32rpx;
+}
+
+/* 通用按钮 */
+.btn-primary {
+  background: var(--color-primary);
+  color: #FFFFFF;
+  border-radius: var(--radius-xl);
+  padding: 24rpx 48rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+  text-align: center;
+  border: none;
+}
+
+.btn-ghost {
+  background: transparent;
+  border: 2rpx solid var(--color-primary);
+  color: var(--color-primary);
+  border-radius: var(--radius-xl);
+  padding: 22rpx 48rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* 页面容器 */
+.page-container {
+  min-height: 100vh;
+  background: var(--color-bg);
+  padding: 0 32rpx 160rpx;
+}
+
+/* 标签徽章 */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 100rpx;
+  padding: 8rpx 20rpx;
+  font-size: 22rpx;
+  font-weight: 600;
+}
+
+.badge-normal { background: #E8F8F0; color: #2ECC71; }
+.badge-warning { background: #FFF5E6; color: #F39C12; }
+.badge-danger  { background: #FFE8E8; color: #E74C3C; }
+
+/* 分割线 */
+.divider {
+  height: 1rpx;
+  background: var(--color-border);
+  margin: 24rpx 0;
+}

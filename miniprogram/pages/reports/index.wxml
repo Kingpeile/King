@@ -1,0 +1,82 @@
+<view class="page-container">
+
+  <!-- 顶部统计 -->
+  <view class="summary-row">
+    <view class="summary-card card">
+      <text class="summary-num">{{reportCount}}</text>
+      <text class="summary-label">体检报告</text>
+    </view>
+    <view class="summary-card card">
+      <text class="summary-num">{{yearSpan}}年</text>
+      <text class="summary-label">健康记录</text>
+    </view>
+    <view class="summary-card card">
+      <text class="summary-num">{{abnormalCount}}</text>
+      <text class="summary-label">异常指标</text>
+    </view>
+  </view>
+
+  <!-- 上传入口 -->
+  <view class="upload-card card" bindtap="uploadReport">
+    <view class="upload-icon">📄</view>
+    <view class="upload-text">
+      <text class="upload-title">上传体检报告</text>
+      <text class="upload-sub">支持 PDF、图片格式</text>
+    </view>
+    <view class="upload-btn">上传</view>
+  </view>
+
+  <!-- 报告列表 -->
+  <view class="section-title">历年报告</view>
+  <view class="report-list">
+    <view class="report-item card" wx:for="{{reports}}" wx:key="_id" bindtap="viewReport" data-id="{{item._id}}">
+      <view class="report-left">
+        <view class="report-year-badge" style="background:{{item.color}}">
+          <text class="report-year">{{item.year}}</text>
+        </view>
+        <view>
+          <text class="report-title">{{item.title}}</text>
+          <text class="report-date">{{item.date}} · {{item.hospital}}</text>
+        </view>
+      </view>
+      <view class="report-right">
+        <view wx:if="{{item.abnormal > 0}}" class="report-alert">
+          <text class="report-alert-num">{{item.abnormal}}</text>
+          <text class="report-alert-text">异常</text>
+        </view>
+        <view wx:else class="report-ok">
+          <text>✓ 正常</text>
+        </view>
+        <text class="report-arrow">›</text>
+      </view>
+    </view>
+
+    <view class="empty-hint" wx:if="{{reports.length === 0}}">
+      <view class="empty-icon">📋</view>
+      <text class="empty-text">还没有报告，上传第一份吧！</text>
+    </view>
+  </view>
+
+  <!-- 关键指标追踪 -->
+  <view class="section-title" wx:if="{{keyMetrics.length > 0}}">跨年度关键指标</view>
+  <view class="key-metrics" wx:if="{{keyMetrics.length > 0}}">
+    <view class="key-metric-card card" wx:for="{{keyMetrics}}" wx:key="name">
+      <view class="km-header">
+        <text class="km-name">{{item.name}}</text>
+        <view class="badge badge-{{item.trend === 'up' ? 'warning' : item.trend === 'down' ? 'normal' : 'normal'}}">
+          {{item.trend === 'up' ? '↑ 上升' : item.trend === 'down' ? '↓ 下降' : '→ 平稳'}}
+        </view>
+      </view>
+      <view class="km-values">
+        <view class="km-year" wx:for="{{item.values}}" wx:key="year" wx:for-item="yv">
+          <text class="km-yr">{{yv.year}}</text>
+          <view class="km-bar-bg">
+            <view class="km-bar" style="width:{{yv.pct}}%; background:{{item.color}}"></view>
+          </view>
+          <text class="km-val">{{yv.value}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+</view>

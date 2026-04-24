@@ -1,0 +1,73 @@
+<view class="page-container">
+
+  <!-- 顶部问候 -->
+  <view class="header">
+    <view class="header-left">
+      <text class="greeting">{{greeting}}</text>
+      <text class="username">{{userInfo.nickName || '健康达人'}}</text>
+    </view>
+    <view class="avatar-wrap">
+      <image class="avatar" src="{{userInfo.avatarUrl || '/images/default-avatar.png'}}" mode="aspectFill"/>
+    </view>
+  </view>
+
+  <!-- 健康评分卡 -->
+  <view class="score-card card">
+    <view class="score-top">
+      <view>
+        <text class="score-label">今日健康评分</text>
+        <view class="score-date">{{today}}</view>
+      </view>
+      <view class="score-circle">
+        <text class="score-num">{{healthScore}}</text>
+        <text class="score-unit">分</text>
+      </view>
+    </view>
+    <view class="score-bar-bg">
+      <view class="score-bar-fill" style="width:{{healthScore}}%"></view>
+    </view>
+    <text class="score-tip">{{scoreTip}}</text>
+  </view>
+
+  <!-- 快捷记录 -->
+  <view class="section-title">快速记录</view>
+  <view class="quick-grid">
+    <view class="quick-item" wx:for="{{quickItems}}" wx:key="id"
+          bindtap="goRecord" data-type="{{item.type}}">
+      <view class="quick-icon" style="background:{{item.color}}">
+        <text class="quick-emoji">{{item.emoji}}</text>
+      </view>
+      <text class="quick-name">{{item.name}}</text>
+      <text class="quick-value">{{item.value}}</text>
+    </view>
+  </view>
+
+  <!-- 最近指标 -->
+  <view class="section-title">最近指标</view>
+  <view class="metrics-list">
+    <view class="metric-row card" wx:for="{{recentMetrics}}" wx:key="id">
+      <view class="metric-left">
+        <view class="metric-dot" style="background:{{item.color}}"></view>
+        <view>
+          <text class="metric-name">{{item.name}}</text>
+          <text class="metric-date">{{item.date}}</text>
+        </view>
+      </view>
+      <view class="metric-right">
+        <text class="metric-value">{{item.value}}<text class="metric-unit">{{item.unit}}</text></text>
+        <view class="badge badge-{{item.status}}">{{item.statusText}}</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 体检提醒 -->
+  <view class="remind-card card" wx:if="{{nextCheckup}}">
+    <view class="remind-icon">📋</view>
+    <view class="remind-content">
+      <text class="remind-title">距下次体检</text>
+      <text class="remind-days">还有 {{nextCheckup.days}} 天</text>
+    </view>
+    <view class="remind-arrow">›</view>
+  </view>
+
+</view>
