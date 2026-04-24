@@ -1,4 +1,4 @@
-const db = wx.cloud ? wx.cloud.database() : null;
+const storage = require('../../utils/storage');
 
 const COLORS = {
   weight: '#FFE566', bp: '#FFB5C8', glucose: '#FF9B6A',
@@ -30,9 +30,8 @@ Page({
     dataList: [],
   },
 
-  onLoad() {
-    this.loadData();
-  },
+  onLoad() { this.loadData(); },
+  onShow() { this.loadData(); },
 
   switchMetric(e) {
     const type = e.currentTarget.dataset.type;
@@ -57,90 +56,48 @@ Page({
   loadData() {
     const { activeMetric } = this.data;
     const startDate = this.getStartDate();
-
-    if (!db) {
-      const key = `health_${activeMetric}`;
-      const local = wx.getStorageSync(key) || [];
-      this.processData(local.filter(r => r.date >= startDate));
-      return;
-    }
-
-    db.collection('health_records')
-      .where({ type: activeMetric })
-      .orderBy('date', 'desc')
-      .limit(100)
-      .get()
-      .then(res => {
-        const filtered = res.data.filter(r => r.date >= startDate);
-        this.processData(filtered);
-      })
-      .catch(() => {});
+    const all = storage.getRecords(activeMetric);
+    const records = all.filter(r => r.date >= startDate);
+    this.processData(activeMetric, records);
   },
 
-  processData(records) {
+  processData(type, records) {
     if (!records.length) {
       this.setData({ dataList: [], stats: [], chartBars: [], chartLabels: [] });
       return;
     }
 
-    const type = this.data.activeMetric;
     const values = records.map(r => this.getMainValue(type, r.data)).filter(v => !isNaN(v));
     const min = Math.min(...values), max = Math.max(...values);
     const avg = (values.reduce((a, b) => a + b, 0) / values.length).toFixed(1);
 
-    const stats = [
-      { label: '最高', value: `${max}` },
-      { label: '平均', value: `${avg}` },
-      { label: '最低', value: `${min}` },
-    ];
-
-    // 图表数据（最近12条）
     const recent = [...records].reverse().slice(-12);
     const chartValues = recent.map(r => this.getMainValue(type, r.data));
     const chartMax = Math.max(...chartValues) || 1;
     const color = COLORS[type];
-    const chartBars = chartValues.map((v, i) => ({
-      h: Math.max(16, Math.round((v / chartMax) * 200)),
-      color,
-      opacity: 0.4 + 0.6 * (i / chartValues.length),
-    }));
-    const chartLabels = recent.map(r => r.date.slice(5));
 
-    const dataList = records.map(r => ({
-      ...r,
-      displayValue: this.formatValue(type, r.data),
-      ...this.evaluate(type, r.data),
-    }));
-
-    this.setData({ stats, chartBars, chartLabels, dataList });
+    this.setData({
+      stats: [
+        { label: '最高', value: String(max) },
+        { label: '平均', value: String(avg) },
+        { label: '最低', value: String(min) },
+      ],
+      chartBars: chartValues.map((v, i) => ({
+        h: Math.max(16, Math.round((v / chartMax) * 200)),
+        color,
+        opacity: 0.4 + 0.6 * (i / chartValues.length),
+      })),
+      chartLabels: recent.map(r => r.date.slice(5)),
+      dataList: records.map(r => ({
+        ...r,
+        displayValue: storage.formatValue(type, r.data),
+        ...storage.evaluate(type, r.data),
+      })),
+    });
   },
 
   getMainValue(type, data) {
     const map = { weight: 'weight', bp: 'systolic', glucose: 'glucose', sleep: 'hours', steps: 'steps', water: 'water' };
     return parseFloat(data[map[type]]);
-  },
-
-  formatValue(type, data) {
-    const fmt = {
-      weight: d => `${d.weight}kg`,
-      bp: d => `${d.systolic}/${d.diastolic}`,
-      glucose: d => `${d.glucose} mmol/L`,
-      sleep: d => `${d.hours}h`,
-      steps: d => `${(+d.steps).toLocaleString()}步`,
-      water: d => `${d.water}ml`,
-    };
-    return fmt[type] ? fmt[type](data) : '-';
-  },
-
-  evaluate(type, data) {
-    const evals = {
-      weight: d => { const v = +d.weight; return v < 50 ? { status:'warning', statusText:'偏轻' } : v < 80 ? { status:'normal', statusText:'正常' } : { status:'warning', statusText:'偏重' }; },
-      bp: d => { const s = +d.systolic; return s <= 120 ? { status:'normal', statusText:'正常' } : s <= 139 ? { status:'warning', statusText:'偏高' } : { status:'danger', statusText:'高' }; },
-      glucose: d => { const g = +d.glucose; return g <= 6.1 ? { status:'normal', statusText:'正常' } : g <= 7 ? { status:'warning', statusText:'偏高' } : { status:'danger', statusText:'过高' }; },
-      sleep: d => { const h = +d.hours; return h >= 7 ? { status:'normal', statusText:'良好' } : { status:'warning', statusText:'不足' }; },
-      steps: d => +d.steps >= 8000 ? { status:'normal', statusText:'达标' } : { status:'warning', statusText:'偏少' },
-      water: d => +d.water >= 1500 ? { status:'normal', statusText:'达标' } : { status:'warning', statusText:'不足' },
-    };
-    return evals[type] ? evals[type](data) : { status: 'normal', statusText: '-' };
   },
 });
