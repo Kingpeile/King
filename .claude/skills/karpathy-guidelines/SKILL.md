@@ -1,20 +1,10 @@
-# CLAUDE.md
+# Karpathy Guidelines
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
-## Repository Status
-
-This repository is currently empty. No source files, build configuration, or commits exist yet. Update this file once the project is initialized with its stack, structure, and workflows.
-
----
-
-## Karpathy Coding Guidelines
-
-Behavioral guidelines to reduce common LLM coding mistakes, derived from [Andrej Karpathy's observations](https://x.com/karpathy/status/2015883857489522876).
+Behavioral guidelines to reduce common LLM coding mistakes, derived from [Andrej Karpathy's observations](https://x.com/karpathy/status/2015883857489522876) on LLM coding pitfalls.
 
 **Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
 
-### 1. Think Before Coding
+## 1. Think Before Coding
 
 **Don't assume. Don't hide confusion. Surface tradeoffs.**
 
@@ -24,7 +14,7 @@ Before implementing:
 - If a simpler approach exists, say so. Push back when warranted.
 - If something is unclear, stop. Name what's confusing. Ask.
 
-### 2. Simplicity First
+## 2. Simplicity First
 
 **Minimum code that solves the problem. Nothing speculative.**
 
@@ -36,7 +26,7 @@ Before implementing:
 
 Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
 
-### 3. Surgical Changes
+## 3. Surgical Changes
 
 **Touch only what you must. Clean up only your own mess.**
 
@@ -52,7 +42,7 @@ When your changes create orphans:
 
 The test: Every changed line should trace directly to the user's request.
 
-### 4. Goal-Driven Execution
+## 4. Goal-Driven Execution
 
 **Define success criteria. Loop until verified.**
 
