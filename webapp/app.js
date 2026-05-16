@@ -398,7 +398,7 @@ function renderReports() {
         <div class="report-badge" style="background:${color}">${(r.date||'').slice(0,4)}</div>
         <div>
           <div class="report-name">${r.title||'体检报告'}</div>
-          <div class="report-meta">${r.date||''} · ${r.hospital||'未知医院'}</div>
+          <div class="report-meta">${r.date||''} · ${r.hospital||'未知医院'}${r.fileName ? ' · 📎' : ''}</div>
         </div>
       </div>
       <div class="report-right">${abHtml}<span class="report-arrow">›</span></div>
@@ -407,7 +407,6 @@ function renderReports() {
 }
 
 function addReportManual() {
-  // 构建指标输入字段
   document.getElementById('report-metric-fields').innerHTML =
     REPORT_METRICS.map(name =>
       `<div class="modal-field">
@@ -418,11 +417,25 @@ function addReportManual() {
   document.getElementById('rp-date').valueAsDate = new Date();
   document.getElementById('rp-hospital').value = '';
   document.getElementById('rp-abnormal').value = '';
+
+  const pending = window._pendingReportFile;
+  const previewEl = document.getElementById('report-image-preview');
+  if (pending) {
+    const imgEl = document.getElementById('report-preview-img');
+    imgEl.src = pending.dataUrl || '';
+    imgEl.style.display = pending.dataUrl ? 'block' : 'none';
+    document.getElementById('report-file-name').textContent = pending.name;
+    previewEl.style.display = 'block';
+  } else {
+    previewEl.style.display = 'none';
+  }
+
   document.getElementById('report-modal').style.display = 'flex';
 }
 
 function closeModal() {
   document.getElementById('report-modal').style.display = 'none';
+  window._pendingReportFile = null;
 }
 
 function saveReport() {
@@ -437,12 +450,17 @@ function saveReport() {
     if (val) metrics[name] = parseFloat(val);
   });
 
-  const list = Store.getReports();
-  list.unshift({
+  const report = {
     _id: Date.now().toString(),
     title: `${(date||'').slice(0,4)}年体检报告`,
     date, hospital, abnormalItems, metrics,
-  });
+  };
+  if (window._pendingReportFile) {
+    report.fileName = window._pendingReportFile.name;
+    if (window._pendingReportFile.dataUrl) report.imageDataUrl = window._pendingReportFile.dataUrl;
+  }
+  const list = Store.getReports();
+  list.unshift(report);
   Store.saveReports(list);
   closeModal();
   showToast('报告已保存 🎉');
@@ -515,6 +533,79 @@ function showToast(msg) {
   t.style.opacity = '1';
   clearTimeout(t._timer);
   t._timer = setTimeout(() => { t.style.opacity = '0'; }, 2000);
+}
+
+/* ════════════════════════════════════════
+   文件上传（手机兼容）
+════════════════════════════════════════ */
+function triggerReportUpload() {
+  document.getElementById('report-file-input').click();
+}
+
+function _compressImage(dataUrl, maxWidth, quality) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = function() {
+      const canvas = document.createElement('canvas');
+      let w = img.width, h = img.height;
+      if (w > maxWidth) { h = Math.round(h * maxWidth / w); w = maxWidth; }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
+
+function handleReportFile(event) {
+  const file = event.target.files[0];
+  event.target.value = '';
+  if (!file) return;
+
+  if (file.type.startsWith('image/')) {
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+      const compressed = await _compressImage(e.target.result, 800, 0.72);
+      window._pendingReportFile = { name: file.name, dataUrl: compressed };
+      addReportManual();
+    };
+    reader.readAsDataURL(file);
+  } else {
+    window._pendingReportFile = { name: file.name, dataUrl: null };
+    addReportManual();
+  }
+}
+
+function triggerDataImport() {
+  document.getElementById('data-import-input').click();
+}
+
+function importData(event) {
+  const file = event.target.files[0];
+  event.target.value = '';
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = JSON.parse(e.target.result);
+      let count = 0;
+      Object.keys(TYPE_CONFIG).forEach(t => {
+        if (Array.isArray(data[t])) {
+          localStorage.setItem(`hr_${t}`, JSON.stringify(data[t]));
+          count += data[t].length;
+        }
+      });
+      if (Array.isArray(data.reports)) Store.saveReports(data.reports);
+      if (data.profile && typeof data.profile === 'object') Store.saveProfile(data.profile);
+      showToast(`导入成功，共 ${count} 条记录 🎉`);
+      renderProfile();
+    } catch {
+      showToast('文件格式错误，请选择正确的备份文件');
+    }
+  };
+  reader.readAsText(file, 'utf-8');
 }
 
 /* ════════════════════════════════════════

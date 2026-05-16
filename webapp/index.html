@@ -124,14 +124,25 @@
 
     <div class="summary-row" id="report-summary"></div>
 
-    <div class="card upload-card" onclick="addReportManual()">
-      <div class="upload-icon">📋</div>
-      <div class="upload-text">
-        <div class="upload-title">手动录入报告</div>
-        <div class="upload-sub">逐项填写体检指标</div>
+    <div class="upload-row">
+      <div class="card upload-card" onclick="addReportManual()">
+        <div class="upload-icon">📋</div>
+        <div class="upload-text">
+          <div class="upload-title">手动录入</div>
+          <div class="upload-sub">逐项填写指标</div>
+        </div>
+        <div class="upload-btn">录入</div>
       </div>
-      <div class="upload-btn">录入</div>
+      <div class="card upload-card upload-card-photo" onclick="triggerReportUpload()">
+        <div class="upload-icon">📷</div>
+        <div class="upload-text">
+          <div class="upload-title">上传报告</div>
+          <div class="upload-sub">图片或PDF文件</div>
+        </div>
+        <div class="upload-btn">上传</div>
+      </div>
     </div>
+    <input type="file" id="report-file-input" accept="image/*,.pdf" style="display:none" onchange="handleReportFile(event)">
 
     <div class="section-title">历年报告</div>
     <div id="report-list" class="metrics-list"></div>
@@ -183,6 +194,13 @@
         <span class="menu-arrow">›</span>
       </div>
       <div class="divider"></div>
+      <div class="menu-item" onclick="triggerDataImport()">
+        <span class="menu-icon">📥</span>
+        <span class="menu-text">导入备份数据（JSON）</span>
+        <span class="menu-arrow">›</span>
+      </div>
+      <input type="file" id="data-import-input" accept=".json,application/json" style="display:none" onchange="importData(event)">
+      <div class="divider"></div>
       <div class="menu-item" onclick="clearConfirm()">
         <span class="menu-icon">🗑️</span>
         <span class="menu-text" style="color:#E74C3C">清除全部数据</span>
@@ -220,6 +238,10 @@
 <div class="modal-overlay" id="report-modal" style="display:none">
   <div class="modal-card">
     <div class="modal-title">录入体检报告</div>
+    <div id="report-image-preview" style="display:none;margin-bottom:16px">
+      <img id="report-preview-img" style="width:100%;border-radius:12px;max-height:180px;object-fit:contain;background:#F9F7F2;display:block">
+      <div id="report-file-name" style="font-size:12px;color:#999;text-align:center;margin-top:6px"></div>
+    </div>
     <div class="form-row">
       <span class="form-label">日期</span>
       <input type="date" id="rp-date" class="form-date-input">
