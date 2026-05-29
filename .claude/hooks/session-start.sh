@@ -59,6 +59,24 @@ else
   fi
 fi
 
+# ---------------------------------------------------------------------------
+# 3) nuwa-skill (alchaincyf/nuwa-skill) — 女娲: distills a person / thinking
+#    style into a runnable persona Skill. Installs the single `huashu-nuwa`
+#    skill. Marker: presence of that skill's SKILL.md.
+# ---------------------------------------------------------------------------
+NUWA_MARKER="$HOME/.claude/skills/huashu-nuwa/SKILL.md"
+
+if [ -f "$NUWA_MARKER" ]; then
+  echo "nuwa-skill: already installed, skipping"
+else
+  echo "nuwa-skill: installing..."
+  npx -y skills@latest add alchaincyf/nuwa-skill -g -a claude-code -s '*' -y >/dev/null 2>&1 || \
+    echo "nuwa-skill: install failed (continuing)"
+  if [ -f "$NUWA_MARKER" ]; then
+    echo "nuwa-skill: ready"
+  fi
+fi
+
 # Persist PATH so plain `agent-memory` resolves in this session's shells.
 if [ -n "${CLAUDE_ENV_FILE:-}" ] && [ -w "$(dirname "$CLAUDE_ENV_FILE")" ]; then
   echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$CLAUDE_ENV_FILE"
