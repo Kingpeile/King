@@ -59,6 +59,36 @@ else
   fi
 fi
 
+# ---------------------------------------------------------------------------
+# 3) Chinese content-creation skills (community, installed from GitHub).
+#    - guizang-social-card-skill : 小红书/公众号 social cards (SKILL.md at repo root)
+#    - ian-xiaohei-illustrations : 中文正文配图 "小黑" (SKILL.md in a subfolder)
+#    Each is restored on cold sessions; idempotent via the SKILL.md marker.
+# ---------------------------------------------------------------------------
+install_git_skill() {
+  # $1 = repo URL, $2 = skill/dir name, $3 = subpath within repo ("" = root)
+  local url="$1" name="$2" subpath="$3"
+  local dest="$HOME/.claude/skills/$name"
+  if [ -f "$dest/SKILL.md" ]; then
+    echo "$name: already installed, skipping"
+    return 0
+  fi
+  echo "$name: installing..."
+  local tmp; tmp="$(mktemp -d)"
+  if git clone --depth 1 -q "$url" "$tmp" 2>/dev/null; then
+    mkdir -p "$dest"
+    cp -R "$tmp/${subpath:+$subpath/}." "$dest/" 2>/dev/null || true
+    rm -rf "$dest/.git"
+    if [ -f "$dest/SKILL.md" ]; then echo "$name: ready"; else echo "$name: install failed (no SKILL.md)"; fi
+  else
+    echo "$name: clone failed (continuing)"
+  fi
+  rm -rf "$tmp"
+}
+
+install_git_skill "https://github.com/op7418/guizang-social-card-skill" "guizang-social-card-skill" ""
+install_git_skill "https://github.com/helloianneo/ian-xiaohei-illustrations" "ian-xiaohei-illustrations" "ian-xiaohei-illustrations"
+
 # Persist PATH so plain `agent-memory` resolves in this session's shells.
 if [ -n "${CLAUDE_ENV_FILE:-}" ] && [ -w "$(dirname "$CLAUDE_ENV_FILE")" ]; then
   echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$CLAUDE_ENV_FILE"
