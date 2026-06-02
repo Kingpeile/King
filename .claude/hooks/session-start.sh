@@ -62,7 +62,6 @@ fi
 # ---------------------------------------------------------------------------
 # 3) Chinese content-creation skills (community, installed from GitHub).
 #    - guizang-social-card-skill : 小红书/公众号 social cards (SKILL.md at repo root)
-#    - ian-xiaohei-illustrations : 中文正文配图 "小黑" (SKILL.md in a subfolder)
 #    Each is restored on cold sessions; idempotent via the SKILL.md marker.
 # ---------------------------------------------------------------------------
 install_git_skill() {
@@ -87,7 +86,6 @@ install_git_skill() {
 }
 
 install_git_skill "https://github.com/op7418/guizang-social-card-skill" "guizang-social-card-skill" ""
-install_git_skill "https://github.com/helloianneo/ian-xiaohei-illustrations" "ian-xiaohei-illustrations" "ian-xiaohei-illustrations"
 
 # Persist PATH so plain `agent-memory` resolves in this session's shells.
 if [ -n "${CLAUDE_ENV_FILE:-}" ] && [ -w "$(dirname "$CLAUDE_ENV_FILE")" ]; then
