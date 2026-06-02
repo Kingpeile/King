@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Long+Cang&family=Noto+Sans+SC:wght@400;500;700&family=Zhi+Mang+Xing&display=swap">
+<style>
+  html,body{margin:0;background:#fff;}
+  #card{width:1200px;height:1380px;background:#fff;position:relative;}
+  svg{display:block;}
+  .ttl{font-family:"Long Cang","Noto Sans SC",sans-serif;}
+  .cap{font-family:"Noto Sans SC",sans-serif;font-weight:500;}
+  .hand{font-family:"Zhi Mang Xing","Noto Sans SC",sans-serif;}
+  .num{font-family:"Noto Sans SC",sans-serif;font-weight:700;}
+</style>
+</head>
+<body>
+<div id="card">
+<svg viewBox="0 0 1200 1380" width="1200" height="1380" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="rough" x="-5%" y="-5%" width="110%" height="110%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.016" numOctaves="2" seed="7" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="3.0" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <filter id="rough2" x="-5%" y="-5%" width="110%" height="110%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="19" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="2.4" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+
+    <!-- 小黑 base: feet at local (0,0), neutral face -->
+    <g id="xh">
+      <ellipse cx="0" cy="5" rx="44" ry="8" fill="#ececec"/>
+      <path d="M-16,-20 L-16,2" stroke="#141414" stroke-width="7" stroke-linecap="round"/>
+      <path d="M16,-20 L16,2" stroke="#141414" stroke-width="7" stroke-linecap="round"/>
+      <path d="M-43,-28 Q-50,-150 0,-156 Q50,-150 43,-28 Q39,-15 0,-15 Q-39,-15 -43,-28 Z" fill="#141414"/>
+      <path d="M-50,-150 Q0,-180 50,-150 Q40,-137 0,-139 Q-40,-137 -50,-150 Z" fill="#141414"/>
+      <circle cx="7" cy="-177" r="6" fill="#141414"/>
+      <path d="M-45,-146 Q0,-135 45,-146" stroke="#fff" stroke-width="3" fill="none" opacity="0.5"/>
+      <circle cx="-15" cy="-104" r="6.5" fill="#fff"/>
+      <circle cx="15" cy="-104" r="6.5" fill="#fff"/>
+    </g>
+
+    <!-- cat loaf (lying), nose toward right, origin at belly center -->
+    <g id="cat-loaf">
+      <ellipse cx="0" cy="20" rx="50" ry="8" fill="#ececec"/>
+      <path d="M-58,16 Q-66,-22 -34,-26 Q-6,-30 40,-20 Q60,-16 58,12 Q30,20 -30,20 Q-52,20 -58,16 Z" fill="#141414"/>
+      <path d="M34,-22 L40,-44 L52,-26 Z" fill="#141414"/>
+      <path d="M54,-22 L62,-42 L70,-22 Z" fill="#141414"/>
+      <path d="M-56,8 Q-92,6 -86,-30" stroke="#141414" stroke-width="7" fill="none" stroke-linecap="round"/>
+      <circle cx="46" cy="-12" r="3.6" fill="#fff"/>
+      <circle cx="60" cy="-12" r="3.6" fill="#fff"/>
+    </g>
+
+    <!-- cat sitting, origin at feet -->
+    <g id="cat-sit">
+      <ellipse cx="0" cy="4" rx="34" ry="7" fill="#ececec"/>
+      <path d="M-30,2 Q-40,-58 0,-66 Q40,-58 30,2 Q0,8 -30,2 Z" fill="#141414"/>
+      <path d="M-26,-52 L-30,-78 L-10,-60 Z" fill="#141414"/>
+      <path d="M26,-52 L30,-78 L10,-60 Z" fill="#141414"/>
+      <path d="M30,-2 Q66,-6 60,-50" stroke="#141414" stroke-width="7" fill="none" stroke-linecap="round"/>
+      <circle cx="-11" cy="-44" r="3.6" fill="#fff"/>
+      <circle cx="11" cy="-44" r="3.6" fill="#fff"/>
+    </g>
+
+    <!-- sparkle (4-point) -->
+    <g id="spark">
+      <path d="M0,-15 Q2,-2 15,0 Q2,2 0,15 Q-2,2 -15,0 Q-2,-2 0,-15 Z" fill="#FF6B35"/>
+    </g>
+  </defs>
+
+  <rect x="0" y="0" width="1200" height="1380" fill="#ffffff"/>
+
+  <!-- ===== Header ===== -->
+  <text x="600" y="92" text-anchor="middle" class="ttl" font-size="68" fill="#141414">AI 帮我把复杂想法画清楚</text>
+  <g filter="url(#rough2)"><path d="M376,116 Q600,104 824,116" stroke="#FF6B35" stroke-width="4" fill="none" stroke-linecap="round"/></g>
+  <text x="600" y="150" text-anchor="middle" class="cap" font-size="24" fill="#9a9a9a" letter-spacing="2">乱 → 研究 → 结构 → 输出 · 小黑四格</text>
+
+  <!-- ====================================================== PANEL 1 -->
+  <g transform="translate(48,176)">
+    <g filter="url(#rough)">
+      <rect x="6" y="6" width="516" height="500" rx="26" fill="#fff" stroke="#141414" stroke-width="2.6"/>
+      <circle cx="48" cy="48" r="21" fill="none" stroke="#141414" stroke-width="2.6"/>
+    </g>
+    <text x="48" y="57" text-anchor="middle" class="num" font-size="26" fill="#141414">1</text>
+
+    <g filter="url(#rough)">
+      <!-- desk -->
+      <path d="M70,398 L452,398" stroke="#141414" stroke-width="3" stroke-linecap="round"/>
+      <!-- 小黑 seated behind desk -->
+      <use href="#xh" transform="translate(250,402)"/>
+      <!-- laptop in front, covers legs -->
+      <path d="M178,400 L322,400 L308,344 L192,344 Z" fill="#fff" stroke="#141414" stroke-width="3"/>
+      <rect x="190" y="338" width="120" height="8" rx="3" fill="#141414"/>
+      <path d="M210,372 q14,-12 28,0" stroke="#9a9a9a" stroke-width="3" fill="none"/>
+      <!-- messy thought scribble above head -->
+      <path d="M196,176 C176,150 200,132 224,148 C250,165 232,190 206,182 C184,175 196,148 228,150 C258,152 258,186 230,190 C204,194 192,162 218,154 C238,148 256,160 248,178"
+            stroke="#141414" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+      <!-- lightbulb -->
+      <circle cx="328" cy="150" r="20" fill="#fff" stroke="#141414" stroke-width="2.6"/>
+      <path d="M320,170 l16,0 M322,178 l12,0" stroke="#141414" stroke-width="2.6" stroke-linecap="round"/>
+      <path d="M321,150 q7,-12 14,0" stroke="#FF6B35" stroke-width="2.6" fill="none"/>
+      <path d="M356,128 l12,-8 M360,150 l14,0 M352,170 l12,8" stroke="#FF6B35" stroke-width="2.4" stroke-linecap="round"/>
+    </g>
+    <text x="150" y="150" class="hand" font-size="44" fill="#1f6dd8">?</text>
+    <text x="118" y="200" class="hand" font-size="36" fill="#FF6B35">?</text>
+    <text x="262" y="468" text-anchor="middle" class="cap" font-size="27" fill="#141414">想法很多，但很乱</text>
+  </g>
+
+  <!-- ====================================================== PANEL 2 -->
+  <g transform="translate(624,176)">
+    <g filter="url(#rough)">
+      <rect x="6" y="6" width="516" height="500" rx="26" fill="#fff" stroke="#141414" stroke-width="2.6"/>
+      <circle cx="48" cy="48" r="21" fill="none" stroke="#141414" stroke-width="2.6"/>
+    </g>
+    <text x="48" y="57" text-anchor="middle" class="num" font-size="26" fill="#141414">2</text>
+
+    <g filter="url(#rough)">
+      <path d="M70,406 L452,406" stroke="#141414" stroke-width="3" stroke-linecap="round"/>
+      <!-- paper with keywords -->
+      <rect x="150" y="296" width="190" height="112" rx="8" fill="#fff" stroke="#141414" stroke-width="2.6" transform="rotate(-4 245 352)"/>
+      <path d="M168,330 l92,0 M168,352 l120,0 M168,374 l70,0" stroke="#9a9a9a" stroke-width="3" stroke-linecap="round" transform="rotate(-4 245 352)"/>
+      <ellipse cx="232" cy="352" rx="40" ry="15" fill="none" stroke="#FF6B35" stroke-width="2.6" transform="rotate(-4 245 352)"/>
+      <!-- 小黑 leaning, holding magnifier + pen -->
+      <use href="#xh" transform="translate(372,408) rotate(-6)"/>
+      <!-- arm to magnifier -->
+      <path d="M338,300 Q300,300 276,318" stroke="#141414" stroke-width="6" fill="none" stroke-linecap="round"/>
+      <circle cx="252" cy="332" r="30" fill="#fff" stroke="#141414" stroke-width="3"/>
+      <path d="M272,352 L292,372" stroke="#141414" stroke-width="6" stroke-linecap="round"/>
+      <!-- cat loaf left -->
+      <use href="#cat-loaf" transform="translate(150,392)"/>
+    </g>
+    <text x="262" y="468" text-anchor="middle" class="cap" font-size="27" fill="#141414">放大关键，逐个梳理</text>
+  </g>
+
+  <!-- ====================================================== PANEL 3 -->
+  <g transform="translate(48,724)">
+    <g filter="url(#rough)">
+      <rect x="6" y="6" width="516" height="500" rx="26" fill="#fff" stroke="#141414" stroke-width="2.6"/>
+      <circle cx="48" cy="48" r="21" fill="none" stroke="#141414" stroke-width="2.6"/>
+    </g>
+    <text x="48" y="57" text-anchor="middle" class="num" font-size="26" fill="#141414">3</text>
+
+    <g filter="url(#rough)">
+      <!-- whiteboard -->
+      <rect x="92" y="96" width="300" height="244" rx="12" fill="#fff" stroke="#141414" stroke-width="2.8"/>
+      <path d="M150,340 L132,400 M334,340 L352,400" stroke="#141414" stroke-width="3" stroke-linecap="round"/>
+      <!-- flow boxes -->
+      <rect x="122" y="140" width="86" height="48" rx="7" fill="#fff" stroke="#141414" stroke-width="2.6"/>
+      <rect x="276" y="140" width="86" height="48" rx="7" fill="#fff" stroke="#141414" stroke-width="2.6"/>
+      <rect x="200" y="250" width="86" height="48" rx="7" fill="#fff" stroke="#141414" stroke-width="2.6"/>
+      <!-- arrows orange -->
+      <path d="M208,164 L272,164" stroke="#FF6B35" stroke-width="3" fill="none"/>
+      <path d="M272,164 l-11,-6 m11,6 l-11,6" stroke="#FF6B35" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <path d="M319,188 Q319,228 256,248" stroke="#FF6B35" stroke-width="3" fill="none"/>
+      <path d="M256,248 l12,-3 m-12,3 l9,9" stroke="#FF6B35" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <!-- 小黑 right, arm up with marker -->
+      <use href="#xh" transform="translate(452,398)"/>
+      <path d="M414,290 Q388,250 372,222" stroke="#141414" stroke-width="6" fill="none" stroke-linecap="round"/>
+      <path d="M372,222 l-4,-22 l16,8 Z" fill="#141414"/>
+    </g>
+    <text x="262" y="468" text-anchor="middle" class="cap" font-size="27" fill="#141414">整理成结构与流程</text>
+  </g>
+
+  <!-- ====================================================== PANEL 4 -->
+  <g transform="translate(624,724)">
+    <g filter="url(#rough)">
+      <rect x="6" y="6" width="516" height="500" rx="26" fill="#fff" stroke="#141414" stroke-width="2.6"/>
+      <circle cx="48" cy="48" r="21" fill="none" stroke="#141414" stroke-width="2.6"/>
+    </g>
+    <text x="48" y="57" text-anchor="middle" class="num" font-size="26" fill="#141414">4</text>
+
+    <g filter="url(#rough)">
+      <!-- 小黑 happy, arms up holding card -->
+      <g transform="translate(232,418)">
+        <ellipse cx="0" cy="5" rx="44" ry="8" fill="#ececec"/>
+        <path d="M-16,-20 L-16,2" stroke="#141414" stroke-width="7" stroke-linecap="round"/>
+        <path d="M16,-20 L16,2" stroke="#141414" stroke-width="7" stroke-linecap="round"/>
+        <path d="M-43,-28 Q-50,-150 0,-156 Q50,-150 43,-28 Q39,-15 0,-15 Q-39,-15 -43,-28 Z" fill="#141414"/>
+        <path d="M-50,-150 Q0,-180 50,-150 Q40,-137 0,-139 Q-40,-137 -50,-150 Z" fill="#141414"/>
+        <circle cx="7" cy="-177" r="6" fill="#141414"/>
+        <path d="M-45,-146 Q0,-135 45,-146" stroke="#fff" stroke-width="3" fill="none" opacity="0.5"/>
+        <!-- happy eyes + smile -->
+        <path d="M-22,-104 q7,-9 14,0" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round"/>
+        <path d="M8,-104 q7,-9 14,0" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round"/>
+        <path d="M-9,-86 q9,8 18,0" stroke="#fff" stroke-width="3.4" fill="none" stroke-linecap="round"/>
+        <!-- raised arms -->
+        <path d="M-40,-120 Q-70,-150 -78,-186" stroke="#141414" stroke-width="6" fill="none" stroke-linecap="round"/>
+        <path d="M40,-120 Q70,-150 78,-186" stroke="#141414" stroke-width="6" fill="none" stroke-linecap="round"/>
+      </g>
+      <!-- finished card held up -->
+      <rect x="150" y="196" width="166" height="120" rx="10" fill="#fff" stroke="#141414" stroke-width="2.8"/>
+      <path d="M172,250 l28,0 M172,272 l44,0" stroke="#9a9a9a" stroke-width="3" stroke-linecap="round"/>
+      <path d="M240,228 l16,18 l30,-40" stroke="#FF6B35" stroke-width="4.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      <rect x="172" y="216" width="40" height="22" rx="4" fill="none" stroke="#1f6dd8" stroke-width="2.4"/>
+      <!-- cat sitting right -->
+      <use href="#cat-sit" transform="translate(404,412)"/>
+    </g>
+    <!-- sparkles -->
+    <use href="#spark" transform="translate(120,210) scale(1.1)"/>
+    <use href="#spark" transform="translate(360,180) scale(0.8)"/>
+    <use href="#spark" transform="translate(360,330) scale(0.9)" fill="#1f6dd8"/>
+    <text x="262" y="468" text-anchor="middle" class="cap" font-size="27" fill="#141414">清晰输出，一图说清</text>
+  </g>
+
+  <!-- footer -->
+  <text x="600" y="1336" text-anchor="middle" class="cap" font-size="22" fill="#bdbdbd" letter-spacing="3">小黑 · 白底手绘 · Keep Growing</text>
+</svg>
+</div>
+</body>
+</html>
