@@ -103,7 +103,7 @@ fi
 #    sessions. Re-syncs whenever the repo copy is newer. Add new distilled
 #    skills to PERSONA_SKILLS below.
 # ---------------------------------------------------------------------------
-PERSONA_SKILLS="karpathy-perspective gushen"
+PERSONA_SKILLS="karpathy-perspective gushen serenity-perspective"
 SKILLS_ROOT="${CLAUDE_PROJECT_DIR:-$PWD}/.claude/skills"
 for sk in $PERSONA_SKILLS; do
   src="$SKILLS_ROOT/$sk"
