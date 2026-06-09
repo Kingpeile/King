@@ -59,6 +59,23 @@ else
   fi
 fi
 
+# ---------------------------------------------------------------------------
+# 3) eastmoney-data — in-repo 东方财富行情数据 skill. Mirror it from the repo
+#    to the user level so it's globally triggerable (and survives cold sessions).
+#    Source lives in this repo, so no network needed; always re-sync to stay current.
+# ---------------------------------------------------------------------------
+EM_SRC="${CLAUDE_PROJECT_DIR:-$PWD}/.claude/skills/eastmoney-data"
+EM_DST="$HOME/.claude/skills/eastmoney-data"
+if [ -d "$EM_SRC" ]; then
+  mkdir -p "$HOME/.claude/skills"
+  rm -rf "$EM_DST"
+  cp -r "$EM_SRC" "$EM_DST"
+  rm -rf "$EM_DST/scripts/__pycache__"
+  echo "eastmoney-data: ready (user-level)"
+else
+  echo "eastmoney-data: source not found in repo, skipping"
+fi
+
 # Persist PATH so plain `agent-memory` resolves in this session's shells.
 if [ -n "${CLAUDE_ENV_FILE:-}" ] && [ -w "$(dirname "$CLAUDE_ENV_FILE")" ]; then
   echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$CLAUDE_ENV_FILE"
