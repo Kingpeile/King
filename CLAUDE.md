@@ -2,10 +2,6 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project instructions
-
-Think step by step and show reasoning for complex problems. Use specific examples.
-
 ## Repository Status
 
 This repository is currently empty. No source files, build configuration, or commits exist yet. Update this file once the project is initialized with its stack, structure, and workflows.
