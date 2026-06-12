@@ -59,57 +59,6 @@ else
   fi
 fi
 
-# ---------------------------------------------------------------------------
-# 3) Global "confirm before run" hook — restore the user-level PreToolUse hook
-#    that forces a confirmation prompt before Bash/Edit/Write tools, in EVERY
-#    repo. ~/.claude is wiped on cold web containers, so recreate it each
-#    session. Idempotent: rewrites the (tiny) script and only appends the
-#    PreToolUse entry to ~/.claude/settings.json if it isn't already there.
-# ---------------------------------------------------------------------------
-CONFIRM_HOOK="$HOME/.claude/hooks/confirm-before-run.sh"
-USER_SETTINGS="$HOME/.claude/settings.json"
-
-mkdir -p "$HOME/.claude/hooks"
-cat > "$CONFIRM_HOOK" <<'HOOK_EOF'
-#!/bin/bash
-# PreToolUse hook (global): force a confirmation prompt before commands/edits.
-set -euo pipefail
-cat <<'JSON'
-{
-  "hookSpecificOutput": {
-    "hookEventName": "PreToolUse",
-    "permissionDecision": "ask",
-    "permissionDecisionReason": "Manual confirmation required (global policy)."
-  }
-}
-JSON
-HOOK_EOF
-chmod +x "$CONFIRM_HOOK"
-
-# Merge the PreToolUse hook into user settings without clobbering other keys.
-python3 - "$USER_SETTINGS" <<'PY' || echo "confirm-before-run: settings merge failed (continuing)"
-import json, sys
-path = sys.argv[1]
-cmd = "$HOME/.claude/hooks/confirm-before-run.sh"
-try:
-    with open(path) as f:
-        data = json.load(f)
-except (FileNotFoundError, json.JSONDecodeError):
-    data = {}
-data.setdefault("$schema", "https://json.schemastore.org/claude-code-settings.json")
-pre = data.setdefault("hooks", {}).setdefault("PreToolUse", [])
-existing = [h.get("command") for e in pre for h in e.get("hooks", [])]
-if cmd not in existing:
-    pre.append({
-        "matcher": "Bash|Edit|Write|MultiEdit|NotebookEdit",
-        "hooks": [{"type": "command", "command": cmd}],
-    })
-with open(path, "w") as f:
-    json.dump(data, f, indent=4)
-    f.write("\n")
-PY
-echo "global confirm-before-run hook: ready"
-
 # Persist PATH so plain `agent-memory` resolves in this session's shells.
 if [ -n "${CLAUDE_ENV_FILE:-}" ] && [ -w "$(dirname "$CLAUDE_ENV_FILE")" ]; then
   echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$CLAUDE_ENV_FILE"
