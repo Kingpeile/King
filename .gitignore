@@ -1,0 +1,2 @@
+# agent-reach / mcporter install artifact (written into cwd by `agent-reach install`)
+config/mcporter.json
