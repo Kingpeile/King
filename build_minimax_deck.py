@@ -347,6 +347,27 @@ bullets(s,0.4,5.7,12.55,1.3,[
 ],12.5)
 foot(s,"来源：各家招股书/融资报道（智谱·量子位；Kimi·新浪/投资界；阶跃·财经网）。估值含 RMB/USD 混合及部分未证实报道 [E]")
 
+# ===== 14b 营收规模对齐 (USD, 新) =====
+s=slide(); title_bar(s,"【竞争格局】营收规模对齐（统一折算 US$M）：四家体量接近，差距在增速与估值",
+                     "2025 营收，按 ¥7.2/US$ 折算")
+section_tag(s,"③ 竞争格局",BLUE2)
+cd=CategoryChartData(); cd.categories=["智谱 (25E)","MiniMax (25A)","Kimi (25)","阶跃 (25)"]
+cd.add_series("2025 营收 (US$M)",(97,79,69,69))
+gf=s.shapes.add_chart(XL_CHART_TYPE.COLUMN_CLUSTERED,Inches(0.5),Inches(1.85),Inches(6.6),Inches(4.6),cd)
+ch=gf.chart; ch.has_legend=False; pl=ch.plots[0]; pl.has_data_labels=True
+pl.data_labels.font.size=Pt(12); pl.data_labels.font.bold=True
+pl.data_labels.number_format='0'; pl.data_labels.number_format_is_linked=False
+pl.series[0].format.fill.solid(); pl.series[0].format.fill.fore_color.rgb=BLUE2
+pts=pl.series[0].points; pts[1].format.fill.solid(); pts[1].format.fill.fore_color.rgb=ACCENT
+bullets(s,7.4,1.9,5.5,4.7,[
+    ("读图要点",True),
+    ("• 2025 营收四家都在 ~$70-100M 区间，绝对体量其实接近（智谱略高、MiniMax 次之）",False),
+    ("• 口径差异大：MiniMax/Kimi/阶跃偏 C 端规模，智谱偏 To B 项目制收入",False),
+    ("• 2026E 增速分化：Kimi >¥20亿(~$278M)、阶跃 ~¥12亿(~$167M)、MiniMax 基准 ~$174M → Kimi 提速最猛",False),
+    ("• 估值与营收倒挂：Kimi 估值($18-30B 报道)远超营收体量 → 市场押的是 Agent 故事",False),
+])
+foot(s,"折算率 ¥7.2/US$。MiniMax 为 2025 实际；智谱按 ~130% 增速外推 [E]；Kimi/阶跃为公司/报道口径。跨家口径不完全可比")
+
 # ===== 15 MiniMax vs 智谱 (新) =====
 s=slide(); title_bar(s,"两条 IPO 路线对照：MiniMax 的 To C 出海 vs 智谱的 To B 政企")
 table(s,0.5,1.85,12.3,4.6,[
