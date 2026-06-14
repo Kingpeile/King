@@ -59,6 +59,46 @@ else
   fi
 fi
 
+# ---------------------------------------------------------------------------
+# 3) Global coding principles — user-level ~/.claude/CLAUDE.md.
+#    Four principles adapted from andrej-karpathy-skills, applied across every
+#    repo and conversation. The container is ephemeral, so recreate it here.
+# ---------------------------------------------------------------------------
+GLOBAL_CLAUDE_MD="$HOME/.claude/CLAUDE.md"
+
+if [ -f "$GLOBAL_CLAUDE_MD" ]; then
+  echo "global coding principles: already present, skipping"
+else
+  echo "global coding principles: installing..."
+  mkdir -p "$HOME/.claude"
+  cat > "$GLOBAL_CLAUDE_MD" <<'PRINCIPLES_EOF'
+# CLAUDE.md (user-level)
+
+Global guidance applied across every repo and conversation.
+
+## Coding principles
+
+Four principles for reducing coding mistakes (adapted from [andrej-karpathy-skills](https://github.com/forrestchang/andrej-karpathy-skills)). Apply these on every change.
+
+### 1. Think Before Coding
+
+State your assumptions explicitly. If uncertain, ask. Surface tradeoffs and multiple interpretations rather than deciding silently. When something is ambiguous, stop and clarify instead of guessing and running with it.
+
+### 2. Simplicity First
+
+Write the minimum code that solves the problem — nothing speculative. Avoid unrequested features, premature abstractions, and unnecessary error handling. Ask yourself: would a senior engineer call this overcomplicated?
+
+### 3. Surgical Changes
+
+Touch only what you must, and clean up only your own mess. Preserve the existing style and resist improving unrelated code. Remove only the imports or variables that *your* changes made unused.
+
+### 4. Goal-Driven Execution
+
+Define success criteria, then loop until verified. Convert vague tasks into testable goals with measurable checks. For multi-step work, outline the plan with its verification steps before executing.
+PRINCIPLES_EOF
+  echo "global coding principles: ready"
+fi
+
 # Persist PATH so plain `agent-memory` resolves in this session's shells.
 if [ -n "${CLAUDE_ENV_FILE:-}" ] && [ -w "$(dirname "$CLAUDE_ENV_FILE")" ]; then
   echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$CLAUDE_ENV_FILE"
