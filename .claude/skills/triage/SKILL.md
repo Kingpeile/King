@@ -15,6 +15,7 @@ description: 晨间 triage — 读最近的 GitHub issues 与提交，判断哪�
 
 1. **读发现源**（这是「昨天到今天系统里冒出来的、值得留意的东西」）：
    - 打开的 issues（标题、正文、标签、最近评论）
+   - **打开的 PR**（标题、base 分支、最近更新时间——找僵尸 PR / 重复 PR / base 选错的）
    - 最近的提交（`git log --since="2 days ago" --stat`，看改了什么）
    - 若以后接入 CI，再加上「昨天失败的 CI」
 
