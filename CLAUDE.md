@@ -81,9 +81,11 @@ Discovery/classify only — it does **not** auto-change code, open PRs, or merge
 method come from the Loop Engineering Orange Book; the full notes are in agentmemory topic
 `loop-engineering`.
 
-A second, **manual** loop — `note-digest` — turns scattered `Obsidian/Inbox/` notes into clean
-cards under `Obsidian/Notes/` (originals are never modified). See `.claude/skills/note-digest/SKILL.md`.
-Trigger it by saying 整理我的笔记 / 做读书卡片 / 笔记周回顾.
+A second, **manual** loop — `note-digest` — reads the user's `笔记同步助手/` Obsidian folder and
+writes a weekly summary report linking this week's new notes to earlier ones (overlap 🔁 &
+progression 📈). Originals are read-only; the report stays in that same folder. **The user's real
+notes live in their local Obsidian, not this repo** — so this loop is meant to run locally. See
+`.claude/skills/note-digest/SKILL.md`. Trigger: 笔记周总结 / 做笔记总结报告.
 
 ## Session setup (Claude Code on the web)
 
