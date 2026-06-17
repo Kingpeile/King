@@ -9,12 +9,10 @@
 
 ### 2026-06-17 第 1 轮
 
-- [ ] **#1 · CLAUDE.md 与现实严重脱节**（comprehension rot 苗头）
-  CLAUDE.md 仍写「This repository is currently empty. No source files... no commits exist yet」，
-  但实际已有完整的 `miniprogram/` 健康小程序、`webapp/`、`docs/`、loops 骨架、数十个 commit。
-  - 建议拆两步：① 事实纠错（删掉 empty / no-commits 断言）—— 范围清晰可逆，**建议直接接受**；
-    ② 补一段真实的项目定位与结构描述 —— 涉及「项目该怎么定位」，**由你定**。
-  - 我没有自动改 CLAUDE.md：它是根指令文件，影响每个会话，留给你拍板。要我改就说一声。
+- [x] **#1 · CLAUDE.md 与现实严重脱节**（comprehension rot 苗头）✅ 2026-06-17 已处理
+  原状：CLAUDE.md 写「repository is currently empty... no commits exist yet」，与现实严重不符。
+  已重写：补上真实的项目概述（个人健康管理，小程序 + webapp 双端、纯本地存储、无构建/测试）、
+  目录结构、约定与坑（含 `cloud/functions/healthData/` 是死代码），并新增 Loops 一节。
 
 - [ ] **#2 · 循环本身的上线闸门未补齐**（needs-info）
   `.github/workflows/triage-loop.yml` 的 cron 已设（每日 UTC 23:00），但：
