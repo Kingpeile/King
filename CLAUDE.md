@@ -81,6 +81,10 @@ Discovery/classify only — it does **not** auto-change code, open PRs, or merge
 method come from the Loop Engineering Orange Book; the full notes are in agentmemory topic
 `loop-engineering`.
 
+A second, **manual** loop — `note-digest` — turns scattered `Obsidian/Inbox/` notes into clean
+cards under `Obsidian/Notes/` (originals are never modified). See `.claude/skills/note-digest/SKILL.md`.
+Trigger it by saying 整理我的笔记 / 做读书卡片 / 笔记周回顾.
+
 ## Session setup (Claude Code on the web)
 
 The cloud container is ephemeral, so a `SessionStart` hook restores user-level skills on every cold session:
