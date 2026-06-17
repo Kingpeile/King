@@ -42,6 +42,15 @@ Obsidian/               Personal Obsidian notes synced into the repo (not app co
 - **`miniprogram/cloud/functions/healthData/` is dead code** left over from that refactor.
 - **Metric types live in one place:** `utils/storage.js` `TYPE_CONFIG`. Add a metric there.
 
+## Coding principles
+
+Adapted from Andrej Karpathy's coding guidelines (consolidated here from PRs #7 and #12):
+
+1. **Think before coding** — state your assumptions; when uncertain, ask instead of guessing.
+2. **Simplicity first** — the minimum code that solves the problem; nothing speculative.
+3. **Surgical changes** — touch only what you must; clean up only your own mess, not unrelated code.
+4. **Goal-driven execution** — define the success criterion up front, then loop until it's verified.
+
 ## Agent skills
 
 ### Issue tracker
