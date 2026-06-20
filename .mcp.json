@@ -1,0 +1,22 @@
+{
+  "mcpServers": {
+    "google-flights": {
+      "command": "uvx",
+      "args": [
+        "--with",
+        "fast-flights==2.2",
+        "--from",
+        "google-flights-mcp",
+        "google-flights-mcp",
+        "serve"
+      ]
+    },
+    "google-maps": {
+      "command": "npx",
+      "args": ["-y", "@cablate/mcp-google-map", "--stdio"],
+      "env": {
+        "GOOGLE_MAPS_API_KEY": "${GOOGLE_MAPS_API_KEY}"
+      }
+    }
+  }
+}
