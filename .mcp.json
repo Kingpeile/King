@@ -11,6 +11,10 @@
         "serve"
       ]
     },
+    "osm-maps": {
+      "command": "uvx",
+      "args": ["osm-mcp-server"]
+    },
     "google-maps": {
       "command": "npx",
       "args": ["-y", "@cablate/mcp-google-map", "--stdio"],

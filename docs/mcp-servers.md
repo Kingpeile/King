@@ -13,6 +13,16 @@ use Claude Code will ask you to approve each project server.
 - **Capabilities:** one-way / round-trip flight search, airport lookup, price
   comparison, multi-passenger, all seat classes.
 
+## osm-maps (no API key)
+
+- **Package:** [`osm-mcp-server`](https://github.com/jagan-shanmugam/open-streetmap-mcp) (PyPI), runs via `uvx`.
+- **API key:** none — uses OpenStreetMap's public Nominatim/Overpass/OSRM APIs.
+- **Capabilities:** geocoding & reverse geocoding, nearby POI search,
+  turn-by-turn directions, category search in an area, meeting-point suggestions,
+  commute analysis, EV charging / parking lookup, neighborhood data.
+- **Note:** free public OSM endpoints are rate-limited; for heavy use point it at
+  self-hosted instances.
+
 ## google-maps
 
 - **Package:** [`@cablate/mcp-google-map`](https://github.com/cablate/mcp-google-map), runs via `npx`.
