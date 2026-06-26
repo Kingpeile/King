@@ -1,0 +1,67 @@
+name: Triage Loop（晨间 triage 循环）
+
+# Loop engineering 的 Scheduling（调度）动作 —— 让循环自己一轮轮转。
+# 跑在 GitHub 的机器上，所以「你睡觉、你的电脑关机」时它照样转（橙皮书 §06）。
+#
+# 启用前提：
+#   1. 在仓库 Settings → Secrets and variables → Actions 配置 ANTHROPIC_API_KEY
+#      （没有它，下面的 Claude 步骤会失败 / 空跑）。
+#   2. 第一次先用 "Run workflow" 手动触发跑一遍，读 docs/loops/triage-state.md 和
+#      docs/loops/inbox.md 看产出对不对，满意了再依赖 schedule。
+#
+# 注意：anthropics/claude-code-action 的输入字段会随版本变化。若运行报错，
+#       对照 https://github.com/anthropics/claude-code-action 的最新文档校准
+#       `prompt` / `claude_args` 等字段 —— 这也是一个该由人确认的检查点。
+
+on:
+  schedule:
+    # UTC 23:00 ≈ 北京时间次日 07:00。按你的时区调整。
+    - cron: "0 23 * * *"
+  workflow_dispatch: {}   # 允许在 Actions 页手动触发
+
+# 让循环把状态文件写回仓库需要写权限
+permissions:
+  contents: write
+  issues: read
+
+concurrency:
+  group: triage-loop
+  cancel-in-progress: false
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20   # 硬性兜底：再怎么空转也不会跑过 20 分钟
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 50   # 让 triage skill 能看到近期提交
+
+      - name: Run triage loop
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # 触发的是一个 skill，不是一坨指令（橙皮书：fire $skill-name，
+          # 别把一大段 prompt 糊进 schedule，没人会再去维护它）。
+          prompt: |
+            先读 docs/loops/triage-state.md 的「未完成、明天接力」，从那里接着干。
+            用 triage skill 跑一轮晨间 triage（发现 + 分类），
+            再用 triage-review skill 以怀疑的眼光复核结论（它能说「不」）。
+            把这一轮结果追加到 docs/loops/triage-state.md，
+            拿不准 / 需要人决定的追加到 docs/loops/inbox.md。
+            不要直接改业务代码、不要开 PR、不要合并 —— 只发现、分类、评估。
+          # token 上限：单轮最多 30 个回合，配合 timeout-minutes 双保险
+          claude_args: "--max-turns 30"
+
+      - name: Commit state & inbox
+        run: |
+          git config user.name  "triage-loop[bot]"
+          git config user.email "triage-loop@users.noreply.github.com"
+          git add docs/loops/triage-state.md docs/loops/inbox.md
+          if git diff --staged --quiet; then
+            echo "本轮无状态变化，不提交。"
+          else
+            git commit -m "chore(loop): triage $(date -u +%Y-%m-%d)"
+            git push
+          fi
