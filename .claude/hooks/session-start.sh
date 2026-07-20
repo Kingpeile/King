@@ -59,6 +59,26 @@ else
   fi
 fi
 
+# ---------------------------------------------------------------------------
+# 3) neat-freak (KKKKhazix/khazix-skills) — knowledge/governance closeout
+#    skill: reconciles project docs, rule files (CLAUDE.md/AGENTS.md),
+#    authorized agent memory, and workspace residue with what the code and
+#    runtime actually do. Installed via the same `skills` CLI as above.
+#    Marker: presence of the neat-freak SKILL.md.
+# ---------------------------------------------------------------------------
+NF_MARKER="$HOME/.claude/skills/neat-freak/SKILL.md"
+
+if [ -f "$NF_MARKER" ]; then
+  echo "neat-freak: already installed, skipping"
+else
+  echo "neat-freak: installing..."
+  npx -y skills@latest add KKKKhazix/khazix-skills -g -a claude-code -s neat-freak -y >/dev/null 2>&1 || \
+    echo "neat-freak: install failed (continuing)"
+  if [ -f "$NF_MARKER" ]; then
+    echo "neat-freak: ready"
+  fi
+fi
+
 # Persist PATH so plain `agent-memory` resolves in this session's shells.
 if [ -n "${CLAUDE_ENV_FILE:-}" ] && [ -w "$(dirname "$CLAUDE_ENV_FILE")" ]; then
   echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$CLAUDE_ENV_FILE"
