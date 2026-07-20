@@ -44,9 +44,10 @@ fi
 # ---------------------------------------------------------------------------
 # 2) mattpocock/skills — engineering & productivity skill pack (14 skills).
 #    Uses the `skills` CLI (vercel-labs) to install globally for claude-code.
-#    Marker: presence of the `diagnose` skill (first skill alphabetically).
+#    Marker: presence of the `diagnosing-bugs` skill (was named `diagnose`
+#    upstream; renamed by mattpocock/skills, so the marker follows suit).
 # ---------------------------------------------------------------------------
-MP_MARKER="$HOME/.claude/skills/diagnose/SKILL.md"
+MP_MARKER="$HOME/.claude/skills/diagnosing-bugs/SKILL.md"
 
 if [ -f "$MP_MARKER" ]; then
   echo "mattpocock/skills: already installed, skipping"
