@@ -6,6 +6,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This repository is currently empty. No source files, build configuration, or commits exist yet. Update this file once the project is initialized with its stack, structure, and workflows.
 
+## MCP servers
+
+`.mcp.json` configures the Amap (高德地图) MCP server over streamable HTTP for site-selection work (POI/周边搜索, 路径规划, 距离测量). It reads the API key from the `AMAP_MAPS_API_KEY` environment variable — set it in the Claude Code environment settings (never commit the key itself). Key is issued at https://console.amap.com (Web 服务 type).
+
 ## Agent skills
 
 ### Issue tracker
