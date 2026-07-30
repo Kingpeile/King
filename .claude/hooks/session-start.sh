@@ -59,6 +59,27 @@ else
   fi
 fi
 
+# ---------------------------------------------------------------------------
+# 3) token-saver — local hybrid-RAG MCP server over ./documents.
+#    Core install only: the embedding model downloads from huggingface.co,
+#    which the cloud network policy blocks, so remote sessions run keyword-only.
+#    Local installs get the full hybrid setup via `tools/token-saver/install.sh`.
+# ---------------------------------------------------------------------------
+TS_DIR="${CLAUDE_PROJECT_DIR:-$PWD}/tools/token-saver"
+
+if [ ! -x "$TS_DIR/install.sh" ]; then
+  echo "token-saver: not present in this checkout, skipping"
+elif [ -x "$TS_DIR/.venv/bin/token-saver" ]; then
+  echo "token-saver: already installed, skipping"
+else
+  echo "token-saver: installing (core)..."
+  if "$TS_DIR/install.sh" --core >/dev/null 2>&1; then
+    echo "token-saver: ready (keyword-only)"
+  else
+    echo "token-saver: install failed (continuing)"
+  fi
+fi
+
 # Persist PATH so plain `agent-memory` resolves in this session's shells.
 if [ -n "${CLAUDE_ENV_FILE:-}" ] && [ -w "$(dirname "$CLAUDE_ENV_FILE")" ]; then
   echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$CLAUDE_ENV_FILE"

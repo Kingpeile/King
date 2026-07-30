@@ -1,0 +1,13 @@
+# Your documents stay local — token-saver reads them from disk, never from git.
+documents/*
+!documents/README.md
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+
+# token-saver index cache, if pointed inside the repo
+.token-saver-cache/

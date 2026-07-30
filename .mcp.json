@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "token-saver": {
+      "command": "${CLAUDE_PROJECT_DIR:-.}/tools/token-saver/run.sh",
+      "args": [],
+      "env": {
+        "TOKEN_SAVER_FOLDER": "${CLAUDE_PROJECT_DIR:-.}/documents"
+      }
+    }
+  }
+}

@@ -1,0 +1,32 @@
+[project]
+name = "token-saver"
+version = "1.0.0"
+description = "Local hybrid-RAG MCP server: answer questions about local documents without pasting them into the conversation"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+
+dependencies = [
+    "mcp>=2.0.0",
+    "pypdfium2>=4.30",
+]
+
+[project.optional-dependencies]
+# Semantic half of hybrid retrieval. Optional on purpose: without it the server
+# degrades to keyword-only rather than failing to start.
+embeddings = ["fastembed>=0.4"]
+# Exact token accounting instead of the chars/4 estimate.
+tokens = ["tiktoken>=0.7"]
+# Fallback PDF extractor for files pypdfium2 cannot read.
+pdf-fallback = ["pypdf>=5.0"]
+dev = ["pytest>=8.0", "fpdf2>=2.7"]
+
+[project.scripts]
+token-saver = "token_saver.server:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["token_saver"]
