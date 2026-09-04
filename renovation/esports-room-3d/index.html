@@ -12,56 +12,52 @@
       --text: #f2f2f4;
       --muted: #9a9aa3;
       --accent: #ff3b45;
+      --accent-bg: rgba(255,59,69,.22);
+    }
+    html[data-theme="white"] {
+      --panel: rgba(255, 255, 255, 0.86);
+      --line: rgba(40, 40, 50, 0.12);
+      --text: #1b1c22;
+      --muted: #6b6d78;
+      --accent: #e4291b;
+      --accent-bg: rgba(228,41,27,.12);
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg); font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; color: var(--text); }
     #app { position: fixed; inset: 0; }
     canvas { display: block; width: 100%; height: 100%; }
 
-    .hud {
-      position: fixed; z-index: 10; pointer-events: none;
-      inset: 0;
-    }
+    .hud { position: fixed; z-index: 10; pointer-events: none; inset: 0; }
     .panel {
       pointer-events: auto;
       background: var(--panel);
       border: 1px solid var(--line);
       backdrop-filter: blur(12px);
       border-radius: 14px;
-      box-shadow: 0 12px 40px rgba(0,0,0,.45);
+      box-shadow: 0 12px 40px rgba(0,0,0,.25);
+      color: var(--text);
+      transition: background .3s, color .3s, border-color .3s;
     }
-    .top-left {
-      position: absolute; top: 20px; left: 20px;
-      padding: 16px 18px; max-width: min(360px, calc(100vw - 40px));
-    }
-    .brand {
-      font-size: 11px; letter-spacing: .18em; text-transform: uppercase;
-      color: var(--accent); margin-bottom: 8px;
-    }
+    .top-left { position: absolute; top: 20px; left: 20px; padding: 16px 18px; max-width: min(360px, calc(100vw - 40px)); }
+    .brand { font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
     h1 { font-size: 20px; font-weight: 650; line-height: 1.25; margin-bottom: 6px; }
     .sub { font-size: 13px; color: var(--muted); line-height: 1.5; }
 
-    .controls {
-      position: absolute; right: 20px; top: 20px;
-      display: flex; flex-direction: column; gap: 8px;
-      padding: 12px;
-    }
+    .controls { position: absolute; right: 20px; top: 20px; display: flex; flex-direction: column; gap: 8px; padding: 12px; }
+    .group-label { font-size: 11px; color: var(--muted); letter-spacing: .1em; padding: 4px 4px 0; }
     button {
-      appearance: none; border: 1px solid rgba(255,255,255,.12);
-      background: rgba(255,255,255,.04); color: var(--text);
+      appearance: none; border: 1px solid rgba(127,127,127,.25);
+      background: rgba(127,127,127,.06); color: var(--text);
       border-radius: 10px; padding: 10px 14px; font-size: 13px;
-      cursor: pointer; text-align: left; min-width: 148px;
+      cursor: pointer; text-align: left; min-width: 160px;
       transition: border-color .15s, background .15s;
     }
-    button:hover { border-color: var(--accent); background: rgba(255,59,69,.12); }
-    button.active { border-color: var(--accent); color: #fff; background: rgba(255,59,69,.22); }
+    button:hover { border-color: var(--accent); background: var(--accent-bg); }
+    button.active { border-color: var(--accent); background: var(--accent-bg); }
+    .swatch { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; vertical-align: -1px; border: 1px solid rgba(0,0,0,.2); }
 
-    .hint {
-      position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%);
-      padding: 10px 16px; font-size: 12px; color: var(--muted);
-      white-space: nowrap;
-    }
-    .hint b { color: #ddd; font-weight: 600; }
+    .hint { position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); padding: 10px 16px; font-size: 12px; color: var(--muted); white-space: nowrap; }
+    .hint b { color: var(--text); font-weight: 600; }
 
     @media (max-width: 640px) {
       .controls { top: auto; bottom: 70px; right: 12px; }
@@ -75,11 +71,15 @@
   <div id="app"></div>
   <div class="hud">
     <div class="panel top-left">
-      <div class="brand">Interactive 3D · 深红赛博</div>
+      <div class="brand" id="brand">Interactive 3D</div>
       <h1>电竞房立体模型</h1>
-      <p class="sub">真 3D 可旋转。布局：左墙电竞桌，卡座在椅背正后方（对面墙）。</p>
+      <p class="sub">真 3D 可旋转。左墙电竞桌，卡座书架在椅背正后方。两套配色一键切换。</p>
     </div>
     <div class="panel controls">
+      <div class="group-label">配色</div>
+      <button data-theme="red"><span class="swatch" style="background:#ff2a36"></span>深红赛博</button>
+      <button data-theme="white"><span class="swatch" style="background:#fff"></span>白色马里奥</button>
+      <div class="group-label">视角</div>
       <button id="btn-orbit" class="active">环视旋转</button>
       <button id="btn-walk">走进房间</button>
       <button id="btn-entrance">门口视角</button>
