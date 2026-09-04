@@ -1,0 +1,16 @@
+import { chromium } from 'playwright';
+const browser = await chromium.launch({ headless: true, args: ['--use-gl=angle','--use-angle=swiftshader','--enable-webgl','--ignore-gpu-blocklist'] });
+const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+page.on('pageerror', e => console.log('[pageerror]', e.message));
+const waitFrames = async (n) => { const base = await page.evaluate(() => window.__frames || 0); await page.waitForFunction((t) => (window.__frames||0) >= t, base + n, { timeout: 120000 }); };
+await page.goto('http://127.0.0.1:5173/', { waitUntil: 'load', timeout: 90000 });
+await waitFrames(4);
+await page.screenshot({ path: '/opt/cursor/artifacts/esports_3d_v3_entrance.png' });
+await page.click('#btn-overview'); await waitFrames(4);
+await page.screenshot({ path: '/opt/cursor/artifacts/esports_3d_v3_overview.png' });
+await page.evaluate(() => window.dispatchEvent(new CustomEvent('debug-cam', { detail: { pos: [-1.2, 1.4, 0.9], target: [1.6, 0.9, -0.3] } }))); await waitFrames(4);
+await page.screenshot({ path: '/opt/cursor/artifacts/esports_3d_v3_booth.png' });
+await page.evaluate(() => window.dispatchEvent(new CustomEvent('debug-cam', { detail: { pos: [0.9, 1.3, 0.2], target: [-2.2, 1.0, 0.2] } }))); await waitFrames(4);
+await page.screenshot({ path: '/opt/cursor/artifacts/esports_3d_v3_desks.png' });
+console.log('ok');
+await browser.close();
