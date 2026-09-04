@@ -24,6 +24,31 @@ RectAreaLightUniformsLib.init();
 const app = document.getElementById('app');
 const hint = document.getElementById('hint');
 
+function showFatal(title, detail) {
+  const el = document.createElement('div');
+  el.style.cssText = 'position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:50;padding:24px;text-align:center;color:#f2f2f4;font-family:sans-serif;background:rgba(5,5,6,.92)';
+  el.innerHTML = `<div><div style="font-size:20px;font-weight:650;margin-bottom:10px">${title}</div><div style="color:#9a9aa3;font-size:14px;line-height:1.6;max-width:520px">${detail}</div></div>`;
+  document.body.appendChild(el);
+}
+
+function webglAvailable() {
+  try {
+    const c = document.createElement('canvas');
+    return !!(c.getContext('webgl2') || c.getContext('webgl'));
+  } catch {
+    return false;
+  }
+}
+
+if (!webglAvailable()) {
+  showFatal('浏览器未开启 WebGL', '3D 需要 WebGL。请在 Chrome 打开 chrome://settings/system 勾选「使用图形加速」，或在 chrome://flags 搜索 WebGL 并启用，然后重启浏览器。');
+  throw new Error('WebGL unavailable');
+}
+
+window.addEventListener('error', (e) => {
+  showFatal('3D 场景加载出错', String(e.message || e.error || '未知错误'));
+});
+
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -36,15 +61,15 @@ app.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x050506);
-scene.fog = new THREE.FogExp2(0x050506, 0.04);
+scene.fog = new THREE.FogExp2(0x050506, 0.018);
 
 const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.05, 40);
 
 const orbit = new OrbitControls(camera, renderer.domElement);
 orbit.enableDamping = true;
 orbit.dampingFactor = 0.06;
-orbit.minDistance = 1.2;
-orbit.maxDistance = 9;
+orbit.minDistance = 0.6;
+orbit.maxDistance = 12;
 orbit.maxPolarAngle = Math.PI * 0.49;
 orbit.target.set(0, 1.05, 0);
 
@@ -71,19 +96,18 @@ function setMode(next) {
 
 document.getElementById('btn-orbit').onclick = () => setMode('orbit');
 document.getElementById('btn-walk').onclick = () => setMode('walk');
-document.getElementById('btn-entrance').onclick = () => {
+const ENTRANCE_CAM = { pos: [1.35, 1.5, 1.55], target: [-0.6, 1.0, -0.6] };
+const OVERVIEW_CAM = { pos: [3.2, 4.4, 3.4], target: [0, 0.6, 0] };
+
+function flyTo({ pos, target }) {
   setMode('orbit');
-  // From door (+Z,+X) looking in: desks left, 卡座 behind chairs on the right
-  camera.position.set(1.55, 1.55, 2.45);
-  orbit.target.set(-0.2, 1.05, -0.15);
+  camera.position.set(...pos);
+  orbit.target.set(...target);
   orbit.update();
-};
-document.getElementById('btn-overview').onclick = () => {
-  setMode('orbit');
-  camera.position.set(0.2, 4.6, 0.15);
-  orbit.target.set(0.2, 0, 0.15);
-  orbit.update();
-};
+}
+
+document.getElementById('btn-entrance').onclick = () => flyTo(ENTRANCE_CAM);
+document.getElementById('btn-overview').onclick = () => flyTo(OVERVIEW_CAM);
 
 window.addEventListener('keydown', (e) => {
   switch (e.code) {
@@ -137,16 +161,24 @@ function makeRoomShell() {
   const ceilingMat = mat({ color: 0xe8e8ea, metalness: 0.05, roughness: 0.85 });
 
   group.add(box(ROOM_W, 0.06, ROOM_D, floorMat, 0, 0.03, 0));
-  group.add(box(ROOM_W, 0.06, ROOM_D, ceilingMat, 0, ROOM_H - 0.03, 0));
 
-  const t = 0.08;
-  group.add(box(t, ROOM_H, ROOM_D, wallMat, -ROOM_W / 2 + t / 2, ROOM_H / 2, 0));
-  group.add(box(t, ROOM_H, ROOM_D, wallMat, ROOM_W / 2 - t / 2, ROOM_H / 2, 0));
-  group.add(box(ROOM_W, ROOM_H, t, wallMat, 0, ROOM_H / 2, -ROOM_D / 2 + t / 2));
-  group.add(box(ROOM_W, ROOM_H, t, darkMat, 0, ROOM_H / 2, ROOM_D / 2 - t / 2));
+  // Walls & ceiling are single-sided planes facing INTO the room, so when the
+  // camera orbits outside they are culled and you can look in (dollhouse view).
+  function wallPlane(w, h, material, x, y, z, rotY = 0, rotX = 0) {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), material);
+    m.position.set(x, y, z);
+    m.rotation.set(rotX, rotY, 0);
+    m.receiveShadow = true;
+    return m;
+  }
+  group.add(wallPlane(ROOM_W, ROOM_D, ceilingMat, 0, ROOM_H, 0, 0, Math.PI / 2)); // faces down
+  group.add(wallPlane(ROOM_D, ROOM_H, wallMat, -ROOM_W / 2, ROOM_H / 2, 0, Math.PI / 2)); // left, faces +X
+  group.add(wallPlane(ROOM_D, ROOM_H, wallMat, ROOM_W / 2, ROOM_H / 2, 0, -Math.PI / 2)); // right, faces -X
+  group.add(wallPlane(ROOM_W, ROOM_H, wallMat, 0, ROOM_H / 2, -ROOM_D / 2, 0)); // far, faces +Z
+  group.add(wallPlane(ROOM_W, ROOM_H, darkMat, 0, ROOM_H / 2, ROOM_D / 2, Math.PI)); // entrance, faces -Z
 
   // Door leaf at bottom-right
-  group.add(box(0.06, 2.1, 0.85, mat({ color: 0x1a1a1e, metalness: 0.3, roughness: 0.5 }), ROOM_W / 2 - 0.5, 1.05, ROOM_D / 2 - 0.04));
+  group.add(box(0.06, 2.1, 0.85, mat({ color: 0x1a1a1e, metalness: 0.3, roughness: 0.5 }), ROOM_W / 2 - 0.5, 1.05, ROOM_D / 2 - 0.45));
 
   const coveY = ROOM_H - 0.12;
   [[-ROOM_W / 2 + 0.12, 0, 'z', ROOM_D - 0.3],
@@ -371,7 +403,9 @@ function setupLights() {
   key.shadow.bias = -0.0002;
   scene.add(key);
 
-  scene.add(Object.assign(new THREE.PointLight(RED, 8, 8, 2), { position: new THREE.Vector3(0.2, 2.1, 0) }));
+  const redFill = new THREE.PointLight(RED, 8, 8, 2);
+  redFill.position.set(0.2, 2.1, 0);
+  scene.add(redFill);
 
   const deskWash = new THREE.RectAreaLight(0xff4450, 6, 0.12, 3.0);
   deskWash.position.set(-ROOM_W / 2 + 0.2, 2.2, 0.1);
@@ -411,9 +445,7 @@ room.add(box(0.22, 0.48, 0.42, mat({
 scene.add(room);
 setupLights();
 
-camera.position.set(1.55, 1.55, 2.45);
-orbit.target.set(-0.2, 1.05, -0.15);
-orbit.update();
+flyTo(ENTRANCE_CAM);
 
 function updateWalk(dt) {
   if (mode !== 'walk' || !walk.isLocked) return;
