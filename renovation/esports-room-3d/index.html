@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>电竞房 · 可交互 3D</title>
+  <style>
+    :root {
+      --bg: #0a0a0c;
+      --panel: rgba(12, 12, 16, 0.82);
+      --line: rgba(255, 60, 70, 0.55);
+      --text: #f2f2f4;
+      --muted: #9a9aa3;
+      --accent: #ff3b45;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg); font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; color: var(--text); }
+    #app { position: fixed; inset: 0; }
+    canvas { display: block; width: 100%; height: 100%; }
+
+    .hud {
+      position: fixed; z-index: 10; pointer-events: none;
+      inset: 0;
+    }
+    .panel {
+      pointer-events: auto;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      backdrop-filter: blur(12px);
+      border-radius: 14px;
+      box-shadow: 0 12px 40px rgba(0,0,0,.45);
+    }
+    .top-left {
+      position: absolute; top: 20px; left: 20px;
+      padding: 16px 18px; max-width: min(360px, calc(100vw - 40px));
+    }
+    .brand {
+      font-size: 11px; letter-spacing: .18em; text-transform: uppercase;
+      color: var(--accent); margin-bottom: 8px;
+    }
+    h1 { font-size: 20px; font-weight: 650; line-height: 1.25; margin-bottom: 6px; }
+    .sub { font-size: 13px; color: var(--muted); line-height: 1.5; }
+
+    .controls {
+      position: absolute; right: 20px; top: 20px;
+      display: flex; flex-direction: column; gap: 8px;
+      padding: 12px;
+    }
+    button {
+      appearance: none; border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.04); color: var(--text);
+      border-radius: 10px; padding: 10px 14px; font-size: 13px;
+      cursor: pointer; text-align: left; min-width: 148px;
+      transition: border-color .15s, background .15s;
+    }
+    button:hover { border-color: var(--accent); background: rgba(255,59,69,.12); }
+    button.active { border-color: var(--accent); color: #fff; background: rgba(255,59,69,.22); }
+
+    .hint {
+      position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%);
+      padding: 10px 16px; font-size: 12px; color: var(--muted);
+      white-space: nowrap;
+    }
+    .hint b { color: #ddd; font-weight: 600; }
+
+    @media (max-width: 640px) {
+      .controls { top: auto; bottom: 70px; right: 12px; }
+      .top-left { top: 12px; left: 12px; padding: 12px 14px; }
+      h1 { font-size: 17px; }
+      .hint { font-size: 11px; bottom: 14px; white-space: normal; text-align: center; max-width: 90vw; }
+    }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <div class="hud">
+    <div class="panel top-left">
+      <div class="brand">Interactive 3D · 深红赛博</div>
+      <h1>电竞房立体模型</h1>
+      <p class="sub">真 3D 可旋转。布局：左墙电竞桌，卡座在椅背正后方（对面墙）。</p>
+    </div>
+    <div class="panel controls">
+      <button id="btn-orbit" class="active">环视旋转</button>
+      <button id="btn-walk">走进房间</button>
+      <button id="btn-entrance">门口视角</button>
+      <button id="btn-overview">俯视走向</button>
+    </div>
+    <div class="panel hint" id="hint">
+      <b>拖拽</b> 旋转 · <b>滚轮</b> 缩放 · <b>右键拖拽</b> 平移
+    </div>
+  </div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
