@@ -528,6 +528,123 @@ export function rugStripes(base = '#22232a', lo = 26) {
   return toTexture(c, { clamp: true });
 }
 
+/* ────────────────────────────────────────────
+   Mario world set
+──────────────────────────────────────────── */
+
+function drawPipe(g, x, groundY, w, h) {
+  g.fillStyle = '#2fa84f';
+  g.fillRect(x + w * 0.08, groundY - h, w * 0.84, h);
+  g.fillRect(x, groundY - h, w, h * 0.22);
+  g.fillStyle = '#1b6e31';
+  g.fillRect(x + w * 0.72, groundY - h, w * 0.2, h);
+  g.fillRect(x + w * 0.78, groundY - h, w * 0.14, h * 0.22);
+  g.fillStyle = '#8ee59b';
+  g.fillRect(x + w * 0.16, groundY - h, w * 0.1, h);
+}
+
+/** Outside view for the bay window: Mushroom Kingdom — sky, clouds, hills, pipes, blocks, castle. */
+export function marioSkyline() {
+  const [c, g] = canvas(2048, 1024);
+  const sky = g.createLinearGradient(0, 0, 0, 760);
+  sky.addColorStop(0, '#4f8bf7');
+  sky.addColorStop(1, '#a9d1ff');
+  g.fillStyle = sky;
+  g.fillRect(0, 0, 2048, 1024);
+  // clouds
+  g.fillStyle = '#ffffff';
+  for (let i = 0; i < 10; i++) {
+    const x = 60 + i * 210 + rand() * 60;
+    const y = 90 + rand() * 220;
+    const s = 0.8 + rand() * 0.7;
+    for (const [dx, dy, r] of [[0, 0, 42], [46, -14, 52], [96, 0, 42], [46, 20, 46]]) {
+      g.beginPath(); g.arc(x + dx * s, y + dy * s, r * s, 0, Math.PI * 2); g.fill();
+    }
+  }
+  const ground = 760;
+  // far hills
+  for (let i = 0; i < 6; i++) {
+    const x = 120 + i * 380 + rand() * 80;
+    const r = 160 + rand() * 120;
+    g.fillStyle = i % 2 ? '#3cb043' : '#2f9a3a';
+    g.beginPath(); g.arc(x, ground + 20, r, Math.PI, 0); g.fill();
+    // hill eyes
+    g.fillStyle = '#0d3d17';
+    g.fillRect(x - r * 0.28, ground - r * 0.55, 10, 30);
+    g.fillRect(x + r * 0.18, ground - r * 0.55, 10, 30);
+  }
+  // castle silhouette
+  g.fillStyle = '#8a8f9a';
+  g.fillRect(1420, ground - 220, 260, 220);
+  for (let x = 1420; x < 1680; x += 52) g.fillRect(x, ground - 250, 30, 30);
+  g.fillRect(1500, ground - 330, 100, 110);
+  for (let x = 1500; x < 1600; x += 34) g.fillRect(x, ground - 358, 20, 28);
+  g.fillStyle = '#22252b';
+  g.fillRect(1530, ground - 80, 40, 80);
+  // pipes + block rows
+  drawPipe(g, 260, ground, 120, 210);
+  drawPipe(g, 1180, ground, 120, 150);
+  for (let i = 0; i < 5; i++) {
+    const x = 640 + i * 96;
+    if (i % 2) drawQuestion(g, x, ground - 420, 88);
+    else {
+      g.fillStyle = '#c84c0c'; g.fillRect(x, ground - 420, 88, 88);
+      g.strokeStyle = '#7a2a00'; g.lineWidth = 5;
+      g.strokeRect(x, ground - 420, 88, 44); g.strokeRect(x, ground - 376, 88, 44);
+      g.beginPath(); g.moveTo(x + 44, ground - 420); g.lineTo(x + 44, ground - 376); g.stroke();
+      g.beginPath(); g.moveTo(x + 22, ground - 376); g.lineTo(x + 22, ground - 332); g.moveTo(x + 66, ground - 376); g.lineTo(x + 66, ground - 332); g.stroke();
+    }
+  }
+  // ground bricks
+  g.fillStyle = '#c84c0c';
+  g.fillRect(0, ground, 2048, 264);
+  g.strokeStyle = '#7a2a00';
+  g.lineWidth = 4;
+  for (let y = ground; y < 1024; y += 48) {
+    for (let x = ((y - ground) / 48) % 2 ? -48 : 0; x < 2048; x += 96) g.strokeRect(x, y, 96, 48);
+  }
+  return toTexture(c, { clamp: true });
+}
+
+/** Round coin rug (use on a disc): gold with a pixel bevel and slot. */
+export function coinRug() {
+  const [c, g] = canvas(512, 512);
+  g.clearRect(0, 0, 512, 512);
+  g.fillStyle = '#e39b00';
+  g.beginPath(); g.arc(256, 256, 250, 0, Math.PI * 2); g.fill();
+  g.fillStyle = '#ffcb2f';
+  g.beginPath(); g.arc(256, 256, 214, 0, Math.PI * 2); g.fill();
+  g.fillStyle = '#fff3b0';
+  g.beginPath(); g.arc(230, 220, 150, Math.PI * 0.95, Math.PI * 1.55); g.lineTo(256, 256); g.fill();
+  g.fillStyle = '#e39b00';
+  g.beginPath(); g.roundRect(216, 120, 80, 272, 30); g.fill();
+  g.fillStyle = '#ffcb2f';
+  g.beginPath(); g.roundRect(232, 136, 48, 240, 20); g.fill();
+  for (let i = 0; i < 6000; i++) {
+    g.fillStyle = `rgba(120,80,0,${rand() * 0.12})`;
+    g.fillRect(rand() * 512, rand() * 512, 3, 3);
+  }
+  return toTexture(c, { clamp: true });
+}
+
+/** Pixel-style player sign (P1 / P2) with glow, transparent background. */
+export function playerSign(text = 'P1', color = '#e4291b') {
+  const [c, g] = canvas(512, 256);
+  g.clearRect(0, 0, 512, 256);
+  g.font = 'bold 150px "Courier New", monospace';
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.shadowColor = color;
+  g.shadowBlur = 30;
+  g.fillStyle = color;
+  g.fillText(text, 256, 118);
+  g.shadowBlur = 0;
+  g.fillStyle = '#ffffff';
+  g.font = 'bold 34px "Courier New", monospace';
+  g.fillText('PLAYER ' + text.slice(1) + ' READY', 256, 222);
+  return toTexture(c, { clamp: true });
+}
+
 /** Wired (夹丝) safety glass: faint tint with a fine wire grid; alpha in the map. */
 export function wireGlass() {
   const [c, g] = canvas(256, 256);

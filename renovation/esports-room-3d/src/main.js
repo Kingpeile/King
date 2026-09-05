@@ -248,6 +248,13 @@ function buildShell(T, tex) {
     rug.position.set(0.3, 0.008, -0.45);
     rug.receiveShadow = true;
     g.add(rug);
+  } else if (T.mario) {
+    // giant coin rug
+    const rug = new THREE.Mesh(new THREE.CircleGeometry(0.85, 72), new THREE.MeshStandardMaterial({ map: tex.rug, transparent: true, roughness: 1 }));
+    rug.rotation.x = -Math.PI / 2;
+    rug.position.set(0.3, 0.008, -0.45);
+    rug.receiveShadow = true;
+    g.add(rug);
   } else {
     const rug = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 0.02, 64), new THREE.MeshStandardMaterial({ map: tex.rug, roughness: 1 }));
     rug.position.set(0.3, 0.01, -0.45);
@@ -313,20 +320,36 @@ function buildFurniture(T, tex) {
     pegFrame.position.set(-W / 2 + 0.02, 2.36, 0);
     g.add(pegFrame);
     if (style === 'mario') {
-      [[0xe4291b, 1.7, -1.3, 0.4, 0.22], [0xffffff, 1.35, 1.35, 0.3, 0.2], [0xf7b515, 1.45, 0.0, 0.26, 0.18], [0x2fa84f, 1.85, 1.2, 0.3, 0.2], [0x2f7be5, 2.15, -0.15, 0.22, 0.16]].forEach(([c, y, z, w, h]) => {
+      // P1 / P2 signs above each desk
+      DESK_Z.forEach((z, i) => {
+        const sign = F.wallLogoPlane(tex.signs[i], 0.8);
+        sign.position.set(-W / 2 + 0.03, 1.95, z);
+        sign.rotation.y = Math.PI / 2;
+        g.add(sign);
+      });
+      // brick + ? block row between the two setups, star on top
+      [-0.36, -0.18, 0.0, 0.18, 0.36].forEach((z, i) => {
+        const b = i % 2 ? F.questionBlock(0.17) : F.brickBlock(0.17);
+        b.position.set(-W / 2 + 0.1, 1.62, z);
+        g.add(b);
+      });
+      const st = F.star(0.09);
+      st.position.set(-W / 2 + 0.12, 1.82, 0);
+      st.rotation.y = Math.PI / 2;
+      g.add(st);
+      // colourful modules on the pegboard
+      [[0xe4291b, 1.25, -1.45, 0.3, 0.2], [0x2f7be5, 2.2, -0.9, 0.24, 0.16], [0xf7b515, 2.2, 0.85, 0.24, 0.16], [0x2fa84f, 1.25, 1.45, 0.3, 0.2]].forEach(([c, y, z, w, h]) => {
         const m = F.pegModule(c, w, h);
         m.position.set(-W / 2 + 0.015, y, z);
         g.add(m);
       });
-      [-0.18, 0.0, 0.18].forEach((z, i) => {
-        const b = i === 1 ? F.questionBlock(0.17) : F.brickBlock(0.17);
-        b.position.set(-W / 2 + 0.1, 1.75, z);
-        g.add(b);
-      });
-      const st = F.star(0.09);
-      st.position.set(-W / 2 + 0.12, 2.05, 0);
-      st.rotation.y = Math.PI / 2;
-      g.add(st);
+      // warp pipe with a piranha plant in the NW corner beside the window
+      const pipe = F.warpPipe(0.55, 0.13);
+      pipe.position.set(-W / 2 + 0.15, 0, -1.72);
+      g.add(pipe);
+      const plant = F.piranhaPlant(0.09);
+      plant.position.set(-W / 2 + 0.15, 0.55, -1.72);
+      g.add(plant);
     } else {
       const logo = F.wallLogoPlane(tex.logo, 0.95);
       logo.position.set(-W / 2 + 0.03, 1.95, 0);
@@ -364,7 +387,7 @@ function buildFurniture(T, tex) {
   });
 
   // table for the booth
-  const table = style === 'ferrari' ? F.rimTable(0.32, 0.5) : F.roundTable(0.3, 0.5);
+  const table = style === 'ferrari' ? F.rimTable(0.32, 0.5) : style === 'mario' ? F.mushroomTable(0.34, 0.5) : F.roundTable(0.3, 0.5);
   table.position.set(TABLE[0], 0, TABLE[1]);
   g.add(table);
 
@@ -423,14 +446,25 @@ function buildFurniture(T, tex) {
       g.add(h);
     });
   } else if (style === 'mario') {
+    // white backlit panel with a big ? block + brick stack, pipe with 1-UP by the door
+    const lp = F.litPanel(0.9, 0.9, 0.04, F.M.marioBlue);
+    lp.rotation.y = -Math.PI / 2;
+    lp.position.set(ex - 0.03, 1.6, ez);
+    g.add(lp);
+    const bigQ = F.questionBlock(0.34);
+    bigQ.position.set(ex - 0.23, 1.43, ez);
+    g.add(bigQ);
     const pipe = F.warpPipe(0.62, 0.15);
-    pipe.position.set(ex - 0.3, 0, ez);
+    pipe.position.set(ex - 0.3, 0, ez + 0.05);
     g.add(pipe);
-    const plant = F.mushroom(0.09);
-    plant.position.set(ex - 0.3, 0.62, ez);
-    g.add(plant);
-    const b1 = F.brickBlock(0.2); b1.position.set(ex - 0.25, 0, ez + 0.5); g.add(b1);
-    const b2 = F.questionBlock(0.2); b2.position.set(ex - 0.25, 0.2, ez + 0.5); g.add(b2);
+    const oneUp = F.mushroom(0.09, 0x2fa84f);
+    oneUp.position.set(ex - 0.3, 0.62, ez + 0.05);
+    g.add(oneUp);
+    [[0, 0], [0.2, 0], [0.1, 0.2]].forEach(([dz, dy], i) => {
+      const b = i === 2 ? F.questionBlock(0.2) : F.brickBlock(0.2);
+      b.position.set(ex - 0.25, dy, ez - 0.55 + dz);
+      g.add(b);
+    });
   } else {
     const lamp = F.tetrisLamp();
     lamp.position.set(ex - 0.3, 0, ez - 0.1);
@@ -556,12 +590,13 @@ function buildScene(T) {
     floor: TX.floorTiles([3, 3.5], T.floorBase, T.floorGrout, T.floorVein),
     peg: TX.pegboard([5, 2.4], T.pegBase, T.pegHole),
     screen: ferrari ? TX.ferrariWallpaper() : T.mario ? TX.marioWallpaper() : TX.screenWallpaper(),
-    view: ferrari ? TX.skylineDusk() : TX.windowView(),
+    view: ferrari ? TX.skylineDusk() : T.mario ? TX.marioSkyline() : TX.windowView(),
     logo: TX.wallLogo('WE', '#ff2a36'),
     wordmark: TX.wallLogo('ROSSO CORSA', '#ff2222', 150),
     emblem: TX.ferrariEmblem(),
+    signs: T.mario ? [TX.playerSign('P1', '#e4291b'), TX.playerSign('P2', '#2fa84f')] : [],
     keys: T.mario ? TX.keyboardTop('#e9eaee', '#f7f7f9', 'rgba(255,255,255,0.6)') : TX.keyboardTop(),
-    rug: ferrari ? TX.rugStripes(T.rugBase, T.rugLo) : TX.rugFabric([4, 4], T.rugBase, T.rugLo),
+    rug: ferrari ? TX.rugStripes(T.rugBase, T.rugLo) : T.mario ? TX.coinRug() : TX.rugFabric([4, 4], T.rugBase, T.rugLo),
     wire: TX.wireGlass(),
   };
   const root = new THREE.Group();

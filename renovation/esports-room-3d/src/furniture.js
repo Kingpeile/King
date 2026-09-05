@@ -729,6 +729,54 @@ export function warpPipe(height = 0.6, r = 0.16) {
   return g;
 }
 
+/** Mushroom coffee table: cream stem, flattened red cap with spots, glass disc on top; origin at floor. */
+export function mushroomTable(R = 0.34, h = 0.5) {
+  const g = new THREE.Group();
+  const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.16, h - 0.12, 32), M.marioCream);
+  stem.position.y = (h - 0.12) / 2;
+  stem.castShadow = true;
+  g.add(stem);
+  for (const s of [-1, 1]) {
+    const eye = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.08, 0.012), M.blackMatte);
+    eye.position.set(s * 0.05, h * 0.5, 0.135);
+    g.add(eye);
+  }
+  const cap = new THREE.Mesh(new THREE.SphereGeometry(R, 48, 24, 0, Math.PI * 2, 0, Math.PI * 0.5), new THREE.MeshPhysicalMaterial({ map: capTex(), roughness: 0.3, clearcoat: 0.8 }));
+  cap.scale.set(1, 0.36, 1);
+  cap.position.y = h - 0.12;
+  cap.castShadow = true;
+  g.add(cap);
+  const rim = new THREE.Mesh(new THREE.CylinderGeometry(R, R, 0.03, 48), M.marioRed);
+  rim.position.y = h - 0.12;
+  g.add(rim);
+  const top = new THREE.Mesh(new THREE.CylinderGeometry(R * 0.72, R * 0.72, 0.012, 64), M.glass);
+  top.position.y = h;
+  g.add(top);
+  return g;
+}
+
+/** Piranha plant poking out of a pipe; origin at the pipe mouth. */
+export function piranhaPlant(size = 0.1) {
+  const g = new THREE.Group();
+  const stem = new THREE.Mesh(new THREE.CylinderGeometry(size * 0.2, size * 0.22, size * 1.6, 16), M.marioGreen);
+  stem.position.y = size * 0.8;
+  g.add(stem);
+  for (const s of [-1, 1]) {
+    const leaf = new THREE.Mesh(new THREE.SphereGeometry(size * 0.35, 16, 10), M.marioGreen);
+    leaf.scale.set(1.6, 0.25, 0.8);
+    leaf.position.set(s * size * 0.45, size * 0.5, 0);
+    g.add(leaf);
+  }
+  const head = new THREE.Mesh(new THREE.SphereGeometry(size * 0.55, 32, 20), new THREE.MeshPhysicalMaterial({ map: capTex(), roughness: 0.3, clearcoat: 0.8 }));
+  head.position.y = size * 1.9;
+  head.castShadow = true;
+  g.add(head);
+  const mouth = new THREE.Mesh(new THREE.SphereGeometry(size * 0.5, 24, 12, 0, Math.PI, Math.PI * 0.35, Math.PI * 0.3), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.7 }));
+  mouth.position.set(0, size * 1.9, size * 0.08);
+  g.add(mouth);
+  return g;
+}
+
 /** Colourful modular wall pocket (reference: rounded detachable modules). Front faces +X. */
 export function pegModule(color, w = 0.32, h = 0.2, d = 0.14) {
   const g = new THREE.Group();
@@ -910,9 +958,9 @@ export function pillow(w, h, mat, { yaw = 0, lean = 0 } = {}) {
 }
 
 /** Backlit black panel facing +Z with an LED halo behind. */
-export function litPanel(w, h, d = 0.04) {
+export function litPanel(w, h, d = 0.04, mat = null) {
   const g = new THREE.Group();
-  g.add(rbox(w, h, d, M.blackGloss, 0.01));
+  g.add(rbox(w, h, d, mat || M.blackGloss, 0.01));
   const top = ledStrip(w, 'x'); top.position.set(0, h / 2 + 0.01, -d / 2); g.add(top);
   const bot = ledStrip(w, 'x'); bot.position.set(0, -h / 2 - 0.01, -d / 2); g.add(bot);
   const l = ledStrip(h, 'y'); l.position.set(-w / 2 - 0.01, 0, -d / 2); g.add(l);
@@ -968,7 +1016,7 @@ export function bayWindow({ width = 2.2, height = 1.85, sillY = 0.45, depth = 0.
     c.castShadow = true;
     g.add(c);
     if (F) g.add(at(rbox(width - 0.14, 0.012, 0.012, M.rosso, 0.004), 0, sillY + 0.115, 0.0));
-    const pillowMats = F ? [M.rossoSoft, M.gialloSoft, M.leather] : THEME.mario ? [M.marioRed, M.marioYellow, M.cushion] : [M.accent, M.cushion, M.cushion];
+    const pillowMats = F ? [M.rossoSoft, M.gialloSoft, M.leather] : THEME.mario ? [M.marioRed, M.marioYellow, M.marioGreen] : [M.accent, M.cushion, M.cushion];
     [[-width / 2 + 0.3, 0, 0.15], [-width / 2 + 0.62, 1, -0.1], [width / 2 - 0.35, 2, 0.1], [width / 2 - 0.68, 0, -0.15]].forEach(([x, k, yaw], i) => {
       const p = pillow(0.38, 0.36, pillowMats[k], { yaw, lean: -(0.28 + (i % 2) * 0.08) });
       p.position.set(x, sillY + 0.12, -depth + 0.13 + (i % 2) * 0.1);
