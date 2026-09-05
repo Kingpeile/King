@@ -263,10 +263,10 @@ export function windowView() {
 }
 
 /** Glowing wall logo text on transparent background. */
-export function wallLogo(text = 'WE', color = '#ff2a36') {
+export function wallLogo(text = 'WE', color = '#ff2a36', fontPx = 340) {
   const [c, g] = canvas(1024, 512);
   g.clearRect(0, 0, 1024, 512);
-  g.font = 'bold 340px "Arial Black", Arial, sans-serif';
+  g.font = `italic 900 ${fontPx}px "Arial Black", Arial, sans-serif`;
   g.textAlign = 'center';
   g.textBaseline = 'middle';
   g.shadowColor = color;
@@ -307,4 +307,238 @@ export function rugFabric(repeat = [4, 4], base = '#2a2b31', lo = 30) {
     g.fillRect(rand() * 256, rand() * 256, 2, 2);
   }
   return toTexture(c, { repeat });
+}
+
+/* ────────────────────────────────────────────
+   Ferrari / Rosso Corsa set
+──────────────────────────────────────────── */
+
+/** 2x2 twill carbon fibre weave. */
+export function carbonFiber(repeat = [8, 8]) {
+  const [c, g] = canvas(256, 256);
+  const cell = 32;
+  for (let y = 0; y < 256; y += cell) {
+    for (let x = 0; x < 256; x += cell) {
+      const horiz = ((x / cell + y / cell) % 2) === 0;
+      const grad = horiz ? g.createLinearGradient(x, y, x, y + cell) : g.createLinearGradient(x, y, x + cell, y);
+      grad.addColorStop(0, '#0b0b0d');
+      grad.addColorStop(0.5, horiz ? '#3d3f46' : '#26282d');
+      grad.addColorStop(1, '#0b0b0d');
+      g.fillStyle = grad;
+      g.fillRect(x, y, cell, cell);
+      g.strokeStyle = 'rgba(255,255,255,0.06)';
+      g.lineWidth = 1;
+      for (let k = 3; k < cell; k += 5) {
+        g.beginPath();
+        if (horiz) { g.moveTo(x, y + k); g.lineTo(x + cell, y + k); } else { g.moveTo(x + k, y); g.lineTo(x + k, y + cell); }
+        g.stroke();
+      }
+    }
+  }
+  return { map: toTexture(c, { repeat }) };
+}
+
+function drawCarSide(g, L, color) {
+  const s = L / 600;
+  g.scale(s, s);
+  g.fillStyle = color;
+  g.beginPath();
+  g.moveTo(8, 165);
+  g.lineTo(4, 125);
+  g.quadraticCurveTo(10, 100, 70, 96);
+  g.quadraticCurveTo(150, 84, 215, 50);
+  g.quadraticCurveTo(290, 30, 360, 46);
+  g.quadraticCurveTo(440, 72, 505, 98);
+  g.quadraticCurveTo(570, 108, 596, 138);
+  g.lineTo(598, 165);
+  g.closePath();
+  g.fill();
+  const hl = g.createLinearGradient(0, 40, 0, 165);
+  hl.addColorStop(0, 'rgba(255,255,255,0.28)');
+  hl.addColorStop(0.55, 'rgba(255,255,255,0)');
+  g.fillStyle = hl;
+  g.fill();
+  g.fillStyle = '#0c0c10';
+  g.beginPath();
+  g.moveTo(228, 58);
+  g.quadraticCurveTo(290, 40, 355, 54);
+  g.quadraticCurveTo(420, 76, 468, 96);
+  g.lineTo(242, 96);
+  g.quadraticCurveTo(205, 92, 228, 58);
+  g.fill();
+  for (const x of [125, 480]) {
+    g.fillStyle = '#050000';
+    g.beginPath(); g.arc(x, 160, 48, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#111114';
+    g.beginPath(); g.arc(x, 165, 42, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#8d8f95';
+    g.beginPath(); g.arc(x, 165, 26, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = '#3a3a3f';
+    g.lineWidth = 4;
+    for (let k = 0; k < 5; k++) {
+      const a = (k / 5) * Math.PI * 2;
+      g.beginPath(); g.moveTo(x, 165); g.lineTo(x + Math.cos(a) * 24, 165 + Math.sin(a) * 24); g.stroke();
+    }
+    g.fillStyle = '#2a2a2e';
+    g.beginPath(); g.arc(x, 165, 8, 0, Math.PI * 2); g.fill();
+  }
+  g.fillStyle = '#ffe9a8';
+  g.beginPath(); g.ellipse(560, 122, 22, 7, -0.25, 0, Math.PI * 2); g.fill();
+  g.fillStyle = '#ff3b3b';
+  g.fillRect(6, 118, 22, 10);
+}
+
+/** Monitor wallpaper: red GT silhouette, speed lines, ROSSO CORSA wordmark. */
+export function ferrariWallpaper() {
+  const [c, g] = canvas(1024, 576);
+  const bg = g.createRadialGradient(512, 300, 60, 512, 300, 720);
+  bg.addColorStop(0, '#5a0006');
+  bg.addColorStop(0.6, '#1a0002');
+  bg.addColorStop(1, '#050000');
+  g.fillStyle = bg;
+  g.fillRect(0, 0, 1024, 576);
+  g.strokeStyle = 'rgba(255,255,255,0.07)';
+  g.lineWidth = 2;
+  for (let i = 0; i < 18; i++) {
+    const y = 120 + rand() * 340;
+    g.beginPath(); g.moveTo(0, y); g.lineTo(200 + rand() * 700, y); g.stroke();
+  }
+  g.save();
+  g.translate(212, 220);
+  drawCarSide(g, 600, '#e40000');
+  g.restore();
+  g.font = 'italic 900 64px "Arial Black", Arial, sans-serif';
+  g.textAlign = 'center';
+  g.fillStyle = '#ffffff';
+  g.fillText('ROSSO CORSA', 512, 500);
+  g.font = '24px Arial';
+  g.fillStyle = '#ffd400';
+  g.fillText('GAMING ROOM  ·  SCUDERIA EDITION', 512, 540);
+  return toTexture(c, { clamp: true });
+}
+
+/** Yellow shield emblem with tricolour band (transparent background). */
+export function ferrariEmblem() {
+  const [c, g] = canvas(512, 640);
+  g.clearRect(0, 0, 512, 640);
+  const shield = () => {
+    g.beginPath();
+    g.moveTo(40, 30);
+    g.lineTo(472, 30);
+    g.lineTo(472, 330);
+    g.quadraticCurveTo(472, 520, 256, 620);
+    g.quadraticCurveTo(40, 520, 40, 330);
+    g.closePath();
+  };
+  shield();
+  g.fillStyle = '#ffd400';
+  g.fill();
+  g.save();
+  shield();
+  g.clip();
+  g.fillStyle = '#009246'; g.fillRect(40, 30, 144, 74);
+  g.fillStyle = '#ffffff'; g.fillRect(184, 30, 144, 74);
+  g.fillStyle = '#ce2b37'; g.fillRect(328, 30, 144, 74);
+  g.restore();
+  shield();
+  g.lineWidth = 16;
+  g.strokeStyle = '#111111';
+  g.stroke();
+  g.fillStyle = '#111111';
+  g.font = 'italic 900 220px "Arial Black", Arial, sans-serif';
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.fillText('SF', 256, 380);
+  return toTexture(c, { clamp: true });
+}
+
+/** Dusk city skyline for the bay window backdrop. */
+export function skylineDusk() {
+  const [c, g] = canvas(2048, 1024);
+  const sky = g.createLinearGradient(0, 0, 0, 700);
+  sky.addColorStop(0, '#070b1e');
+  sky.addColorStop(0.45, '#2a2250');
+  sky.addColorStop(0.8, '#b0456a');
+  sky.addColorStop(1, '#ffa35c');
+  g.fillStyle = sky;
+  g.fillRect(0, 0, 2048, 1024);
+  for (let i = 0; i < 260; i++) {
+    g.globalAlpha = 0.3 + rand() * 0.7;
+    g.fillStyle = '#ffffff';
+    g.fillRect(rand() * 2048, rand() * 380, 2, 2);
+  }
+  g.globalAlpha = 1;
+  g.fillStyle = '#fff4d6';
+  g.beginPath(); g.arc(1660, 170, 46, 0, Math.PI * 2); g.fill();
+  const horizon = 700;
+  g.fillStyle = '#1a1830';
+  for (let x = 0; x < 2048;) {
+    const w = 40 + rand() * 90;
+    const h = 120 + rand() * 260;
+    g.fillRect(x, horizon - h, w, h + 40);
+    x += w + 4 + rand() * 20;
+  }
+  for (let x = -20; x < 2048;) {
+    const w = 70 + rand() * 140;
+    const h = 200 + rand() * 420;
+    const top = horizon + 60 - h;
+    g.fillStyle = '#0b0c16';
+    g.fillRect(x, top, w, h + 300);
+    for (let wy = top + 14; wy < horizon + 40; wy += 18) {
+      for (let wx = x + 8; wx < x + w - 10; wx += 16) {
+        if (rand() > 0.45) {
+          g.fillStyle = rand() > 0.85 ? 'rgba(255,120,90,0.9)' : `rgba(255,${200 + Math.floor(rand() * 40)},${140 + Math.floor(rand() * 60)},${0.5 + rand() * 0.5})`;
+          g.fillRect(wx, wy, 7, 10);
+        }
+      }
+    }
+    if (rand() > 0.6) {
+      g.fillStyle = '#ff2a2a';
+      g.fillRect(x + w / 2 - 2, top - 30, 4, 30);
+      g.beginPath(); g.arc(x + w / 2, top - 32, 5, 0, Math.PI * 2); g.fill();
+    }
+    x += w + 6 + rand() * 30;
+  }
+  const hz = g.createLinearGradient(0, 760, 0, 1024);
+  hz.addColorStop(0, 'rgba(10,8,20,0)');
+  hz.addColorStop(1, 'rgba(5,4,10,1)');
+  g.fillStyle = hz;
+  g.fillRect(0, 760, 2048, 264);
+  return toTexture(c, { clamp: true });
+}
+
+/** Charcoal rug with twin racing stripes (stripes run along V). */
+export function rugStripes(base = '#22232a', lo = 26) {
+  const [c, g] = canvas(512, 768);
+  g.fillStyle = base;
+  g.fillRect(0, 0, 512, 768);
+  for (let i = 0; i < 14000; i++) {
+    const v = lo + Math.floor(rand() * 26);
+    g.fillStyle = `rgb(${v},${v},${v + 4})`;
+    g.fillRect(rand() * 512, rand() * 768, 2, 2);
+  }
+  g.fillStyle = '#c40010';
+  g.fillRect(196, 0, 50, 768);
+  g.fillRect(266, 0, 50, 768);
+  g.fillStyle = '#ffd400';
+  g.fillRect(250, 0, 12, 768);
+  g.strokeStyle = '#c40010';
+  g.lineWidth = 10;
+  g.strokeRect(14, 14, 484, 740);
+  return toTexture(c, { clamp: true });
+}
+
+/** Wired (夹丝) safety glass: faint tint with a fine wire grid; alpha in the map. */
+export function wireGlass() {
+  const [c, g] = canvas(256, 256);
+  g.clearRect(0, 0, 256, 256);
+  g.fillStyle = 'rgba(210,225,235,0.30)';
+  g.fillRect(0, 0, 256, 256);
+  g.strokeStyle = 'rgba(40,40,45,0.85)';
+  g.lineWidth = 2;
+  for (let i = 0; i <= 256; i += 32) {
+    g.beginPath(); g.moveTo(i, 0); g.lineTo(i, 256); g.stroke();
+    g.beginPath(); g.moveTo(0, i); g.lineTo(256, i); g.stroke();
+  }
+  return toTexture(c, { repeat: [3, 7] });
 }

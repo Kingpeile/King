@@ -11,15 +11,28 @@ import * as F from './furniture.js';
 import * as TX from './textures.js';
 
 /**
- * Floor plan (meters). Entrance wall is +Z.
- *  -X left wall  : two height-adjustable desks, sitter faces -X
- *  +X right wall : L-shaped 卡座书架 directly BEHIND the chairs
- *  -Z far wall   : short booth arm (L corner)
- *  +Z near wall  : entrance door (right) + display cabinet (left)
+ * Floor plan (metres) — traced from the owner's drawing. North is -Z.
+ *
+ *   -X (west) wall  : two 升降电竞桌 side by side, one PC + monitor each, sitters face -X
+ *   -Z (north) wall : 2.2 m 飘窗 bay window (the backdrop), structural column in the NE corner
+ *   +X (east) wall  : 卡座 bench continuing from under the window, wrapping the column (L shape)
+ *   +Z (south) wall : 展示架 display cabinet (left) + 夹丝玻璃偏轴门 pivot door (right, SE corner)
+ *   centre-right    : round table for the booth
  */
-const ROOM_W = 4.5;
-const ROOM_D = 3.85;
-const ROOM_H = 2.65;
+const ROOM_W = 3.4;
+const ROOM_D = 4.0;
+const ROOM_H = 2.8;
+const SOFFIT_Y = 2.5;
+const SOFFIT_W = 0.5;
+const COLUMN = 0.65;
+const WIN = { x: -0.1, width: 2.2, sillY: 0.45, height: 1.85, depth: 0.55 };
+const DOOR = { x: 0.975, width: 0.95, height: 2.2 };
+const DESK_X = -ROOM_W / 2 + 0.39;
+const DESK_Z = [-0.8, 0.75];
+const BOOTH_DEPTH = 0.45;
+const BOOTH_EAST = { from: -ROOM_D / 2 + COLUMN, to: 0.3 };
+const BOOTH_NORTH = { from: 0.0, to: ROOM_W / 2 - COLUMN };
+const TABLE = [0.72, -0.6];
 
 const app = document.getElementById('app');
 const hint = document.getElementById('hint');
@@ -87,8 +100,12 @@ function setMode(next) {
   }
 }
 
-const ENTRANCE_CAM = { pos: [1.45, 1.5, 1.72], target: [-0.7, 0.95, -0.55] };
-const OVERVIEW_CAM = { pos: [3.4, 4.6, 3.6], target: [0, 0.5, 0] };
+const CAMS = {
+  entrance: { pos: [0.95, 1.5, 1.8], target: [-0.65, 1.0, -1.1] },
+  desks: { pos: [0.75, 1.35, 0.15], target: [-1.5, 1.05, -0.1] },
+  window: { pos: [0.05, 1.45, 1.05], target: [0.4, 0.9, -2.3] },
+  overview: { pos: [3.4, 4.9, 3.9], target: [0, 0.3, -0.1] },
+};
 function flyTo({ pos, target }) {
   setMode('orbit');
   camera.position.set(...pos);
@@ -97,8 +114,7 @@ function flyTo({ pos, target }) {
 }
 document.getElementById('btn-orbit').onclick = () => setMode('orbit');
 document.getElementById('btn-walk').onclick = () => setMode('walk');
-document.getElementById('btn-entrance').onclick = () => flyTo(ENTRANCE_CAM);
-document.getElementById('btn-overview').onclick = () => flyTo(OVERVIEW_CAM);
+document.querySelectorAll('[data-cam]').forEach((b) => { b.onclick = () => flyTo(CAMS[b.dataset.cam]); });
 window.addEventListener('debug-cam', (e) => flyTo(e.detail));
 
 const keyMap = { KeyW: 'forward', KeyS: 'back', KeyA: 'left', KeyD: 'right' };
@@ -110,6 +126,13 @@ function plane(w, h, material, x, y, z, rotY = 0, rotX = 0) {
   const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), material);
   m.position.set(x, y, z);
   m.rotation.set(rotX, rotY, 0);
+  m.receiveShadow = true;
+  return m;
+}
+function box(w, h, d, material, x, y, z) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
+  m.position.set(x, y, z);
+  m.castShadow = true;
   m.receiveShadow = true;
   return m;
 }
@@ -129,246 +152,389 @@ function disposeGroup(root) {
 /* ───────────── room shell ───────────── */
 function buildShell(T, tex) {
   const g = new THREE.Group();
-  const wallMat = new THREE.MeshStandardMaterial({ map: tex.metal.map, color: T.wall, metalness: 0.75, roughness: 0.35 });
-  const wallEntrance = T.mario ? wallMat : new THREE.MeshStandardMaterial({ color: 0x1a1b20, metalness: 0.35, roughness: 0.6 });
+  const ferrari = T.style === 'ferrari';
+  const wallMat = ferrari
+    ? new THREE.MeshStandardMaterial({ color: T.wall, roughness: 0.92 })
+    : new THREE.MeshStandardMaterial({ map: tex.metal.map, color: T.wall, metalness: 0.75, roughness: 0.35 });
+  const wallEntrance = T.mario || ferrari ? wallMat : new THREE.MeshStandardMaterial({ color: 0x1a1b20, metalness: 0.35, roughness: 0.6 });
   const floorMat = new THREE.MeshPhysicalMaterial({
     map: tex.floor.map, roughnessMap: tex.floor.roughnessMap, roughness: 0.35, metalness: 0.05, clearcoat: 0.9, clearcoatRoughness: 0.08,
   });
   const ceilMat = new THREE.MeshStandardMaterial({ color: 0xf4f4f6, roughness: 0.9 });
+  const soffitMat = new THREE.MeshStandardMaterial({ color: ferrari ? 0xf1f0ec : 0xf4f4f6, roughness: 0.9 });
 
-  g.add(plane(ROOM_W, ROOM_D, floorMat, 0, 0, 0, 0, -Math.PI / 2));
+  const W = ROOM_W, D = ROOM_D, H = ROOM_H;
+  g.add(plane(W, D, floorMat, 0, 0, 0, 0, -Math.PI / 2));
   // Single-sided planes facing inward: from outside they are culled (dollhouse view)
-  g.add(plane(ROOM_W, ROOM_D, ceilMat, 0, ROOM_H, 0, 0, Math.PI / 2));
-  g.add(plane(ROOM_D, ROOM_H, wallMat, -ROOM_W / 2, ROOM_H / 2, 0, Math.PI / 2));
-  g.add(plane(ROOM_D, ROOM_H, wallMat, ROOM_W / 2, ROOM_H / 2, 0, -Math.PI / 2));
-  g.add(plane(ROOM_W, ROOM_H, wallMat, 0, ROOM_H / 2, -ROOM_D / 2, 0));
-  g.add(plane(ROOM_W, ROOM_H, wallEntrance, 0, ROOM_H / 2, ROOM_D / 2, Math.PI));
+  g.add(plane(W - 2 * SOFFIT_W, D - 2 * SOFFIT_W, ceilMat, 0, H, 0, 0, Math.PI / 2));
+  // perimeter soffit (dropped ceiling band) — undersides + inner vertical faces
+  g.add(plane(W, SOFFIT_W, soffitMat, 0, SOFFIT_Y, -D / 2 + SOFFIT_W / 2, 0, Math.PI / 2));
+  g.add(plane(W, SOFFIT_W, soffitMat, 0, SOFFIT_Y, D / 2 - SOFFIT_W / 2, 0, Math.PI / 2));
+  g.add(plane(SOFFIT_W, D - 2 * SOFFIT_W, soffitMat, -W / 2 + SOFFIT_W / 2, SOFFIT_Y, 0, 0, Math.PI / 2));
+  g.add(plane(SOFFIT_W, D - 2 * SOFFIT_W, soffitMat, W / 2 - SOFFIT_W / 2, SOFFIT_Y, 0, 0, Math.PI / 2));
+  const sh = H - SOFFIT_Y;
+  const sy = SOFFIT_Y + sh / 2;
+  g.add(plane(W - 2 * SOFFIT_W, sh, soffitMat, 0, sy, -D / 2 + SOFFIT_W, 0));
+  g.add(plane(W - 2 * SOFFIT_W, sh, soffitMat, 0, sy, D / 2 - SOFFIT_W, Math.PI));
+  g.add(plane(D - 2 * SOFFIT_W, sh, soffitMat, -W / 2 + SOFFIT_W, sy, 0, Math.PI / 2));
+  g.add(plane(D - 2 * SOFFIT_W, sh, soffitMat, W / 2 - SOFFIT_W, sy, 0, -Math.PI / 2));
 
-  // Ceiling tray with warm cove + accent perimeter line
-  g.add(plane(ROOM_W - 0.7, ROOM_D - 0.7, ceilMat, 0, ROOM_H - 0.08, 0, 0, Math.PI / 2));
-  const cove = [
-    [0, -ROOM_D / 2 + 0.35, 'x', ROOM_W - 0.7],
-    [0, ROOM_D / 2 - 0.35, 'x', ROOM_W - 0.7],
-    [-ROOM_W / 2 + 0.35, 0, 'z', ROOM_D - 0.7],
-    [ROOM_W / 2 - 0.35, 0, 'z', ROOM_D - 0.7],
-  ];
-  cove.forEach(([x, z, axis, len]) => {
-    const warm = F.ledStrip(len, axis, F.M.warmGlow);
-    warm.position.set(x, ROOM_H - 0.085, z);
-    g.add(warm);
-    const line = F.ledStrip(len + 0.4, axis);
-    const off = 0.2;
-    line.position.set(axis === 'x' ? x : x + (x > 0 ? off : -off), ROOM_H - 0.16, axis === 'z' ? z : z + (z > 0 ? off : -off));
+  // walls
+  g.add(plane(D, H, wallMat, -W / 2, H / 2, 0, Math.PI / 2));
+  g.add(plane(D, H, wallMat, W / 2, H / 2, 0, -Math.PI / 2));
+  // north wall with the bay-window opening
+  const wl = WIN.x - WIN.width / 2;
+  const wr = WIN.x + WIN.width / 2;
+  g.add(plane(wl + W / 2, H, wallMat, (-W / 2 + wl) / 2, H / 2, -D / 2, 0));
+  g.add(plane(W / 2 - wr, H, wallMat, (wr + W / 2) / 2, H / 2, -D / 2, 0));
+  g.add(plane(WIN.width, WIN.sillY, wallMat, WIN.x, WIN.sillY / 2, -D / 2, 0));
+  const aboveWin = H - (WIN.sillY + WIN.height);
+  g.add(plane(WIN.width, aboveWin, wallMat, WIN.x, H - aboveWin / 2, -D / 2, 0));
+  // south wall with the door opening
+  const dl = DOOR.x - DOOR.width / 2;
+  const dr = DOOR.x + DOOR.width / 2;
+  g.add(plane(dl + W / 2, H, wallEntrance, (-W / 2 + dl) / 2, H / 2, D / 2, Math.PI));
+  g.add(plane(W / 2 - dr, H, wallEntrance, (dr + W / 2) / 2, H / 2, D / 2, Math.PI));
+  g.add(plane(DOOR.width, H - DOOR.height, wallEntrance, DOOR.x, (H + DOOR.height) / 2, D / 2, Math.PI));
+
+  // structural column in the NE corner (the booth wraps around it)
+  g.add(box(COLUMN, H, COLUMN, wallMat, W / 2 - COLUMN / 2, H / 2, -D / 2 + COLUMN / 2));
+  const colLed = F.ledStrip(H - 0.5, 'y');
+  colLed.position.set(W / 2 - COLUMN - 0.01, H / 2 - 0.1, -D / 2 + COLUMN + 0.01);
+  g.add(colLed);
+
+  // skirting
+  const skirtMat = ferrari ? F.M.blackGloss : T.mario ? new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.6 }) : F.M.blackMatte;
+  g.add(box(0.012, 0.08, D, skirtMat, W / 2 - 0.006, 0.04, 0));
+  g.add(box(0.012, 0.08, D, skirtMat, -W / 2 + 0.006, 0.04, 0));
+  g.add(box(W, 0.08, 0.012, skirtMat, 0, 0.04, -D / 2 + 0.006));
+  g.add(box(dl + W / 2, 0.08, 0.012, skirtMat, (-W / 2 + dl) / 2, 0.04, D / 2 - 0.006));
+
+  // ceiling accent line along the soffit inner edge + warm cove glow
+  const inset = SOFFIT_W + 0.02;
+  const accentMat = T.mario ? F.M.warmGlow : F.M.led;
+  [[0, -D / 2 + inset, 'x', W - 2 * inset], [0, D / 2 - inset, 'x', W - 2 * inset], [-W / 2 + inset, 0, 'z', D - 2 * inset], [W / 2 - inset, 0, 'z', D - 2 * inset]].forEach(([x, z, axis, len]) => {
+    const line = F.ledStrip(len, axis, accentMat);
+    line.position.set(x, H - 0.03, z);
     g.add(line);
   });
-  [[-ROOM_W / 2 + 0.03, -ROOM_D / 2 + 0.03], [ROOM_W / 2 - 0.03, -ROOM_D / 2 + 0.03], [-ROOM_W / 2 + 0.03, ROOM_D / 2 - 0.03]].forEach(([x, z]) => {
-    const v = F.ledStrip(ROOM_H - 0.3, 'y');
-    v.position.set(x, ROOM_H / 2, z);
-    g.add(v);
-  });
-  const fl = F.ledStrip(ROOM_D - 0.5, 'z');
-  fl.position.set(-ROOM_W / 2 + 0.06, 0.02, 0);
-  g.add(fl);
 
-  // Door + frame at bottom-right
-  const doorX = ROOM_W / 2 - 0.55;
-  const frameMat = new THREE.MeshStandardMaterial({ color: T.mario ? 0xe6e7ea : 0x0c0c0f, roughness: 0.5, metalness: 0.3 });
-  const mkFrame = (w, h, x, y) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.06), frameMat); m.position.set(x, y, ROOM_D / 2 - 0.03); return m; };
-  g.add(mkFrame(0.06, 2.15, doorX - 0.47, 1.075), mkFrame(0.06, 2.15, doorX + 0.47, 1.075), mkFrame(1.0, 0.06, doorX, 2.18));
-  const door = new THREE.Mesh(new THREE.BoxGeometry(0.88, 2.1, 0.045), new THREE.MeshPhysicalMaterial({ color: T.mario ? 0xf2f2f4 : 0x1d1a19, roughness: 0.45, clearcoat: 0.3 }));
-  door.position.set(doorX + 0.05, 1.05, ROOM_D / 2 - 0.5);
-  door.rotation.y = Math.PI / 2.6;
-  door.castShadow = true;
+  // recessed light box in the soffit above the desks (reference: SketchUp ceiling trough)
+  const lb = F.lightBox(3.0, 0.3, T.mario ? 1.6 : 2.2);
+  lb.position.set(-W / 2 + SOFFIT_W / 2, SOFFIT_Y, 0);
+  g.add(lb);
+  // linear AC grille in the south soffit
+  const ac = F.acGrille(1.3);
+  ac.position.set(-0.55, SOFFIT_Y, D / 2 - SOFFIT_W / 2);
+  g.add(ac);
+
+  // 飘窗 bay window in the north wall
+  const win = F.bayWindow({ ...WIN, viewTex: tex.view, wallColor: T.wall });
+  win.position.set(WIN.x, 0, -D / 2);
+  g.add(win);
+
+  // 夹丝玻璃偏轴门 at the SE corner, swinging out toward the kitchen
+  const door = F.pivotDoor({ width: DOOR.width, height: DOOR.height, open: 0.65, wireTex: tex.wire });
+  door.position.set(DOOR.x, 0, D / 2);
   g.add(door);
-  const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.14, 12), F.M.chrome);
-  handle.rotation.x = Math.PI / 2;
-  handle.position.set(doorX - 0.28, 1.0, ROOM_D / 2 - 0.16);
-  g.add(handle);
+  // a hint of the corridor floor outside the door so the glass door has something behind it
+  const outsideFloor = plane(2.4, 1.6, new THREE.MeshStandardMaterial({ color: 0x1b1b1f, roughness: 0.7 }), DOOR.x, -0.002, D / 2 + 0.8, 0, -Math.PI / 2);
+  g.add(outsideFloor);
 
-  const rug = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.75, 0.025, 64), new THREE.MeshStandardMaterial({ map: tex.rug, roughness: 1 }));
-  rug.position.set(0.2, 0.0125, -0.15);
-  rug.receiveShadow = true;
-  g.add(rug);
+  // rug in the middle
+  if (ferrari) {
+    const rug = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 1.9), new THREE.MeshStandardMaterial({ map: tex.rug, roughness: 1 }));
+    rug.rotation.x = -Math.PI / 2;
+    rug.position.set(0.3, 0.008, -0.45);
+    rug.receiveShadow = true;
+    g.add(rug);
+  } else {
+    const rug = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 0.02, 64), new THREE.MeshStandardMaterial({ map: tex.rug, roughness: 1 }));
+    rug.position.set(0.3, 0.01, -0.45);
+    rug.receiveShadow = true;
+    g.add(rug);
+  }
   return g;
 }
 
 /* ───────────── furniture placement ───────────── */
 function buildFurniture(T, tex) {
   const g = new THREE.Group();
-  const deskX = -ROOM_W / 2 + 0.36;
+  const W = ROOM_W, D = ROOM_D;
+  const style = T.style;
 
-  // Pegboard wall panel behind desks
-  const peg = new THREE.Mesh(new THREE.PlaneGeometry(3.1, 1.5), new THREE.MeshStandardMaterial({
-    map: tex.peg.map, bumpMap: tex.peg.bumpMap, bumpScale: 0.01, metalness: 0.5, roughness: 0.5,
-  }));
-  peg.position.set(-ROOM_W / 2 + 0.01, 1.6, 0.2);
-  peg.rotation.y = Math.PI / 2;
-  peg.receiveShadow = true;
-  g.add(peg);
-  const pegFrame = F.ledStrip(3.1, 'z');
-  pegFrame.position.set(-ROOM_W / 2 + 0.02, 2.36, 0.2);
-  g.add(pegFrame);
-
-  if (T.mario) {
-    // Long white shelves with accent LED (reference: 白色层板)
-    [[2.15, 1.05], [2.02, -0.55]].forEach(([y, zc]) => {
-      const sh = F.floatingShelf(1.3);
-      sh.position.set(-ROOM_W / 2 + 0.14, y, zc);
-      g.add(sh);
-    });
-    // Colourful detachable modules on the pegboard
-    const mods = [
-      [0xe4291b, 1.7, 0.25, 0.4, 0.22], [0xffffff, 1.35, 0.85, 0.3, 0.2], [0xf7b515, 1.45, -0.25, 0.26, 0.18],
-      [0x2fa84f, 1.8, -0.75, 0.3, 0.2], [0x2f7be5, 1.2, 1.35, 0.22, 0.16],
-    ];
-    mods.forEach(([c, y, z, w, h]) => {
-      const m = F.pegModule(c, w, h);
-      m.position.set(-ROOM_W / 2 + 0.015, y, z);
-      g.add(m);
-    });
-    // ? blocks + bricks row as the wall focal (instead of WE logo)
-    [-0.15, 0.03, 0.21].forEach((z, i) => {
-      const b = i === 1 ? F.questionBlock(0.17) : F.brickBlock(0.17);
-      b.position.set(-ROOM_W / 2 + 0.1, 1.95, z);
-      g.add(b);
-    });
-    const st = F.star(0.09);
-    st.position.set(-ROOM_W / 2 + 0.12, 2.28, 0.03);
-    st.rotation.y = Math.PI / 2;
-    g.add(st);
-  } else {
-    const logo = F.wallLogoPlane(tex.logo, 0.95);
-    logo.position.set(-ROOM_W / 2 + 0.03, 2.0, 0.2);
-    logo.rotation.y = Math.PI / 2;
-    g.add(logo);
-    g.add(F.redPipe([
-      [-ROOM_W / 2 + 0.06, 1.1, -1.3], [-ROOM_W / 2 + 0.06, 1.1, -0.6], [-ROOM_W / 2 + 0.06, 1.45, -0.45],
-      [-ROOM_W / 2 + 0.06, 1.45, 0.9], [-ROOM_W / 2 + 0.06, 1.1, 1.05], [-ROOM_W / 2 + 0.06, 1.1, 1.7],
-    ]));
-    const s1 = F.floatingShelf(0.9);
-    s1.position.set(-ROOM_W / 2 + 0.14, 1.55, 1.25);
-    g.add(s1);
-    const s2 = F.floatingShelf(0.9);
-    s2.position.set(-ROOM_W / 2 + 0.14, 1.9, 1.25);
-    g.add(s2);
-  }
-
-  // Two desks along left wall, sitter faces -X
-  [-0.55, 0.95].forEach((z, i) => {
-    const desk = F.gamingDesk({ screenTex: tex.screen, keyboardTex: tex.keys, withHeadset: i === 0 });
+  // ── two 升降电竞桌 along the west wall, each with its own PC ──
+  DESK_Z.forEach((z, i) => {
+    const desk = F.gamingDesk({ width: 1.5, depth: 0.7, screenTex: tex.screen, keyboardTex: tex.keys, withHeadset: i === 1, withTower: true });
     desk.rotation.y = Math.PI / 2;
-    desk.position.set(deskX, 0, z);
+    desk.position.set(DESK_X, 0, z);
     g.add(desk);
     const chair = F.gamingChair();
     chair.rotation.y = Math.PI / 2;
-    chair.position.set(deskX + 0.62, 0, z + (i === 0 ? 0.05 : -0.05));
+    chair.position.set(DESK_X + 0.64, 0, z + (i === 0 ? 0.04 : -0.04));
     g.add(chair);
-    if (T.mario) {
-      const m = F.mushroom(0.05, i === 0 ? null : 0x2fa84f);
-      m.position.set(deskX + 0.02, 0.762, z + 0.55);
-      g.add(m);
+  });
+
+  // ── feature wall behind the desks ──
+  if (style === 'ferrari') {
+    // single-sided so the dollhouse view from the west is not blocked
+    const panel = plane(3.3, SOFFIT_Y - 0.1, F.M.carbon, -W / 2 + 0.04, (SOFFIT_Y - 0.1) / 2 + 0.08, 0, Math.PI / 2);
+    g.add(panel);
+    const panelFrame = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.03, 3.3), F.M.blackGloss);
+    panelFrame.position.set(-W / 2 + 0.02, SOFFIT_Y - 0.02 - 0.015, 0);
+    g.add(panelFrame);
+    for (const y of [1.98, 1.9]) {
+      const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.012, y === 1.98 ? 0.05 : 0.018, 3.2), F.M.rosso);
+      stripe.position.set(-W / 2 + 0.046, y, 0);
+      g.add(stripe);
     }
-  });
-
-  const pc = F.pcTower();
-  pc.position.set(-ROOM_W / 2 + 0.36, 0, 1.75);
-  g.add(pc);
-
-  // ── L-shaped 卡座书架 behind the chairs ──
-  const boothDepth = 0.72;
-  const boothLen = 2.8;
-  const boothZ = -0.15;
-  const mainBooth = F.boothUnit({ length: boothLen, depth: boothDepth });
-  mainBooth.position.set(ROOM_W / 2 - boothDepth / 2, 0, boothZ);
-  g.add(mainBooth);
-
-  const win = F.windowUnit({ width: 1.7, height: 1.1, viewTex: tex.view });
-  win.position.set(ROOM_W / 2 - 0.03, 1.75, boothZ);
-  g.add(win);
-
-  const towerY0 = 1.0;
-  [boothZ - boothLen / 2 + 0.25, boothZ + boothLen / 2 - 0.25].forEach((z) => {
-    const t = F.bookshelf({ width: 0.5, height: 1.35, depth: 0.3, shelves: 3, y0: towerY0 });
-    t.position.set(ROOM_W / 2 - 0.15, 0, z);
-    g.add(t);
-  });
-
-  const armBooth = F.boothUnit({ length: 1.0, depth: boothDepth });
-  armBooth.rotation.y = Math.PI / 2;
-  armBooth.position.set(ROOM_W / 2 - boothDepth - 0.5, 0, -ROOM_D / 2 + boothDepth / 2);
-  g.add(armBooth);
-  const armShelf = F.bookshelf({ width: 1.0, height: 1.35, depth: 0.3, shelves: 3, y0: towerY0 });
-  armShelf.rotation.y = Math.PI / 2;
-  armShelf.position.set(ROOM_W / 2 - boothDepth - 0.5, 0, -ROOM_D / 2 + 0.15);
-  g.add(armShelf);
-
-  const column = new THREE.Mesh(new THREE.BoxGeometry(0.08, 1.4, 0.08), T.mario ? F.M.warmGlow : F.M.redGlow);
-  column.position.set(ROOM_W / 2 - boothDepth - 1.12, 1.2, -ROOM_D / 2 + 0.2);
-  g.add(column);
-
-  if (T.mario) {
-    const pipe = F.warpPipe(0.62, 0.15);
-    pipe.position.set(ROOM_W / 2 - 0.95, 0, 1.5);
-    g.add(pipe);
-    const plant = F.mushroom(0.09);
-    plant.position.set(ROOM_W / 2 - 0.95, 0.62, 1.5);
-    g.add(plant);
-    // block stack by the entrance display
-    const b1 = F.brickBlock(0.2); b1.position.set(0.95, 0, ROOM_D / 2 - 0.35); g.add(b1);
-    const b2 = F.questionBlock(0.2); b2.position.set(0.95, 0.2, ROOM_D / 2 - 0.35); g.add(b2);
+    const emblem = new THREE.Mesh(new THREE.PlaneGeometry(0.42, 0.525), new THREE.MeshStandardMaterial({ map: tex.emblem, transparent: true, roughness: 0.5, emissive: 0xffffff, emissiveMap: tex.emblem, emissiveIntensity: 0.35 }));
+    emblem.position.set(-W / 2 + 0.055, 2.22, 0);
+    emblem.rotation.y = Math.PI / 2;
+    g.add(emblem);
+    const word = F.wallLogoPlane(tex.wordmark, 1.7);
+    word.position.set(-W / 2 + 0.05, 1.62, 0);
+    word.rotation.y = Math.PI / 2;
+    g.add(word);
+    for (const z of [-1.66, 1.66]) {
+      const v = F.ledStrip(SOFFIT_Y - 0.2, 'y');
+      v.position.set(-W / 2 + 0.045, (SOFFIT_Y - 0.2) / 2 + 0.1, z);
+      g.add(v);
+    }
   } else {
-    const lamp = F.tetrisLamp();
-    lamp.position.set(ROOM_W / 2 - 0.95, 0, 1.45);
-    g.add(lamp);
+    const peg = new THREE.Mesh(new THREE.PlaneGeometry(3.3, 1.5), new THREE.MeshStandardMaterial({
+      map: tex.peg.map, bumpMap: tex.peg.bumpMap, bumpScale: 0.01, metalness: 0.5, roughness: 0.5,
+    }));
+    peg.position.set(-W / 2 + 0.01, 1.6, 0);
+    peg.rotation.y = Math.PI / 2;
+    peg.receiveShadow = true;
+    g.add(peg);
+    const pegFrame = F.ledStrip(3.3, 'z');
+    pegFrame.position.set(-W / 2 + 0.02, 2.36, 0);
+    g.add(pegFrame);
+    if (style === 'mario') {
+      [[0xe4291b, 1.7, -1.3, 0.4, 0.22], [0xffffff, 1.35, 1.35, 0.3, 0.2], [0xf7b515, 1.45, 0.0, 0.26, 0.18], [0x2fa84f, 1.85, 1.2, 0.3, 0.2], [0x2f7be5, 2.15, -0.15, 0.22, 0.16]].forEach(([c, y, z, w, h]) => {
+        const m = F.pegModule(c, w, h);
+        m.position.set(-W / 2 + 0.015, y, z);
+        g.add(m);
+      });
+      [-0.18, 0.0, 0.18].forEach((z, i) => {
+        const b = i === 1 ? F.questionBlock(0.17) : F.brickBlock(0.17);
+        b.position.set(-W / 2 + 0.1, 1.75, z);
+        g.add(b);
+      });
+      const st = F.star(0.09);
+      st.position.set(-W / 2 + 0.12, 2.05, 0);
+      st.rotation.y = Math.PI / 2;
+      g.add(st);
+    } else {
+      const logo = F.wallLogoPlane(tex.logo, 0.95);
+      logo.position.set(-W / 2 + 0.03, 1.95, 0);
+      logo.rotation.y = Math.PI / 2;
+      g.add(logo);
+      g.add(F.redPipe([
+        [-W / 2 + 0.06, 1.1, -1.6], [-W / 2 + 0.06, 1.1, -0.75], [-W / 2 + 0.06, 1.5, -0.6],
+        [-W / 2 + 0.06, 1.5, 0.6], [-W / 2 + 0.06, 1.1, 0.75], [-W / 2 + 0.06, 1.1, 1.6],
+      ]));
+    }
   }
 
-  const cab = F.displayCabinet({ width: 2.15, depth: 0.4, height: 0.95 });
-  cab.position.set(-0.45, 0, ROOM_D / 2 - 0.2);
+  // ── L-shaped 卡座: bench under the bay window + bench along the east wall, wrapping the column ──
+  const eastLen = BOOTH_EAST.to - BOOTH_EAST.from;
+  const east = F.boothUnit({ length: eastLen, depth: BOOTH_DEPTH, withBack: true });
+  east.position.set(W / 2 - BOOTH_DEPTH / 2, 0, (BOOTH_EAST.from + BOOTH_EAST.to) / 2);
+  g.add(east);
+  const northLen = BOOTH_NORTH.to - BOOTH_NORTH.from;
+  const north = F.boothUnit({ length: northLen, depth: BOOTH_DEPTH, withBack: false, bolsters: false });
+  north.rotation.y = Math.PI / 2;
+  north.position.set((BOOTH_NORTH.from + BOOTH_NORTH.to) / 2, 0, -D / 2 + BOOTH_DEPTH / 2);
+  g.add(north);
+  // corner filler where the two arms meet
+  g.add(box(BOOTH_DEPTH, 0.46, BOOTH_DEPTH, T.mario ? F.M.blackGloss : F.M.cabinet, W / 2 - COLUMN - BOOTH_DEPTH / 2, 0.23, -D / 2 + COLUMN + BOOTH_DEPTH / 2));
+  const cornerCushion = new THREE.Mesh(new THREE.BoxGeometry(BOOTH_DEPTH - 0.02, 0.11, BOOTH_DEPTH - 0.02), F.M.cushion);
+  cornerCushion.position.set(W / 2 - COLUMN - BOOTH_DEPTH / 2, 0.515, -D / 2 + COLUMN + BOOTH_DEPTH / 2);
+  cornerCushion.castShadow = true;
+  g.add(cornerCushion);
+  // pillows on the east bench
+  const pMats = style === 'ferrari' ? [F.M.rossoSoft, F.M.gialloSoft] : style === 'mario' ? [F.M.marioRed, F.M.marioYellow] : [F.M.accent, F.M.cushion];
+  [[-1.0, 0, 0.1], [-0.15, 1, -0.12], [0.2, 0, 0.15]].forEach(([dz, k, dyaw], i) => {
+    const p = F.pillow(0.38, 0.36, pMats[k], { yaw: -Math.PI / 2 + dyaw, lean: 0.3 + (i % 2) * 0.08 });
+    p.position.set(W / 2 - 0.17 - (i % 2) * 0.03, 0.57, (BOOTH_EAST.from + BOOTH_EAST.to) / 2 + dz);
+    g.add(p);
+  });
+
+  // table for the booth
+  const table = style === 'ferrari' ? F.rimTable(0.32, 0.5) : F.roundTable(0.3, 0.5);
+  table.position.set(TABLE[0], 0, TABLE[1]);
+  g.add(table);
+
+  // ── shelves above the east bench ──
+  const shelfZ = (BOOTH_EAST.from + BOOTH_EAST.to) / 2;
+  [1.35, 1.75].forEach((y, row) => {
+    const shelf = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.028, 1.4), F.M.furniture);
+    shelf.position.set(W / 2 - 0.1, y, shelfZ);
+    shelf.castShadow = true;
+    g.add(shelf);
+    const led = F.ledStrip(1.3, 'z');
+    led.position.set(W / 2 - 0.16, y - 0.02, shelfZ);
+    g.add(led);
+    [-0.45, 0, 0.45].forEach((dz, k) => {
+      let item;
+      if (style === 'ferrari') {
+        const paints = [0xd40000, 0xffd400, 0x111114, 0xf2f2f2, 0xd40000, 0xd40000];
+        item = (row === 1 && k === 1) ? F.helmet(0xffd400, 0.08) : F.modelCar(paints[row * 3 + k], 0.22);
+        item.rotation.y = (row === 1 && k === 1) ? -Math.PI / 2 : Math.PI / 2;
+      } else if (style === 'mario') {
+        item = k === 1 ? F.questionBlock(0.15) : F.mushroom(0.065, row === 0 ? null : 0x2fa84f);
+      } else {
+        item = new THREE.Mesh(new THREE.SphereGeometry(0.06, 20, 14), new THREE.MeshPhysicalMaterial({ color: k === 1 ? 0xf5f5f5 : 0xff3b45, roughness: 0.2, clearcoat: 1 }));
+        item.position.y = 0.06;
+      }
+      item.position.x = W / 2 - 0.1;
+      item.position.y += y + 0.014;
+      item.position.z = shelfZ + dz;
+      g.add(item);
+    });
+  });
+
+  // ── east wall between the booth and the door ──
+  const ex = W / 2;
+  const ez = 1.15;
+  if (style === 'ferrari') {
+    const lp = F.litPanel(0.9, 0.9);
+    lp.rotation.y = -Math.PI / 2;
+    lp.position.set(ex - 0.03, 1.6, ez);
+    g.add(lp);
+    const wheel = F.steeringWheel(0.17);
+    wheel.rotation.y = -Math.PI / 2;
+    wheel.position.set(ex - 0.12, 1.65, ez);
+    g.add(wheel);
+    const shelf = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.03, 1.0), F.M.furniture);
+    shelf.position.set(ex - 0.12, 0.95, ez);
+    shelf.castShadow = true;
+    g.add(shelf);
+    const led = F.ledStrip(0.9, 'z');
+    led.position.set(ex - 0.2, 0.93, ez);
+    g.add(led);
+    [[0xd40000, -0.27], [0xf2f2f2, 0.27]].forEach(([c, dz]) => {
+      const h = F.helmet(c, 0.1);
+      h.rotation.y = -Math.PI / 2;
+      h.position.set(ex - 0.12, 0.965, ez + dz);
+      g.add(h);
+    });
+  } else if (style === 'mario') {
+    const pipe = F.warpPipe(0.62, 0.15);
+    pipe.position.set(ex - 0.3, 0, ez);
+    g.add(pipe);
+    const plant = F.mushroom(0.09);
+    plant.position.set(ex - 0.3, 0.62, ez);
+    g.add(plant);
+    const b1 = F.brickBlock(0.2); b1.position.set(ex - 0.25, 0, ez + 0.5); g.add(b1);
+    const b2 = F.questionBlock(0.2); b2.position.set(ex - 0.25, 0.2, ez + 0.5); g.add(b2);
+  } else {
+    const lamp = F.tetrisLamp();
+    lamp.position.set(ex - 0.3, 0, ez - 0.1);
+    g.add(lamp);
+    const sh = F.floatingShelf(0.9);
+    sh.rotation.y = Math.PI;
+    sh.position.set(ex - 0.14, 1.55, ez);
+    g.add(sh);
+  }
+
+  // ── 展示架 display cabinet on the south wall + shelves above it ──
+  const cab = F.displayCabinet({ width: 2.2, depth: 0.45, height: 0.95 });
+  cab.position.set(-0.6, 0, D / 2 - 0.225);
   g.add(cab);
+  [1.5, 1.9].forEach((y, row) => {
+    const shelf = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.028, 0.22), F.M.furniture);
+    shelf.position.set(-0.6, y, D / 2 - 0.11);
+    shelf.castShadow = true;
+    g.add(shelf);
+    const led = F.ledStrip(1.9, 'x');
+    led.position.set(-0.6, y - 0.02, D / 2 - 0.18);
+    g.add(led);
+    [-0.7, -0.23, 0.23, 0.7].forEach((dx, k) => {
+      let item;
+      if (style === 'ferrari') {
+        const isHelmet = (row === 0 && k === 1) || (row === 1 && k === 2);
+        item = isHelmet ? F.helmet(k === 1 ? 0xffd400 : 0xd40000, 0.08) : F.modelCar([0xd40000, 0xd40000, 0x111114, 0xffd400][k], 0.22);
+        item.rotation.y = isHelmet ? Math.PI : (k % 2 ? Math.PI : 0);
+      } else if (style === 'mario') {
+        item = [() => F.mushroom(0.065), () => F.questionBlock(0.15), () => F.star(0.075), () => F.brickBlock(0.15)][(k + row) % 4]();
+      } else {
+        item = new THREE.Mesh(new THREE.CapsuleGeometry(0.035, 0.12, 6, 12), new THREE.MeshStandardMaterial({ color: [0xff3b45, 0xf5f5f5, 0xffc933, 0x8fa3ff][k], roughness: 0.45 }));
+        item.position.y = 0.095;
+      }
+      item.position.x = -0.6 + dx;
+      item.position.y += y + 0.014;
+      item.position.z = D / 2 - 0.11;
+      g.add(item);
+    });
+  });
   return g;
 }
 
 /* ───────────── lights ───────────── */
 function buildLights(T) {
   const g = new THREE.Group();
+  const ferrari = T.style === 'ferrari';
   const warm = T.mario ? 0xffffff : 0xfff0e4;
   g.add(new THREE.AmbientLight(warm, T.mario ? 0.05 : 0.06));
 
-  const key = new THREE.SpotLight(warm, T.keyLight, 9, Math.PI / 3.2, 0.6, 1.6);
-  key.position.set(0.4, ROOM_H - 0.1, 0.3);
-  key.target.position.set(0, 0, 0);
+  const key = new THREE.SpotLight(warm, T.keyLight, 9, Math.PI / 3.0, 0.6, 1.6);
+  key.position.set(0.3, ROOM_H - 0.1, -0.2);
+  key.target.position.set(0, 0, -0.2);
   key.castShadow = true;
   key.shadow.mapSize.set(2048, 2048);
   key.shadow.bias = -0.00015;
   key.shadow.radius = 4;
   g.add(key, key.target);
 
-  [-0.55, 0.95].forEach((z) => {
-    const s = new THREE.SpotLight(warm, T.mario ? 5 : 8, 4, Math.PI / 5, 0.7, 1.5);
-    s.position.set(-ROOM_W / 2 + 0.7, ROOM_H - 0.1, z);
-    s.target.position.set(-ROOM_W / 2 + 0.5, 0.75, z);
+  // light box over the desks
+  const lbLight = new THREE.RectAreaLight(0xfff0dc, T.mario ? 4 : 6, 3.0, 0.3);
+  lbLight.position.set(-ROOM_W / 2 + SOFFIT_W / 2, SOFFIT_Y - 0.01, 0);
+  lbLight.lookAt(-ROOM_W / 2 + SOFFIT_W / 2, 0, 0);
+  g.add(lbLight);
+  DESK_Z.forEach((z) => {
+    const s = new THREE.SpotLight(warm, T.mario ? 4 : 6, 4, Math.PI / 5, 0.7, 1.5);
+    s.position.set(DESK_X + 0.5, SOFFIT_Y - 0.05, z);
+    s.target.position.set(DESK_X + 0.1, 0.75, z);
     g.add(s, s.target);
   });
-  const b = new THREE.SpotLight(warm, T.mario ? 4.5 : 7, 4, Math.PI / 4.5, 0.7, 1.5);
-  b.position.set(ROOM_W / 2 - 0.9, ROOM_H - 0.1, -0.15);
-  b.target.position.set(ROOM_W / 2 - 0.4, 0.6, -0.15);
+
+  // booth + display cabinet spots
+  const b = new THREE.SpotLight(warm, T.mario ? 4 : 6, 4.5, Math.PI / 4.5, 0.7, 1.5);
+  b.position.set(0.9, ROOM_H - 0.1, -0.6);
+  b.target.position.set(1.4, 0.6, -0.6);
   g.add(b, b.target);
+  const c = new THREE.SpotLight(warm, T.mario ? 3.5 : 5, 4.5, Math.PI / 4.5, 0.7, 1.5);
+  c.position.set(-0.6, ROOM_H - 0.1, 1.2);
+  c.target.position.set(-0.6, 0.6, 1.9);
+  g.add(c, c.target);
 
-  if (!T.mario) {
-    const redA = new THREE.PointLight(T.accent, 2.5, 5, 2);
-    redA.position.set(-ROOM_W / 2 + 0.5, 1.9, 0.2);
-    const redB = new THREE.PointLight(T.accent, 1.5, 4, 2);
-    redB.position.set(ROOM_W / 2 - 0.6, 1.2, -0.15);
-    g.add(redA, redB);
-  }
-
-  const winLight = new THREE.RectAreaLight(0xcfe3ff, T.mario ? 1.6 : 2.2, 1.7, 1.1);
-  winLight.position.set(ROOM_W / 2 - 0.08, 1.75, -0.15);
-  winLight.lookAt(0, 1.1, -0.15);
+  // bay window dusk light
+  const winLight = new THREE.RectAreaLight(ferrari ? 0xc9b8ff : 0xcfe3ff, T.mario ? 1.8 : 2.4, WIN.width, WIN.height);
+  winLight.position.set(WIN.x, WIN.sillY + WIN.height / 2, -ROOM_D / 2 + 0.02);
+  winLight.lookAt(WIN.x, 1.0, 0);
   g.add(winLight);
 
-  const cove = new THREE.RectAreaLight(T.coveColor, T.coveIntensity, ROOM_W - 0.8, ROOM_D - 0.8);
-  cove.position.set(0, ROOM_H - 0.12, 0);
+  if (!T.mario) {
+    const redA = new THREE.PointLight(T.accent, 2.2, 4.5, 2);
+    redA.position.set(-ROOM_W / 2 + 0.45, 2.0, 0);
+    const redB = new THREE.PointLight(T.accent, 0.7, 3.0, 2);
+    redB.position.set(ROOM_W / 2 - 0.75, 2.2, 1.15);
+    const redC = new THREE.PointLight(T.accent, 1.0, 3, 2);
+    redC.position.set(ROOM_W / 2 - 0.6, 0.15, -0.5);
+    g.add(redA, redB, redC);
+  }
+
+  // corridor light outside the glass door
+  const out = new THREE.PointLight(0xffe0b8, 1.4, 4, 2);
+  out.position.set(DOOR.x, 2.1, ROOM_D / 2 + 0.8);
+  g.add(out);
+
+  const cove = new THREE.RectAreaLight(T.coveColor, T.coveIntensity, ROOM_W - 1.1, ROOM_D - 1.1);
+  cove.position.set(0, ROOM_H - 0.05, 0);
   cove.lookAt(0, 0, 0);
   g.add(cove);
   return g;
@@ -384,15 +550,19 @@ function buildScene(T) {
   }
   F.applyTheme(T);
   TX.resetSeed();
+  const ferrari = T.style === 'ferrari';
   const tex = {
     metal: TX.brushedMetal([2.5, 1], T.wallBase, T.wallStreak),
-    floor: TX.floorTiles([3, 2.6], T.floorBase, T.floorGrout, T.mario ? '190,192,198' : '150,152,160'),
+    floor: TX.floorTiles([3, 3.5], T.floorBase, T.floorGrout, T.floorVein),
     peg: TX.pegboard([5, 2.4], T.pegBase, T.pegHole),
-    screen: T.mario ? TX.marioWallpaper() : TX.screenWallpaper(),
-    view: TX.windowView(),
+    screen: ferrari ? TX.ferrariWallpaper() : T.mario ? TX.marioWallpaper() : TX.screenWallpaper(),
+    view: ferrari ? TX.skylineDusk() : TX.windowView(),
     logo: TX.wallLogo('WE', '#ff2a36'),
+    wordmark: TX.wallLogo('ROSSO CORSA', '#ff2222', 150),
+    emblem: TX.ferrariEmblem(),
     keys: T.mario ? TX.keyboardTop('#e9eaee', '#f7f7f9', 'rgba(255,255,255,0.6)') : TX.keyboardTop(),
-    rug: TX.rugFabric([4, 4], T.rugBase, T.rugLo),
+    rug: ferrari ? TX.rugStripes(T.rugBase, T.rugLo) : TX.rugFabric([4, 4], T.rugBase, T.rugLo),
+    wire: TX.wireGlass(),
   };
   const root = new THREE.Group();
   root.add(buildShell(T, tex), buildFurniture(T, tex), buildLights(T));
@@ -424,9 +594,9 @@ composer.addPass(bloom);
 composer.addPass(new OutputPass());
 
 const initial = new URLSearchParams(location.search).get('theme');
-buildScene(F.THEMES[initial] || F.THEMES.red);
+buildScene(F.THEMES[initial] || F.THEMES.ferrari);
 
-flyTo(ENTRANCE_CAM);
+flyTo(CAMS.entrance);
 
 /* ───────────── loop ───────────── */
 function updateWalk(dt) {
@@ -440,8 +610,8 @@ function updateWalk(dt) {
   walk.moveRight(-walkVelocity.x * dt * 60);
   walk.moveForward(-walkVelocity.z * dt * 60);
   camera.position.y = 1.55;
-  camera.position.x = THREE.MathUtils.clamp(camera.position.x, -ROOM_W / 2 + 1.35, ROOM_W / 2 - 0.9);
-  camera.position.z = THREE.MathUtils.clamp(camera.position.z, -ROOM_D / 2 + 0.9, ROOM_D / 2 - 0.55);
+  camera.position.x = THREE.MathUtils.clamp(camera.position.x, -ROOM_W / 2 + 1.2, ROOM_W / 2 - 0.8);
+  camera.position.z = THREE.MathUtils.clamp(camera.position.z, -ROOM_D / 2 + 0.85, ROOM_D / 2 - 0.45);
 }
 
 function animate() {
