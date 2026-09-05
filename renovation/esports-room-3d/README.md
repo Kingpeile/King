@@ -12,6 +12,8 @@ npm run dev
 
 浏览器打开 `http://localhost:5173/`（默认法拉利配色）。
 
+不装 Node 的话：`npm run build` 后把 `dist/` 整个目录丢到任意静态托管（here.now / GitHub Pages / 手机 HTTP 服务器）即可，已配置相对路径。手机直接打开链接也能转。
+
 ## 户型（对齐平面图，北为 -Z）
 
 | 位置 | 内容 |
