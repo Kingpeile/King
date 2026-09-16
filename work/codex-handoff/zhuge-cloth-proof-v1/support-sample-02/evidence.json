@@ -1,0 +1,219 @@
+{
+  "task_id": "CT-CLOTH-SUPPORT-02",
+  "title": "Bounded left-shoulder support sample (not a garment)",
+  "status": "UNRUN",
+  "execution_kind": "expected",
+  "physics_status": "UNRUN",
+  "not_a_zhuge_product": true,
+  "costume_03_claimed": false,
+  "full_garment": false,
+  "can_claim_pass": false,
+  "physics_response_observed": false,
+  "target_coverage_needs_visual_review": true,
+  "declaration": "Same posed male, left sheet only. Physics copied from 24c90a2d. Y and 4 medial pins changed. Not 03 / not art PASS.",
+  "historical_baseline": {
+    "head": "24c90a2de7a709af5369b0a408083101d52ed485",
+    "scheme": "posterior 4 pins y=0.191-0.248, cloth y=-0.057-0.248",
+    "not_this_run_control": true,
+    "note": "24c90a2d Mac pair is history, not the on/off of this sample."
+  },
+  "diag_note": "PATTERN-DIAG claim that the sheet first hits the back shoulder and cannot crest the apex is inference (no per-frame contact). Old PATTERN-DIAG.md was not rewritten. Support split is the testable hypothesis.",
+  "input": {
+    "pr17_head": "3d4a40c5350ec46b9ff54547df9af1818f2dea08",
+    "support_body_commit": "624e008349a447859ed58417394c68f382e9b887",
+    "proof_physics_head": "24c90a2de7a709af5369b0a408083101d52ed485",
+    "source_read_only": true
+  },
+  "params": {
+    "frames": [
+      1,
+      60
+    ],
+    "fps": 24,
+    "time_budget_s": 120.0,
+    "ClothSettings": {
+      "quality": 8,
+      "mass": 0.3,
+      "vertex_group_mass": "Pin",
+      "pin_stiffness": 20.0,
+      "bending_stiffness": 0.5,
+      "effector_weights.gravity": 1.0
+    },
+    "ClothCollisionSettings": {
+      "distance_min": 0.012,
+      "collision_quality": 3,
+      "use_self_collision": true,
+      "self_distance_min": 0.008
+    },
+    "body_COLLISION": {
+      "thickness_outer": 0.01
+    },
+    "point_cache": {
+      "use_disk_cache": false,
+      "note": "Both arms use in-memory PointCache. Disk cache is not a verified isolation method."
+    },
+    "note": "One set. collision_on vs collision_off only flips cloth use_collision."
+  },
+  "cloth_placement": {
+    "side": "left",
+    "plane": "world XY, gravity -Z",
+    "x0": 0.15086875882822576,
+    "x1": 0.3461169180995612,
+    "y0": 0.06,
+    "y1": 0.21,
+    "z": 1.5337936498188298,
+    "x_z_from": "24c90a2d build_sample_cloth rest x/z (unrounded)",
+    "y_fixed": [
+      0.06,
+      0.21
+    ],
+    "segs_u": 12,
+    "segs_v": 16,
+    "vert_n": 221,
+    "quad_n": 192,
+    "pin_rule": "4 distinct medial (u=0) verts; two adjacent rows nearest y=0.10 and two adjacent rows nearest y=0.17. Not the full sheet.",
+    "pin_groups": [
+      {
+        "target_y": 0.1,
+        "rows": [
+          4,
+          5
+        ],
+        "ys": [
+          0.0975,
+          0.106875
+        ]
+      },
+      {
+        "target_y": 0.17,
+        "rows": [
+          11,
+          12
+        ],
+        "ys": [
+          0.163125,
+          0.1725
+        ]
+      }
+    ],
+    "pin_indices": [
+      52,
+      65,
+      143,
+      156
+    ],
+    "pin_xyz": [
+      [
+        0.15086875882822576,
+        0.0975,
+        1.5337936498188298
+      ],
+      [
+        0.15086875882822576,
+        0.106875,
+        1.5337936498188298
+      ],
+      [
+        0.15086875882822576,
+        0.163125,
+        1.5337936498188298
+      ],
+      [
+        0.15086875882822576,
+        0.1725,
+        1.5337936498188298
+      ]
+    ],
+    "historical_baseline_pins": [
+      169,
+      182,
+      195,
+      208
+    ],
+    "historical_baseline_not_this_control": true
+  },
+  "geometry_selfcheck": {
+    "ok": true,
+    "blockers": [],
+    "pin_indices": [
+      52,
+      65,
+      143,
+      156
+    ],
+    "pin_xyz": [
+      [
+        0.15086875882822576,
+        0.0975,
+        1.5337936498188298
+      ],
+      [
+        0.15086875882822576,
+        0.106875,
+        1.5337936498188298
+      ],
+      [
+        0.15086875882822576,
+        0.163125,
+        1.5337936498188298
+      ],
+      [
+        0.15086875882822576,
+        0.1725,
+        1.5337936498188298
+      ]
+    ]
+  },
+  "construction_selfcheck": {
+    "ok": true,
+    "blockers": [],
+    "min_dist_to_body": {
+      "min_m": 0.05466,
+      "verts_closer_than_clearance": 0,
+      "clearance_m": 0.025,
+      "src_n": 221
+    },
+    "hull_at_cloth_z": {
+      "intersecting_verts": 0,
+      "worst_in_hull_m": 0.0
+    },
+    "note": "Slice-hull + vert distance. Not an exact triangle penetration proof."
+  },
+  "local_camera_bbox": {
+    "min": [
+      0.05086875882822575,
+      -0.07749682710998067,
+      1.1
+    ],
+    "max": [
+      0.4061169180995612,
+      0.27,
+      1.62
+    ]
+  },
+  "pair_verdict": {
+    "ready": false,
+    "verdict": "UNRUN",
+    "physics_response_observed": false,
+    "target_coverage_needs_visual_review": true,
+    "can_claim_pass": false,
+    "reason": "physics not executed",
+    "caveat": "below_shoulder_apex_in_target_xy is not inside-body. BVH pair_count==0 is not a no-penetration proof. can_claim_pass stays false until root visual verification."
+  },
+  "physics": null,
+  "blender_present": false,
+  "blender_version_actual": null,
+  "expected_outputs": [
+    "collision_on|off/proof.blend",
+    "collision_on|off/frame01/view_{front,side,back,lookdown}.png",
+    "collision_on|off/frame60/view_{front,side,back,lookdown}.png",
+    "collision_on|off/frames.json",
+    "collision_on|off/timing.json",
+    "evidence.json"
+  ],
+  "unverified_until_mac_blender": [
+    "one same-param CLOTH pair; memory cache false/false both arms",
+    "frame01+frame60 4-views: front-apex-back cover, free verts move, no explode",
+    "if front/apex still exposed: stop this geometry; no retune, no robe"
+  ]
+}
