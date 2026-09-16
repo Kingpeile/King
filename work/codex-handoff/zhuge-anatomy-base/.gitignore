@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+male_out/*.glb
+male_out/*.blend
+male_out/*.png

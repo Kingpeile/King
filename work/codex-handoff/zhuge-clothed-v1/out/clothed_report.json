@@ -1,0 +1,355 @@
+{
+  "task_id": "CT-COSTUME-01-FIX",
+  "title": "Structural fix of Mac 629035d front fail (not art PASS)",
+  "status": "UNRUN",
+  "execution_kind": "expected",
+  "not_a_zhuge_product": true,
+  "g1_g5_claimed": false,
+  "art_approval": false,
+  "fusion_pass": false,
+  "palace_mesh": false,
+  "armature": false,
+  "can_walk": false,
+  "declaration": "Static clothed mesh. Clothes and body are separate objects. No armature. Do not claim walk or fusion PASS.",
+  "mac_fail_seen": {
+    "commit": "629035d21489e1e6b2bf75d813a67367061ff592",
+    "blender": "5.2.1",
+    "exit": 0,
+    "pixel": "ct-costume-01-mac-front-fail.png",
+    "visible": "guan board on face; bare shoulders; arms punch sleeve sides; hands fused; paper fan; floating triangle beard; barrel robe + sash slab; toes out of shoes"
+  },
+  "method": {
+    "used": "posed-arm tube sleeves (shoulder→elbow→wrist) + body-hull robe; guan from crown/brow; not empty-robe cones",
+    "empty_robe_generators": false,
+    "support_body": {
+      "commit": "624e008349a447859ed58417394c68f382e9b887",
+      "exit": 0,
+      "glb_bytes": 626508,
+      "tris": 26756,
+      "height_m": 1.78,
+      "minY": 0,
+      "note": "Mac accepted as clothing support body. Still too athletic-slender vs 03. Not Zhuge PASS."
+    },
+    "pose": "static two-bone rest pose (not a rig); hands apart on fan handle"
+  },
+  "support_body_faces": 13378,
+  "support_body_uvs": 14517,
+  "census": {
+    "body": {
+      "verts": 13380,
+      "faces": 13378,
+      "tris": 26756
+    },
+    "robe_outer": {
+      "verts": 392,
+      "faces": 364,
+      "tris": 728
+    },
+    "sleeve_l": {
+      "verts": 176,
+      "faces": 160,
+      "tris": 320
+    },
+    "sleeve_r": {
+      "verts": 176,
+      "faces": 160,
+      "tris": 320
+    },
+    "collar": {
+      "verts": 56,
+      "faces": 28,
+      "tris": 56
+    },
+    "sash": {
+      "verts": 92,
+      "faces": 62,
+      "tris": 124
+    },
+    "shoe_l": {
+      "verts": 36,
+      "faces": 24,
+      "tris": 48
+    },
+    "shoe_r": {
+      "verts": 36,
+      "faces": 24,
+      "tris": 48
+    },
+    "guan": {
+      "verts": 56,
+      "faces": 38,
+      "tris": 76
+    },
+    "beard": {
+      "verts": 80,
+      "faces": 64,
+      "tris": 128
+    },
+    "fan": {
+      "verts": 80,
+      "faces": 42,
+      "tris": 84
+    }
+  },
+  "pose": {
+    "left": {
+      "upper_deg": 34.68,
+      "fore_deg": 38.73
+    },
+    "right": {
+      "upper_deg": 34.68,
+      "fore_deg": 38.73
+    },
+    "hand_l": [
+      0.15,
+      -0.23,
+      1.14
+    ],
+    "hand_r": [
+      -0.15,
+      -0.23,
+      1.14
+    ]
+  },
+  "structure": {
+    "face_vis": {
+      "face_z_clear": [
+        1.5,
+        1.655
+      ],
+      "guan_z_min": 1.668,
+      "guan_z_max": 1.798,
+      "guan_min_z_bar": 1.668,
+      "guan_verts_in_face_front": 0,
+      "eyes_nose_mouth_clear": true,
+      "covers_scalp": true,
+      "board_z_min": 1.668,
+      "crown_z": 1.78
+    },
+    "sleeves_cover_upper_arm": true,
+    "sleeves_cover_forearm": true,
+    "sleeve_upper_L": {
+      "n": 262,
+      "uncovered": 0,
+      "covered_frac": 1.0,
+      "covers": true,
+      "worst_outside_m": 0.0
+    },
+    "sleeve_fore_L": {
+      "n": 155,
+      "uncovered": 0,
+      "covered_frac": 1.0,
+      "covers": true,
+      "worst_outside_m": 0.0
+    },
+    "sleeve_upper_R": {
+      "n": 262,
+      "uncovered": 0,
+      "covered_frac": 1.0,
+      "covers": true,
+      "worst_outside_m": 0.0
+    },
+    "sleeve_fore_R": {
+      "n": 155,
+      "uncovered": 0,
+      "covered_frac": 1.0,
+      "covers": true,
+      "worst_outside_m": 0.0
+    },
+    "sleeve_join_L": {
+      "min_m": 0.04287,
+      "verts_closer_than_6mm": 0,
+      "src_n": 16
+    },
+    "sleeve_join_R": {
+      "min_m": 0.04251,
+      "verts_closer_than_6mm": 0,
+      "src_n": 16
+    },
+    "hand_separation": {
+      "min_m": 0.14023,
+      "ok": true
+    },
+    "shoe_L": {
+      "toe_n": 100,
+      "toe_y_min": -0.07096,
+      "shoe_y_min": -0.10189,
+      "toes_in_front_of_shoe": 0,
+      "toes_outside_xy_hull": 0,
+      "ok": true
+    },
+    "shoe_R": {
+      "toe_n": 100,
+      "toe_y_min": -0.07096,
+      "shoe_y_min": -0.09926,
+      "toes_in_front_of_shoe": 0,
+      "toes_outside_xy_hull": 0,
+      "ok": true
+    },
+    "collar_on_robe": {
+      "punch_through_verts": 0,
+      "worst_m": 0.0,
+      "ok": true
+    },
+    "sash_on_robe": {
+      "punch_through_verts": 0,
+      "worst_m": 0.0,
+      "ok": true
+    },
+    "beard_chin": {
+      "top_to_chin_min_m": 0.00295,
+      "ok": true,
+      "volume_verts": 80
+    },
+    "fan_max_z": 1.3307,
+    "fan_below_face": true,
+    "fan_vane_n": 9,
+    "posed_arm_radius_m": {
+      "L_upper": 0.08771,
+      "L_fore": 0.05264,
+      "R_upper": 0.08771,
+      "R_fore": 0.05264
+    }
+  },
+  "robe_rings": [
+    {
+      "z": 1.505,
+      "name": "neck",
+      "offset": 0.014,
+      "r_mean": 0.1012,
+      "r_min": 0.0297,
+      "r_max": 0.1394
+    },
+    {
+      "z": 1.46,
+      "name": "collar",
+      "offset": 0.024,
+      "r_mean": 0.2037,
+      "r_min": 0.0315,
+      "r_max": 0.2773
+    },
+    {
+      "z": 1.405,
+      "name": "shoulder",
+      "offset": 0.04,
+      "r_mean": 0.2256,
+      "r_min": 0.0401,
+      "r_max": 0.318
+    },
+    {
+      "z": 1.33,
+      "name": "chest",
+      "offset": 0.048,
+      "r_mean": 0.2323,
+      "r_min": 0.0537,
+      "r_max": 0.3252
+    },
+    {
+      "z": 1.23,
+      "name": "chest2",
+      "offset": 0.052,
+      "r_mean": 0.2109,
+      "r_min": 0.0502,
+      "r_max": 0.2927
+    },
+    {
+      "z": 1.12,
+      "name": "lower_chest",
+      "offset": 0.054,
+      "r_mean": 0.1962,
+      "r_min": 0.047,
+      "r_max": 0.2749
+    },
+    {
+      "z": 1.02,
+      "name": "waist",
+      "offset": 0.058,
+      "r_mean": 0.2096,
+      "r_min": 0.0573,
+      "r_max": 0.2865
+    },
+    {
+      "z": 0.92,
+      "name": "hip",
+      "offset": 0.072,
+      "r_mean": 0.2314,
+      "r_min": 0.0538,
+      "r_max": 0.3157
+    },
+    {
+      "z": 0.78,
+      "name": "thigh",
+      "offset": 0.088,
+      "r_mean": 0.2453,
+      "r_min": 0.0853,
+      "r_max": 0.3242
+    },
+    {
+      "z": 0.62,
+      "name": "knee_hi",
+      "offset": 0.102,
+      "r_mean": 0.2531,
+      "r_min": 0.0837,
+      "r_max": 0.3375
+    },
+    {
+      "z": 0.46,
+      "name": "knee",
+      "offset": 0.116,
+      "r_mean": 0.2828,
+      "r_min": 0.0677,
+      "r_max": 0.3926
+    },
+    {
+      "z": 0.3,
+      "name": "shin",
+      "offset": 0.128,
+      "r_mean": 0.302,
+      "r_min": 0.0503,
+      "r_max": 0.4205
+    },
+    {
+      "z": 0.16,
+      "name": "hem",
+      "offset": 0.138,
+      "r_mean": 0.2955,
+      "r_min": 0.0646,
+      "r_max": 0.413
+    },
+    {
+      "z": 0.095,
+      "name": "hem_lip",
+      "offset": 0.124,
+      "r_mean": 0.2973,
+      "r_min": 0.1035,
+      "r_max": 0.409
+    }
+  ],
+  "bbox": {
+    "min": [
+      -0.416407,
+      -0.366043,
+      0.0
+    ],
+    "max": [
+      0.416407,
+      0.316747,
+      1.798
+    ]
+  },
+  "height_m": 1.798,
+  "glb_export": {
+    "rootName": "ZhugeClothed_Root",
+    "yup": true,
+    "bytes": "UNKNOWN"
+  },
+  "blender_present": false,
+  "blender_version_actual": null,
+  "outputs": [],
+  "unverified_until_mac_blender": [
+    "Mac front vs 629035d fail still: guan off the face, sleeves covering upper arm/forearm, hands apart on fan",
+    "Y-up GLB import, feet on z=0 after exporter",
+    "pixel G1–G5 (not claimed)",
+    "armpit crease from static fold"
+  ]
+}

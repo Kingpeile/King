@@ -1,0 +1,497 @@
+{
+  "task_id": "CT-3D-02",
+  "title": "诸葛亮真实三维人物 v2",
+  "status": "UNRUN",
+  "execution_kind": "expected",
+  "execution_kind_meaning": "Cloud/static path. Codex must run Blender locally; numbers below are generator census or placeholders.",
+  "blender_present": false,
+  "blender_version_expected": "5.2.1",
+  "blender_version_actual": null,
+  "render_engine": null,
+  "timestamp_utc": "2026-09-16T12:24:43Z",
+  "mac_real_run": {
+    "filepath_bug_commit": "64a0192232c16f94e3d162c0098986fecbfe0827",
+    "export_ok_commit": "9746c6099a40168bbd87ee5d2c65f7bfd4276be2",
+    "art_fail_then_framing_commit": "e5282c0bd63246ee616a19c49e8848d4496ab95c",
+    "aae56dcd_commit": "aae56dcdf517eeedee60329d77d889589c0cbce4",
+    "sculpt_base_commit": "176c7f39224d7d8aee203a66c7b79eb05ec1984b",
+    "fail_2f8abf7_commit": "2f8abf7ef430c01af4dd0cae76ccc7baf9de1915",
+    "blender": "5.2.1",
+    "environment": "Mac factory-startup, background, independent output-dir",
+    "mac_2f8abf7": {
+      "exit": 0,
+      "glb_bytes": 976024,
+      "tris": 42940,
+      "mesh": 80,
+      "materials": 7,
+      "minY": 0,
+      "validator_issues": [],
+      "keep": "shoulder-sleeve inner closure; cameras; wrists/grip; output interface",
+      "appeared": "outer panels + waist cinch",
+      "art_review": "FAIL",
+      "published": false
+    },
+    "mac_176c7f3": {
+      "exit": 0,
+      "glb_bytes": 780188,
+      "tris": 33760,
+      "mesh": 66,
+      "materials": 7,
+      "minY": 0,
+      "validator_issues": [],
+      "keep": "shoulder-sleeve closure; review cameras; wrists; output interface",
+      "confirmed_better": "collar-on-chest; continuous cyan hem; front-readable fan",
+      "art_review": "FAIL",
+      "published": false
+    },
+    "aae56dcd_mac": {
+      "exit": 0,
+      "glb_bytes": 816144,
+      "tris": 35504,
+      "mesh": 66,
+      "materials": 7,
+      "minY": 0,
+      "validator_issues": [],
+      "keep": "shoulder holes gone; side/back feet unobstructed; side feathers visible",
+      "art_review": "CHANGES_REQUESTED",
+      "published": false
+    },
+    "e5282c0_mac": {
+      "exit": 0,
+      "glb_bytes": 917288,
+      "tris": 39144,
+      "mesh": 64,
+      "materials": 7,
+      "minY": 0,
+      "skin": false,
+      "animation": false,
+      "validator_issues": [],
+      "front_lookdown": "head+feet in frame, wrists at cuffs — real improvement",
+      "art_review": "CHANGES_REQUESTED",
+      "published": false
+    },
+    "art_review": "FAIL",
+    "art_approval": false,
+    "art_rejection_176c7f3": [
+      "Narrow column + smooth cone skirt — lookdown has no fold shading turns",
+      "Fan vanes taper 0.05→0 as needle spikes",
+      "Long bare neck",
+      "Plastic barrel guan",
+      "Wire / ponytail beard, not 3 volumetric bundles"
+    ],
+    "art_rejection_e5282c0": [
+      "Side/back feet hidden by foreground railing — NDC-in-frame is not enough",
+      "Lookdown still holes/folded edges on both shoulders",
+      "Chest still large armor plates",
+      "Annulus only sealed thickness rims; inner holes remain",
+      "yoke/torso/collar independent lofts intersecting",
+      "Soft gravity robe folds + waist transition still needed",
+      "Fan spread / thin vanes; some side vanes disappear (normals)",
+      "Beard still wires, not natural bundles",
+      "Guan crown must not show holes"
+    ],
+    "art_rejection_aae56dcd": [
+      "Collar is a floating X ribbon — not on Robe_Body",
+      "Hem cyan trim broken floating chunks — old 48-seg contour vs BODY_N40 skirt",
+      "Skirt front/back still a smooth cone; side waist has a step",
+      "Front fan is a knife-edge (face yawed sideways); square stacked plates",
+      "Beard still parallel hard rods"
+    ],
+    "art_rejection_2f8abf7": [
+      "Lookdown outer robe: huge open barrel at shoulder top; two back panels with a through-gap",
+      "Sash ellipse punched through panels as broken chunks",
+      "Fan 0.385 m vanes cover mouth/nose, read as lotus petals",
+      "Beard is 3 shiny thick tubes with extra long straight tail sticks"
+    ],
+    "this_commit_scope": "Three items only: (1) outer wrap grown from Robe_Body shoulder + back seam width 0 + sash on wrap waist ring; (2) long vane 0.385→0.26, width scaled, rachis tilted at hinge, wrist/grip untouched; (3) 3 flat-spindle beard bundles, delete tail tubes, M_Hair lower specular/higher roughness. KEEP inner shoulder-sleeve, cameras, wrists, interface. Not art approval. Recommend stop further enlargement of this class.",
+    "this_cloud_status": "UNRUN",
+    "valid_glb_on_cloud": false,
+    "note": "2f8abf7 Mac export was real and overall art FAIL (barrel/gap/lotus fan/tube beard). This cloud did not re-export. Do not treat UNRUN JSON as art approval or as a new measured GLB."
+  },
+  "units": "meters",
+  "rootName": "ZhugeLiang_Root",
+  "root": "ZhugeLiang_Root",
+  "upAxis": {
+    "expected_blender": "Z",
+    "expected_glb": "Y",
+    "measured_glb": "UNKNOWN",
+    "measured_glb_source": "UNKNOWN"
+  },
+  "forwardAxis": {
+    "expected_blender": "-Y",
+    "expected_glb": "+Z",
+    "expected_note": "Face is built on Blender -Y. Blender glTF export_yup maps (X,Y,Z)_blender -> (X,Z,-Y)_gltf, so expected glTF forward is +Z. Not read from a GLB extra.",
+    "measured_glb": "UNKNOWN"
+  },
+  "bbox": {
+    "expected_blender_zup": {
+      "min": [
+        -0.5156,
+        -0.3884,
+        0.0
+      ],
+      "max": [
+        0.3966,
+        0.2889,
+        1.8373
+      ]
+    },
+    "expected_note": "Generator vertex AABB in Blender Z-up meters. Not a GLB measurement.",
+    "measured_glb_yup": "UNKNOWN"
+  },
+  "height": {
+    "expected_blender_m": 1.8373,
+    "expected_note": "generator max.z - min.z (includes guan). Design crown height is 1.8 m.",
+    "measured_glb_m": "UNKNOWN"
+  },
+  "footOffset": {
+    "expected_blender_z_min": 0.0,
+    "expected_note": "Interface snapshot of generator min Z. Foot-zero policy is owned by another Codex developer; this builder does not change that path.",
+    "measured_glb_y_min": "UNKNOWN"
+  },
+  "skin": {
+    "expected": false,
+    "measured_glb": "UNKNOWN"
+  },
+  "animations": {
+    "expected": false,
+    "measured_glb": "UNKNOWN"
+  },
+  "glb_export": {
+    "contents": "character_only",
+    "rootName": "ZhugeLiang_Root",
+    "includes_stage": false,
+    "includes_ground": false,
+    "includes_cameras": false,
+    "includes_lights": false,
+    "includes_roof_tiles": false,
+    "stage_remains_in_blend": true,
+    "excludes_stage_expected": true,
+    "excludes_stage_measured": "UNKNOWN"
+  },
+  "heads": 7.35,
+  "height_m": 1.8,
+  "feet_z_blender": 0.0,
+  "glb_yup_expected": true,
+  "armature": {
+    "present": false,
+    "skins": false,
+    "animations": false,
+    "can_walk": false,
+    "declaration": "Static first version. No armature. Do not claim it can walk."
+  },
+  "materials_max": 8,
+  "materials": [
+    "M_Skin",
+    "M_Hair",
+    "M_RobeIvory",
+    "M_CyanGreen",
+    "M_Gold",
+    "M_Feather",
+    "M_Stone",
+    "M_Wood"
+  ],
+  "tris_target_band": [
+    20000,
+    45000
+  ],
+  "tris_policy": "If look would clearly degrade to hit the band, keep quality and report honestly.",
+  "tris_note": "Inside 20k–45k target band (character GLB census; stage is .blend-only).",
+  "stats_character": {
+    "part_count": 79,
+    "verts": 21428,
+    "tris": 40834,
+    "material_count": 7,
+    "materials_used": [
+      "M_CyanGreen",
+      "M_Feather",
+      "M_Gold",
+      "M_Hair",
+      "M_RobeIvory",
+      "M_Skin",
+      "M_Wood"
+    ]
+  },
+  "stats_all": {
+    "part_count": 98,
+    "verts": 25314,
+    "tris": 45458,
+    "material_count": 8,
+    "materials_used": [
+      "M_CyanGreen",
+      "M_Feather",
+      "M_Gold",
+      "M_Hair",
+      "M_RobeIvory",
+      "M_Skin",
+      "M_Stone",
+      "M_Wood"
+    ]
+  },
+  "v1_baseline_planning_only": {
+    "glb_bytes": 1722920,
+    "primitives": 102,
+    "materials": 8,
+    "verts": 50313,
+    "tris": 85068,
+    "skin_animation": false,
+    "blender_z_min": 0.14,
+    "note": "v1 floated (Z min 0.14). v2 snaps character min Z to 0."
+  },
+  "v1_rejection_addressed_in_construction": [
+    "Head is dual-profile lathe + sockets/brow/nose/zygoma/jaw bumps — not an egg with geometric dots.",
+    "Beard is layered tapering strand sweeps — not a cylinder.",
+    "Guan has brim, crown folds, trail, hairpin — not a bucket.",
+    "Robe is lofted with gravity folds + inner/outer skirt — not a smooth cone.",
+    "Cuffs are a single swept band + gold piping — not jagged overlapping shells.",
+    "Feathers are thin sheets with thickness and a vein ridge — not white sausages."
+  ],
+  "art_approval": {
+    "screenshot_count_is_not_approval": true,
+    "this_handoff_claims_approval": false,
+    "approval_authority": "Codex local review on Mac Blender 5.2.1",
+    "mac_9746c60_art_review": "FAILED",
+    "mac_e5282c0_art_review": "CHANGES_REQUESTED",
+    "mac_aae56dcd_art_review": "CHANGES_REQUESTED",
+    "mac_176c7f3_art_review": "FAIL",
+    "mac_2f8abf7_art_review": "FAIL",
+    "this_revision_art_approval": false,
+    "structure_pass_is_not_art_pass": true
+  },
+  "review_cameras": {
+    "margin": "10% on all four sides (ndc_limit 0.80)",
+    "frames": "character AABB including guan and feet",
+    "stage_enlarged_to_hide_crop": false,
+    "palace_hidden_on_review_views": true,
+    "neutral_ground": true,
+    "palace_lookdown_extra": "view_lookdown_palace.png",
+    "ndc_in_frame_is_not_enough": true,
+    "views": {
+      "Cam_Front": {
+        "distance_m": 6.1896,
+        "location": [
+          -0.0595,
+          -6.2394,
+          0.9186
+        ],
+        "target": [
+          -0.0595,
+          -0.0498,
+          0.9186
+        ],
+        "lens_mm": 50.0,
+        "max_abs_ndc_x": 0.2165,
+        "max_abs_ndc_y": 0.7754,
+        "behind_count": 0,
+        "in_frame_10pct_margin": true
+      },
+      "Cam_Side": {
+        "distance_m": 6.3106,
+        "location": [
+          6.2511,
+          -0.0498,
+          0.9186
+        ],
+        "target": [
+          -0.0595,
+          -0.0498,
+          0.9186
+        ],
+        "lens_mm": 50.0,
+        "max_abs_ndc_x": 0.1607,
+        "max_abs_ndc_y": 0.7749,
+        "behind_count": 0,
+        "in_frame_10pct_margin": true
+      },
+      "Cam_Back": {
+        "distance_m": 6.1896,
+        "location": [
+          -0.0595,
+          6.1399,
+          0.9186
+        ],
+        "target": [
+          -0.0595,
+          -0.0498,
+          0.9186
+        ],
+        "lens_mm": 50.0,
+        "max_abs_ndc_x": 0.2165,
+        "max_abs_ndc_y": 0.7754,
+        "behind_count": 0,
+        "in_frame_10pct_margin": true
+      },
+      "Cam_LookDown": {
+        "distance_m": 6.6815,
+        "location": [
+          1.8579,
+          -4.7954,
+          5.2134
+        ],
+        "target": [
+          -0.0595,
+          -0.0498,
+          0.9186
+        ],
+        "lens_mm": 50.0,
+        "max_abs_ndc_x": 0.2553,
+        "max_abs_ndc_y": 0.7759,
+        "behind_count": 0,
+        "in_frame_10pct_margin": true
+      }
+    },
+    "legacy_9746c60_Cam_Front": {
+      "location": [
+        0.0,
+        -3.15,
+        1.55
+      ],
+      "target": [
+        0.0,
+        0.15,
+        0.95
+      ],
+      "lens_mm": 55.0,
+      "max_abs_ndc_x": 0.591,
+      "max_abs_ndc_y": 1.8703,
+      "behind_count": 0,
+      "in_frame_10pct_margin": false,
+      "note": "Cropped guan/feet on Mac art review. Replaced by bbox-fit cameras."
+    }
+  },
+  "construction_audit": {
+    "bbox_overlap_is_not_connection": true,
+    "annulus_is_not_a_closed_root": true,
+    "all_join_overlaps_is_not_pass": true,
+    "do_not_claim_pass_from_this_audit": true,
+    "one_robe_body": true,
+    "has_Robe_Body": true,
+    "has_Robe_Yoke": false,
+    "has_Robe_Torso": false,
+    "duplicate_shoulder_shells": false,
+    "sleeve_root_disk_caps": true,
+    "no_shoulder_annulus_caps": true,
+    "collar_chest_bands": true,
+    "collar_projected_on_robe_body": true,
+    "standing_collar_covers_neck": true,
+    "outer_robe_wrap": true,
+    "outer_shoulder_seal": true,
+    "no_split_back_panels": true,
+    "waist_sash": true,
+    "hem_trim_from_skirt_outer": true,
+    "board_guan": true,
+    "guan_crown": true,
+    "part_names": [
+      "Head",
+      "Eye_L",
+      "Eye_L_Iris",
+      "Eye_R",
+      "Eye_R_Iris",
+      "Ear_L",
+      "Ear_R",
+      "Neck",
+      "Robe_Body",
+      "Hair_Cap",
+      "Hair_Lock_L",
+      "Hair_Lock_R",
+      "Guan_Brim",
+      "Guan_Crown",
+      "Guan_Board_Center",
+      "Guan_Board_Front",
+      "Guan_Board_R",
+      "Guan_Board_L",
+      "Guan_Trail",
+      "Guan_Hairpin",
+      "Guan_HairpinBead",
+      "Beard_Mustache",
+      "Beard_Long",
+      "Collar_L",
+      "Collar_R",
+      "CollarStand_R",
+      "CollarStand_L",
+      "CollarStandInner_R",
+      "CollarStandInner_L",
+      "Skirt_Inner",
+      "Skirt_Outer",
+      "Robe_Panel_Outer",
+      "Robe_Panel_ShoulderSeal",
+      "Robe_PanelFacing_R",
+      "Robe_PanelFacing_L",
+      "Robe_PanelHem",
+      "Sash_Band",
+      "Sash_Knot",
+      "Sash_Tassel",
+      "Sleeve_R",
+      "SleeveRootCap_R",
+      "SleeveInner_R",
+      "SleeveInnerCap_R",
+      "SleeveCapCuff_R",
+      "Cuff_R",
+      "CuffGold_R_0",
+      "CuffGold_R_1",
+      "Sleeve_L",
+      "SleeveRootCap_L",
+      "SleeveInner_L",
+      "SleeveInnerCap_L",
+      "SleeveCapCuff_L",
+      "Cuff_L",
+      "CuffGold_L_0",
+      "CuffGold_L_1",
+      "Trim_Hem",
+      "Trim_HemGold",
+      "Trim_Collar",
+      "Shoe_L",
+      "ShoeCloud_L",
+      "Shoe_R",
+      "ShoeCloud_R",
+      "Hand_R_Palm",
+      "Hand_R_Wrist",
+      "Hand_R_Index",
+      "Hand_R_Middle",
+      "Hand_R_Ring",
+      "Hand_R_Pinky",
+      "Hand_R_Thumb",
+      "Hand_L_Palm",
+      "Hand_L_Wrist",
+      "Hand_L_Index",
+      "Hand_L_Middle",
+      "Hand_L_Ring",
+      "Hand_L_Pinky",
+      "Hand_L_Thumb",
+      "Fan_Handle",
+      "Fan_Ferrule",
+      "Fan_Vanes"
+    ],
+    "note": "Construction inventory only. Cloud has no Blender. This is not a Mac render and not art approval."
+  },
+  "outputs": [],
+  "static_checks": {
+    "mesh_stats": "written",
+    "py_compile": "pass",
+    "py_compile_error": null,
+    "source_guards": {
+      "has_output_dir_flag": true,
+      "has_dash_dash_argv": true,
+      "banned_api_hits": [],
+      "root_name": true,
+      "declares_no_walk": true,
+      "character_only_glb": true,
+      "uses_get_rna_type_filter": true
+    },
+    "filepath_guard": "pass"
+  },
+  "notes": [
+    "Generator census only. No GLB/blend/png written because this was --mesh-stats or bpy is missing.",
+    "Static posed meshes. No armature. Cannot walk.",
+    "Mac 2f8abf7 overall art FAIL. This revision: wrap-seal + sash-on-ring, vane 0.26, flat-spindle beard. Cloud UNRUN."
+  ],
+  "unfinished": [
+    "No armature / no walk cycle (intentional for this static first version).",
+    "Object origins are world-layout, not joint-centered — recenter before rigging.",
+    "Roof glaze shares M_CyanGreen with robe trim/guan to stay at 8 materials (blend stage only).",
+    "Cloud VM has no Blender; visual sign-off is Codex on Mac.",
+    "GLB / .blend / view PNGs are absent until Blender 5.2.1 is re-run on this revision.",
+    "GLB interface measured_* fields are UNKNOWN until a real export exists.",
+    "Mac 2f8abf7 exported (976024B, 42940 tris, 80 mesh, minY 0, issues=[]). KEEP: shoulder-sleeve inner closure, cameras, wrists/grip, output interface. Panels+cinch appeared. FAIL: lookdown outer barrel + back through-gap; fan covers face as lotus petals; beard is 3 shiny tubes with extra tail sticks. This handoff is those three items only. Cloud UNRUN. Structure inventory is not art PASS."
+  ]
+}
