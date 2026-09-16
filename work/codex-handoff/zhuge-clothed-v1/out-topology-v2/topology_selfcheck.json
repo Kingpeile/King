@@ -1,0 +1,187 @@
+{
+  "task_id": "CT-COSTUME-TOPO-01",
+  "source_obj": "/workspace/work/codex-handoff/zhuge-anatomy-base/source/base.obj",
+  "v2": {
+    "ok": true,
+    "garment": {
+      "components": 1,
+      "loop_count": 4,
+      "loop_lengths": [
+        28,
+        28,
+        16,
+        16
+      ],
+      "loops_closed": true,
+      "open_chains": 0,
+      "non_boundary_edges_have_2_faces": true,
+      "non_manifold_edges": [],
+      "boundary_verts_degree_2": true,
+      "boundary_degree_bad_n": 0,
+      "duplicate_faces": 0,
+      "degenerate_faces": 0,
+      "tiny_area_faces": 0,
+      "long_edges_gt_38cm": 0,
+      "no_duplicate_or_degenerate": true,
+      "no_obvious_spikes": true,
+      "labels": {
+        "ok": true,
+        "labeled": {
+          "neck": {
+            "length": 28,
+            "closed": true,
+            "mean_x": -0.00045,
+            "mean_y": 0.0874,
+            "mean_z": 1.505,
+            "max_z": 1.505,
+            "min_z": 1.505,
+            "mean_radius": 0.06007
+          },
+          "hem": {
+            "length": 28,
+            "closed": true,
+            "mean_x": -0.00021,
+            "mean_y": 0.10983,
+            "mean_z": 0.09498,
+            "max_z": 0.095,
+            "min_z": 0.09493,
+            "mean_radius": 0.28422
+          },
+          "cuff_l": {
+            "length": 16,
+            "closed": true,
+            "mean_x": 0.15485,
+            "mean_y": -0.22431,
+            "mean_z": 1.14828,
+            "max_z": 1.23169,
+            "min_z": 1.05104,
+            "mean_radius": 0.05189
+          },
+          "cuff_r": {
+            "length": 16,
+            "closed": true,
+            "mean_x": -0.14694,
+            "mean_y": -0.22002,
+            "mean_z": 1.15147,
+            "max_z": 1.23176,
+            "min_z": 1.05727,
+            "mean_radius": 0.05669
+          }
+        },
+        "reason": null
+      },
+      "ok": true
+    },
+    "guan": {
+      "ok": true,
+      "zmax": 1.804,
+      "zmin": 1.668,
+      "loop_count": 1,
+      "loop_mean_z": [
+        1.705
+      ],
+      "crown_boundary_loops": 0,
+      "brim_boundary_loops": 1,
+      "fill_faces_at_crown": 28,
+      "boundary_sits_on_crown": false,
+      "note": "PASS only if no boundary loop at crown z AND at least one face covers the crown interior"
+    },
+    "shoe_l": {
+      "ok": true,
+      "sole_faces": 12,
+      "sole_open_loops": 0,
+      "ankle_loops": 1,
+      "loop_count": 1,
+      "loop_mean_z": [
+        0.09
+      ],
+      "zmin": 0.002,
+      "zmax": 0.09
+    },
+    "shoe_r": {
+      "ok": true,
+      "sole_faces": 12,
+      "sole_open_loops": 0,
+      "ankle_loops": 1,
+      "loop_count": 1,
+      "loop_mean_z": [
+        0.09
+      ],
+      "zmin": 0.002,
+      "zmax": 0.09
+    },
+    "feet_min_z": 0.0,
+    "body_min_z": 0.0,
+    "body_kept": 13380,
+    "armhole_join": {
+      "shared_indices": true,
+      "n_holes": 2,
+      "skipped_torso_faces": 30,
+      "armhole_loop_lengths": [
+        16,
+        16
+      ],
+      "method": "sleeve ring 0 uses torso hole vertex indices; compact remaps together",
+      "armhole_verts_not_on_boundary": true,
+      "armhole_vert_n": 32
+    },
+    "sleeve_frame": {
+      "max_ring_twist_deg": 7.44,
+      "mean_ring_twist_deg": 5.35,
+      "stations": 12,
+      "centerline": "quadratic bezier + parallel transport"
+    },
+    "export_objects": [
+      "Anatomy_Body",
+      "Robe_Garment",
+      "Collar_Inner",
+      "Sash",
+      "Shoe_L",
+      "Shoe_R",
+      "Guan",
+      "Beard",
+      "Fan"
+    ]
+  },
+  "negative_control_v1": {
+    "generator": "build_clothed_v1.py",
+    "frozen_commit": "72f854997468595b7492d709d8235db6cd74cf0c",
+    "garment": {
+      "components": 3,
+      "loop_count": 6,
+      "ok": false
+    },
+    "guan": {
+      "ok": false,
+      "zmax": 1.798,
+      "zmin": 1.668,
+      "loop_count": 2,
+      "loop_mean_z": [
+        1.705,
+        1.798
+      ],
+      "crown_boundary_loops": 1,
+      "brim_boundary_loops": 1,
+      "fill_faces_at_crown": 17,
+      "boundary_sits_on_crown": true,
+      "note": "PASS only if no boundary loop at crown z AND at least one face covers the crown interior"
+    },
+    "shoe_l": {
+      "ok": false,
+      "sole_faces": 0,
+      "sole_open_loops": 1,
+      "ankle_loops": 1,
+      "loop_count": 2,
+      "loop_mean_z": [
+        0.004,
+        0.088
+      ],
+      "zmin": 0.004,
+      "zmax": 0.088
+    },
+    "must_fail_separate_sleeves": true,
+    "must_fail_open_guan_crown": true,
+    "negative_control_ok": true
+  },
+  "ok": true
+}

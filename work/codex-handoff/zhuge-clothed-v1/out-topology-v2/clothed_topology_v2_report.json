@@ -1,0 +1,263 @@
+{
+  "task_id": "CT-COSTUME-TOPO-01",
+  "title": "Shared-armhole garment sample (not art PASS)",
+  "status": "UNRUN",
+  "execution_kind": "expected",
+  "not_a_zhuge_product": true,
+  "g1_g5_claimed": false,
+  "art_approval": false,
+  "fusion_pass": false,
+  "palace_mesh": false,
+  "armature": false,
+  "can_walk": false,
+  "declaration": "Static topology sample. One garment mesh with shared armhole indices. Body kept. No armature.",
+  "method": {
+    "used": "single garment; armhole = torso hole loop = sleeve ring 0 (same indices); guan/shoe filled; bezier+parallel-transport sleeves",
+    "empty_robe_generators": false,
+    "frozen_v1_generator": "72f854997468595b7492d709d8235db6cd74cf0c",
+    "not_a_third_tube_tune": true
+  },
+  "export_objects": [
+    "Anatomy_Body",
+    "Robe_Garment",
+    "Collar_Inner",
+    "Sash",
+    "Shoe_L",
+    "Shoe_R",
+    "Guan",
+    "Beard",
+    "Fan"
+  ],
+  "census": {
+    "body": {
+      "verts": 13380,
+      "faces": 13378,
+      "tris": 26756
+    },
+    "garment": {
+      "verts": 728,
+      "faces": 686,
+      "tris": 1372
+    },
+    "collar": {
+      "verts": 56,
+      "faces": 28,
+      "tris": 56
+    },
+    "sash": {
+      "verts": 92,
+      "faces": 62,
+      "tris": 124
+    },
+    "shoe_l": {
+      "verts": 37,
+      "faces": 36,
+      "tris": 60
+    },
+    "shoe_r": {
+      "verts": 37,
+      "faces": 36,
+      "tris": 60
+    },
+    "guan": {
+      "verts": 57,
+      "faces": 54,
+      "tris": 92
+    },
+    "beard": {
+      "verts": 80,
+      "faces": 64,
+      "tris": 128
+    },
+    "fan": {
+      "verts": 80,
+      "faces": 42,
+      "tris": 84
+    }
+  },
+  "armhole_join": {
+    "shared_indices": true,
+    "n_holes": 2,
+    "skipped_torso_faces": 30,
+    "armhole_loop_lengths": [
+      16,
+      16
+    ],
+    "method": "sleeve ring 0 uses torso hole vertex indices; compact remaps together"
+  },
+  "sleeve_frame": {
+    "max_ring_twist_deg": 7.44,
+    "mean_ring_twist_deg": 5.35,
+    "stations": 12,
+    "centerline": "quadratic bezier + parallel transport"
+  },
+  "topology": {
+    "ok": true,
+    "garment": {
+      "components": 1,
+      "loop_count": 4,
+      "loop_lengths": [
+        28,
+        28,
+        16,
+        16
+      ],
+      "loops_closed": true,
+      "open_chains": 0,
+      "non_boundary_edges_have_2_faces": true,
+      "non_manifold_edges": [],
+      "boundary_verts_degree_2": true,
+      "boundary_degree_bad_n": 0,
+      "duplicate_faces": 0,
+      "degenerate_faces": 0,
+      "tiny_area_faces": 0,
+      "long_edges_gt_38cm": 0,
+      "no_duplicate_or_degenerate": true,
+      "no_obvious_spikes": true,
+      "labels": {
+        "ok": true,
+        "labeled": {
+          "neck": {
+            "length": 28,
+            "closed": true,
+            "mean_x": -0.00045,
+            "mean_y": 0.0874,
+            "mean_z": 1.505,
+            "max_z": 1.505,
+            "min_z": 1.505,
+            "mean_radius": 0.06007
+          },
+          "hem": {
+            "length": 28,
+            "closed": true,
+            "mean_x": -0.00021,
+            "mean_y": 0.10983,
+            "mean_z": 0.09498,
+            "max_z": 0.095,
+            "min_z": 0.09493,
+            "mean_radius": 0.28422
+          },
+          "cuff_l": {
+            "length": 16,
+            "closed": true,
+            "mean_x": 0.15485,
+            "mean_y": -0.22431,
+            "mean_z": 1.14828,
+            "max_z": 1.23169,
+            "min_z": 1.05104,
+            "mean_radius": 0.05189
+          },
+          "cuff_r": {
+            "length": 16,
+            "closed": true,
+            "mean_x": -0.14694,
+            "mean_y": -0.22002,
+            "mean_z": 1.15147,
+            "max_z": 1.23176,
+            "min_z": 1.05727,
+            "mean_radius": 0.05669
+          }
+        },
+        "reason": null
+      },
+      "ok": true
+    },
+    "guan": {
+      "ok": true,
+      "zmax": 1.804,
+      "zmin": 1.668,
+      "loop_count": 1,
+      "loop_mean_z": [
+        1.705
+      ],
+      "crown_boundary_loops": 0,
+      "brim_boundary_loops": 1,
+      "fill_faces_at_crown": 28,
+      "boundary_sits_on_crown": false,
+      "note": "PASS only if no boundary loop at crown z AND at least one face covers the crown interior"
+    },
+    "shoe_l": {
+      "ok": true,
+      "sole_faces": 12,
+      "sole_open_loops": 0,
+      "ankle_loops": 1,
+      "loop_count": 1,
+      "loop_mean_z": [
+        0.09
+      ],
+      "zmin": 0.002,
+      "zmax": 0.09
+    },
+    "shoe_r": {
+      "ok": true,
+      "sole_faces": 12,
+      "sole_open_loops": 0,
+      "ankle_loops": 1,
+      "loop_count": 1,
+      "loop_mean_z": [
+        0.09
+      ],
+      "zmin": 0.002,
+      "zmax": 0.09
+    },
+    "feet_min_z": 0.0,
+    "body_min_z": 0.0,
+    "body_kept": 13380,
+    "armhole_join": {
+      "shared_indices": true,
+      "n_holes": 2,
+      "skipped_torso_faces": 30,
+      "armhole_loop_lengths": [
+        16,
+        16
+      ],
+      "method": "sleeve ring 0 uses torso hole vertex indices; compact remaps together",
+      "armhole_verts_not_on_boundary": true,
+      "armhole_vert_n": 32
+    },
+    "sleeve_frame": {
+      "max_ring_twist_deg": 7.44,
+      "mean_ring_twist_deg": 5.35,
+      "stations": 12,
+      "centerline": "quadratic bezier + parallel transport"
+    },
+    "export_objects": [
+      "Anatomy_Body",
+      "Robe_Garment",
+      "Collar_Inner",
+      "Sash",
+      "Shoe_L",
+      "Shoe_R",
+      "Guan",
+      "Beard",
+      "Fan"
+    ]
+  },
+  "feet_min_z": 0.0,
+  "bbox": {
+    "min": [
+      -0.35805,
+      -0.366043,
+      0.0
+    ],
+    "max": [
+      0.37717,
+      0.316747,
+      1.804
+    ]
+  },
+  "height_m": 1.804,
+  "glb_export": {
+    "rootName": "ZhugeTopoV2_Root",
+    "yup": true,
+    "bytes": "UNKNOWN"
+  },
+  "blender_present": false,
+  "blender_version_actual": null,
+  "outputs": [],
+  "unverified_until_mac_blender": [
+    "Mac lookdown: guan crown closed, no scalp",
+    "Mac back/lookdown shoulder: one cloth, no second sleeve shell, no hole",
+    "pixel G1–G5 (not claimed)"
+  ]
+}

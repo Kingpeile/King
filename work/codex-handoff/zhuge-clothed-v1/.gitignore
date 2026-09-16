@@ -3,3 +3,6 @@ __pycache__/
 out/*.glb
 out/*.blend
 out/*.png
+out-topology-v2/*.glb
+out-topology-v2/*.blend
+out-topology-v2/*.png
