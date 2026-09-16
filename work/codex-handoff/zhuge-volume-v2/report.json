@@ -8,20 +8,31 @@
   "blender_version_expected": "5.2.1",
   "blender_version_actual": null,
   "render_engine": null,
-  "timestamp_utc": "2026-09-16T09:07:53Z",
+  "timestamp_utc": "2026-09-16T09:57:47Z",
   "mac_real_run": {
-    "commit_tested": "64a0192232c16f94e3d162c0098986fecbfe0827",
+    "filepath_bug_commit": "64a0192232c16f94e3d162c0098986fecbfe0827",
+    "export_ok_commit": "9746c6099a40168bbd87ee5d2c65f7bfd4276be2",
     "blender": "5.2.1",
     "environment": "Mac factory-startup, background, independent output-dir",
     "mesh_build": "succeeded",
-    "glb_export": "failed",
-    "error": "FileNotFoundError [Errno 2] No such file or directory: ''",
-    "cause": "filter_op_kwargs used bpy.types.EXPORT_SCENE_OT_gltf.bl_rna (filepath absent) instead of bpy.ops.export_scene.gltf.get_rna_type().properties (filepath present).",
-    "fix": "Filter kwargs via the live operator get_rna_type() RNA for gltf and save_as_mainfile; refuse missing/empty filepath instead of calling with ''.",
-    "this_cloud_status": "UNRUN",
-    "valid_glb": false,
+    "glb_export_on_9746c60": "succeeded",
+    "structure_on_9746c60": "issues=[], height 1.8553m, feet 0, no skin/animation",
+    "art_review": "FAILED",
     "art_approval": false,
-    "note": "Mac failure is real. This cloud did not re-export. Do not treat UNRUN JSON as a successful GLB."
+    "art_rejection": [
+      "Head/crown and feet cropped in front+lookdown",
+      "Both shoulder sleeves float with holes",
+      "Neck clearly detached from torso",
+      "Left hand pasted on abdomen, not joined to cuff",
+      "Right hand is a ring-like block",
+      "Chest like two hard plates",
+      "Feathers thick vertical cards — ③ deferred",
+      "Skirt still a smooth cone — ③ deferred"
+    ],
+    "this_commit_scope": "① review cameras frame character bbox with 10% margin; ② topology/join (neck-yoke-sleeve-hand, cuff join, C-grip, one collar). ③ not started.",
+    "this_cloud_status": "UNRUN",
+    "valid_glb_on_cloud": false,
+    "note": "9746c60 Mac export was real. This cloud did not re-export. Do not treat UNRUN JSON as art approval or as a new measured GLB."
   },
   "units": "meters",
   "rootName": "ZhugeLiang_Root",
@@ -41,12 +52,12 @@
   "bbox": {
     "expected_blender_zup": {
       "min": [
-        -0.5658,
-        -0.6367,
+        -0.4719,
+        -0.5807,
         0.0
       ],
       "max": [
-        0.3991,
+        0.3261,
         0.2752,
         1.8553
       ]
@@ -113,9 +124,9 @@
   "tris_policy": "If look would clearly degrade to hit the band, keep quality and report honestly.",
   "tris_note": "Inside 20k–45k target band (character GLB census; stage is .blend-only).",
   "stats_character": {
-    "part_count": 58,
-    "verts": 20402,
-    "tris": 38616,
+    "part_count": 64,
+    "verts": 20794,
+    "tris": 39144,
     "material_count": 7,
     "materials_used": [
       "M_CyanGreen",
@@ -128,9 +139,9 @@
     ]
   },
   "stats_all": {
-    "part_count": 77,
-    "verts": 24288,
-    "tris": 43240,
+    "part_count": 83,
+    "verts": 24680,
+    "tris": 43768,
     "material_count": 8,
     "materials_used": [
       "M_CyanGreen",
@@ -164,7 +175,201 @@
   "art_approval": {
     "screenshot_count_is_not_approval": true,
     "this_handoff_claims_approval": false,
-    "approval_authority": "Codex local review on Mac Blender 5.2.1"
+    "approval_authority": "Codex local review on Mac Blender 5.2.1",
+    "mac_9746c60_art_review": "FAILED"
+  },
+  "review_cameras": {
+    "margin": "10% on all four sides (ndc_limit 0.80)",
+    "frames": "character AABB including guan and feet",
+    "stage_enlarged_to_hide_crop": false,
+    "views": {
+      "Cam_Front": {
+        "distance_m": 6.3388,
+        "location": [
+          -0.0729,
+          -6.4916,
+          0.9276
+        ],
+        "target": [
+          -0.0729,
+          -0.1527,
+          0.9276
+        ],
+        "lens_mm": 50.0,
+        "max_abs_ndc_x": 0.1875,
+        "max_abs_ndc_y": 0.775,
+        "behind_count": 0,
+        "in_frame_10pct_margin": true
+      },
+      "Cam_Side": {
+        "distance_m": 6.309,
+        "location": [
+          6.2361,
+          -0.1527,
+          0.9276
+        ],
+        "target": [
+          -0.0729,
+          -0.1527,
+          0.9276
+        ],
+        "lens_mm": 50.0,
+        "max_abs_ndc_x": 0.2011,
+        "max_abs_ndc_y": 0.7751,
+        "behind_count": 0,
+        "in_frame_10pct_margin": true
+      },
+      "Cam_Back": {
+        "distance_m": 6.3388,
+        "location": [
+          -0.0729,
+          6.1861,
+          0.9276
+        ],
+        "target": [
+          -0.0729,
+          -0.1527,
+          0.9276
+        ],
+        "lens_mm": 50.0,
+        "max_abs_ndc_x": 0.1875,
+        "max_abs_ndc_y": 0.775,
+        "behind_count": 0,
+        "in_frame_10pct_margin": true
+      },
+      "Cam_LookDown": {
+        "distance_m": 6.9338,
+        "location": [
+          1.9169,
+          -5.0776,
+          5.3846
+        ],
+        "target": [
+          -0.0729,
+          -0.1527,
+          0.9276
+        ],
+        "lens_mm": 50.0,
+        "max_abs_ndc_x": 0.2396,
+        "max_abs_ndc_y": 0.7761,
+        "behind_count": 0,
+        "in_frame_10pct_margin": true
+      }
+    },
+    "legacy_9746c60_Cam_Front": {
+      "location": [
+        0.0,
+        -3.15,
+        1.55
+      ],
+      "target": [
+        0.0,
+        0.15,
+        0.95
+      ],
+      "lens_mm": 55.0,
+      "max_abs_ndc_x": 0.583,
+      "max_abs_ndc_y": 2.0631,
+      "behind_count": 0,
+      "in_frame_10pct_margin": false,
+      "note": "Cropped guan/feet on Mac art review. Replaced by bbox-fit cameras."
+    }
+  },
+  "topology_join": {
+    "required_parts_missing": [],
+    "collar_part_names": [
+      "Collar"
+    ],
+    "collar_is_single_wrap": true,
+    "right_hand_is_grip": true,
+    "left_palm_center": [
+      -0.3445,
+      -0.0953,
+      0.9635
+    ],
+    "left_hand_pasted_on_abdomen": false,
+    "bbox_overlaps": [
+      {
+        "label": "neck_yoke",
+        "a": "Neck",
+        "b": "Robe_Yoke",
+        "present": true,
+        "bbox_overlap": true
+      },
+      {
+        "label": "yoke_torso",
+        "a": "Robe_Yoke",
+        "b": "Robe_Torso",
+        "present": true,
+        "bbox_overlap": true
+      },
+      {
+        "label": "neck_torso",
+        "a": "Neck",
+        "b": "Robe_Torso",
+        "present": true,
+        "bbox_overlap": true
+      },
+      {
+        "label": "neck_collar",
+        "a": "Neck",
+        "b": "Collar",
+        "present": true,
+        "bbox_overlap": true
+      },
+      {
+        "label": "collar_yoke",
+        "a": "Collar",
+        "b": "Robe_Yoke",
+        "present": true,
+        "bbox_overlap": true
+      },
+      {
+        "label": "sleeveL_yoke",
+        "a": "Sleeve_L",
+        "b": "Robe_Yoke",
+        "present": true,
+        "bbox_overlap": true
+      },
+      {
+        "label": "sleeveR_yoke",
+        "a": "Sleeve_R",
+        "b": "Robe_Yoke",
+        "present": true,
+        "bbox_overlap": true
+      },
+      {
+        "label": "left_wrist_cuff",
+        "a": "Hand_L_Wrist",
+        "b": "Cuff_L",
+        "present": true,
+        "bbox_overlap": true
+      },
+      {
+        "label": "left_palm_cuff",
+        "a": "Hand_L_Palm",
+        "b": "Cuff_L",
+        "present": true,
+        "bbox_overlap": true
+      },
+      {
+        "label": "right_wrist_cuff",
+        "a": "Hand_R_Wrist",
+        "b": "Cuff_R",
+        "present": true,
+        "bbox_overlap": true
+      },
+      {
+        "label": "right_palm_cuff",
+        "a": "Hand_R_Palm",
+        "b": "Cuff_R",
+        "present": true,
+        "bbox_overlap": true
+      }
+    ],
+    "all_join_overlaps": true,
+    "pass_3_soft_folds_beard_fan": false,
+    "pass_3_note": "③ deferred; this audit is ② connections/joins only."
   },
   "outputs": [],
   "static_checks": {
@@ -185,15 +390,15 @@
   "notes": [
     "Generator census only. No GLB/blend/png written because this was --mesh-stats or bpy is missing.",
     "Static posed meshes. No armature. Cannot walk.",
-    "Mac 64a0192 real run: mesh OK, GLB filepath empty because class bl_rna dropped it. Filter now uses get_rna_type(); cloud still UNRUN."
+    "Mac 9746c60 art review FAILED. This revision: ① cameras + ② joins. ③ deferred. Cloud UNRUN."
   ],
   "unfinished": [
     "No armature / no walk cycle (intentional for this static first version).",
     "Object origins are world-layout, not joint-centered — recenter before rigging.",
     "Roof glaze shares M_CyanGreen with robe trim/guan to stay at 8 materials (blend stage only).",
     "Cloud VM has no Blender; visual sign-off is Codex on Mac.",
-    "GLB / .blend / view PNGs are absent until Blender 5.2.1 is run.",
+    "GLB / .blend / view PNGs are absent until Blender 5.2.1 is re-run on this revision.",
     "GLB interface measured_* fields are UNKNOWN until a real export exists.",
-    "Mac Blender 5.2.1 run of 64a0192: mesh build succeeded; GLB export failed with FileNotFoundError filepath=''. Cause: filter_op_kwargs used Operator class bl_rna (no filepath) instead of bpy.ops.*.get_rna_type().properties. Fix is in this handoff and unverified until re-run. No valid GLB/renders; no art approval."
+    "Mac 9746c60 exported GLB/blend/four views (structure OK). Art review FAILED: cropped guan/feet; floating sleeve holes; neck detached; left hand not at cuff; right hand torus; chest as two plates. This handoff is ① review-camera 10% bbox margin + ② topology/join only. ③ soft folds / beard / fan refine is deferred. No art approval."
   ]
 }

@@ -45,7 +45,7 @@ WAIST_Z = 0.97
 HIP_Z = 0.88
 HEM_Z = 0.038
 FOOT_Z = 0.0
-SHOULDER_W = 0.235
+SHOULDER_W = 0.235  # visual robe half-width; sleeve ROOT sits on the torso (~0.148), not out here
 CHEST_RX, CHEST_RY = 0.205, 0.155
 WAIST_RX, WAIST_RY = 0.175, 0.130
 
@@ -123,7 +123,10 @@ class V:
 
     def __init__(self, x, y=None, z=None):
         if y is None:
-            self.x, self.y, self.z = float(x[0]), float(x[1]), float(x[2])
+            if isinstance(x, V):
+                self.x, self.y, self.z = x.x, x.y, x.z
+            else:
+                self.x, self.y, self.z = float(x[0]), float(x[1]), float(x[2])
         else:
             self.x, self.y, self.z = float(x), float(y), float(z)
 
@@ -393,6 +396,35 @@ def loft_closed(rings, name, material, smooth=True):
     m = Mesh(name, material, smooth=smooth)
     m.add_grid(rings, closed_u=True, closed_v=False)
     return m
+
+
+def annulus_between(ring_a, ring_b, name, material, flip=False, outward=None):
+    """Stitch two equal-length loops into a closed band (sleeve/neck caps)."""
+    if len(ring_a) != len(ring_b) or len(ring_a) < 3:
+        raise ValueError("annulus needs matching rings")
+    m = Mesh(name, material)
+    n = len(ring_a)
+    for p in ring_a:
+        m.add(p)
+    for p in ring_b:
+        m.add(p)
+    for j in range(n):
+        j2 = (j + 1) % n
+        a, b, c, d = j, j2, n + j2, n + j
+        m.faces.append((a, d, c, b) if flip else (a, b, c, d))
+    if outward is not None and m.faces:
+        acc = V(0, 0, 0)
+        for fa in m.faces:
+            acc = acc + (m.verts[fa[1]] - m.verts[fa[0]]).cross(m.verts[fa[2]] - m.verts[fa[0]])
+        if acc.dot(outward) < 0:
+            m.faces = [tuple(reversed(f)) for f in m.faces]
+    return m
+
+
+def rotate_around(v, axis, ang):
+    axis = axis.nrm()
+    c, s = math.cos(ang), math.sin(ang)
+    return v * c + axis.cross(v) * s + axis * axis.dot(v) * (1.0 - c)
 
 
 def lathe_rz(profile_rz, n_seg, name, material, axis_y_face=True):
@@ -790,17 +822,29 @@ def build_ears():
 
 
 def build_neck():
+    """Skin column that flares into the robe yoke — no floating gap at the collar."""
     n = 28
-    rings = []
-    for k, (rx, ry, z) in enumerate(
-        [
-            (0.048, 0.046, CHIN_Z + 0.004),
-            (0.050, 0.048, CHIN_Z - 0.025),
-            (0.062, 0.055, SHOULDER_Z + 0.055),
-        ]
-    ):
-        rings.append(ellipse_ring(0, 0, z, rx, ry, n))
+    rings = [
+        ellipse_ring(0, 0.0, CHIN_Z + 0.008, 0.048, 0.046, n),
+        ellipse_ring(0, 0.0, CHIN_Z - 0.035, 0.052, 0.050, n),
+        ellipse_ring(0, 0.002, SHOULDER_Z + 0.06, 0.068, 0.060, n),
+        ellipse_ring(0, 0.008, SHOULDER_Z + 0.01, 0.088, 0.072, n),
+        ellipse_ring(0, 0.010, SHOULDER_Z - 0.05, 0.105, 0.085, n),
+    ]
     return loft_closed(rings, "Neck", "M_Skin")
+
+
+def build_yoke():
+    """Robe shoulder yoke: neck opening → full shoulders, fills the old armhole void."""
+    n = 36
+    rings = [
+        ellipse_ring(0, 0.004, SHOULDER_Z + 0.075, 0.072, 0.066, n),
+        ellipse_ring(0, 0.008, SHOULDER_Z + 0.035, 0.125, 0.105, n),
+        ellipse_ring(0, 0.012, SHOULDER_Z - 0.01, 0.188, 0.142, n),
+        ellipse_ring(0, 0.014, SHOULDER_Z - 0.07, 0.205, 0.152, n),
+        ellipse_ring(0, 0.012, CHEST_Z + 0.10, 0.210, 0.158, n),
+    ]
+    return loft_closed(rings, "Robe_Yoke", "M_RobeIvory")
 
 
 def build_hair():
@@ -1017,52 +1061,51 @@ def build_beard():
 
 
 def build_torso_robe():
-    """Ivory robe body with gravity folds. Not a smooth cone."""
+    """Ivory robe body. Top ring meets the yoke/neck; one continuous volume, not two chest boards."""
     n = 40
     specs = [
-        (0.155, 0.120, SHOULDER_Z + 0.04, 8, 0.008, 0.2),
-        (0.185, 0.138, SHOULDER_Z - 0.04, 10, 0.012, 0.15),
-        (CHEST_RX + 0.02, CHEST_RY + 0.012, CHEST_Z + 0.04, 10, 0.016, 0.1),
-        (0.200, 0.155, CHEST_Z - 0.02, 10, 0.020, 0.18),
-        (0.195, 0.150, CHEST_Z - 0.08, 10, 0.018, 0.15),
-        (WAIST_RX + 0.028, WAIST_RY + 0.022, WAIST_Z + 0.08, 11, 0.017, 0.05),
-        (WAIST_RX + 0.025, WAIST_RY + 0.02, WAIST_Z + 0.02, 10, 0.016, 0.0),
-        (WAIST_RX + 0.03, WAIST_RY + 0.022, WAIST_Z - 0.02, 12, 0.018, 0.1),
+        (0.078, 0.070, SHOULDER_Z + 0.07, 0, 0.0, 0.0),
+        (0.130, 0.108, SHOULDER_Z + 0.02, 6, 0.006, 0.1),
+        (0.185, 0.140, SHOULDER_Z - 0.05, 8, 0.010, 0.15),
+        (CHEST_RX + 0.02, CHEST_RY + 0.012, CHEST_Z + 0.04, 8, 0.012, 0.1),
+        (0.200, 0.155, CHEST_Z - 0.02, 8, 0.014, 0.18),
+        (0.195, 0.150, CHEST_Z - 0.08, 8, 0.012, 0.15),
+        (WAIST_RX + 0.028, WAIST_RY + 0.022, WAIST_Z + 0.08, 8, 0.012, 0.05),
+        (WAIST_RX + 0.025, WAIST_RY + 0.02, WAIST_Z + 0.02, 8, 0.010, 0.0),
+        (WAIST_RX + 0.03, WAIST_RY + 0.022, WAIST_Z - 0.02, 8, 0.012, 0.1),
     ]
     rings = []
     for rx, ry, z, fn, fa, ph in specs:
-        rings.append(ellipse_ring(0, 0.01, z, rx, ry, n, fold_n=fn, fold_amp=fa / rx, fold_phase=ph))
+        ring = ellipse_ring(0, 0.012, z, rx, ry, n, fold_n=fn, fold_amp=fa / rx if rx else 0.0, fold_phase=ph)
+        rings.append(ring)
     return loft_closed(rings, "Robe_Torso", "M_RobeIvory")
 
 
 def build_collar():
-    """交领 cross-collar, left panel on top (右衽), thick cyan-green edge later."""
-    parts = []
-    n = 18
-    # two lapel strips as sweeps of thick cloth profile
-    for name, side, y_sign, z_off in (
-        ("Collar_Under_R", -1.0, 1.0, 0.0),
-        ("Collar_Over_L", 1.0, 1.0, 0.006),
-    ):
-        path = poly_bezier(
-            [
-                V(side * 0.02, -0.11, SHOULDER_Z + 0.02),
-                V(side * 0.08, -0.14, CHEST_Z + 0.08),
-                V(side * 0.04, -0.16, CHEST_Z - 0.02),
-                V(-side * 0.03, -0.10, WAIST_Z + 0.12),
-            ],
-            7,
-        )
-        parts.append(
-            sweep_profile(
-                path,
-                _rounded_rect(0.055, 0.014, 3),
-                name,
-                "M_RobeIvory",
-                closed_profile=True,
-            )
-        )
-    return parts
+    """Single 交领 wrap around the neck, overlapping the yoke — not two disconnected plates."""
+    n = 32
+    rings = []
+    specs = [
+        (0.074, 0.070, SHOULDER_Z + 0.08, 0.000, 0.00),
+        (0.100, 0.090, SHOULDER_Z + 0.04, -0.012, 0.02),
+        (0.125, 0.100, CHEST_Z + 0.14, -0.028, 0.05),
+        (0.118, 0.095, CHEST_Z + 0.04, -0.040, 0.08),
+        (0.090, 0.085, CHEST_Z - 0.04, -0.030, 0.10),
+    ]
+    for rx, ry, z, yoff, v_pull in specs:
+        ring = []
+        for i in range(n):
+            a = 2.0 * math.pi * i / n
+            x = math.cos(a) * rx
+            y = math.sin(a) * ry + yoff
+            # Front (-Y) pulled into a joined V overlap, still one loop
+            front = 0.5 * (1.0 - math.sin(a))  # 1 at -Y
+            y -= v_pull * (front ** 2)
+            z_v = z - 0.04 * v_pull * (front ** 2)
+            ring.append(V(x, y, z_v))
+        rings.append(ring)
+    collar = loft_closed(rings, "Collar", "M_RobeIvory")
+    return [collar]
 
 
 def build_skirt():
@@ -1097,43 +1140,57 @@ def build_skirt():
     return parts
 
 
-def _sleeve_path(side, raised):
-    sh = V(side * SHOULDER_W, 0.02, SHOULDER_Z)
+def arm_chain(side, raised):
+    """Shoulder on the torso surface → wrist at the cuff. Shared by sleeves and hands."""
+    sh = V(side * 0.148, 0.018, SHOULDER_Z - 0.02)
     if raised:
-        # right arm holding fan — elbow forward-down, wrist at fan
-        elbow = V(side * 0.32, -0.10, CHEST_Z - 0.02)
-        wrist = V(side * 0.26, -0.16, CHEST_Z - 0.08)
-        return poly_bezier([sh, V(side * 0.28, -0.02, SHOULDER_Z - 0.08), elbow, wrist], 8)
-    # hanging left sleeve with gravity
-    elbow = V(side * 0.38, -0.04, WAIST_Z + 0.12)
-    cuff = V(side * 0.42, -0.08, HIP_Z + 0.02)
-    return poly_bezier([sh, V(side * 0.30, 0.04, SHOULDER_Z - 0.12), elbow, cuff], 8)
+        mid = V(side * 0.22, -0.01, SHOULDER_Z - 0.10)
+        el = V(side * 0.255, -0.07, CHEST_Z + 0.05)
+        wr = V(side * 0.225, -0.155, CHEST_Z - 0.02)
+    else:
+        mid = V(side * 0.22, 0.03, SHOULDER_Z - 0.12)
+        el = V(side * 0.30, -0.02, WAIST_Z + 0.18)
+        wr = V(side * 0.335, -0.08, HIP_Z + 0.12)
+    return [sh, mid, el, wr]
+
+
+def fan_pose():
+    wr = arm_chain(1.0, True)[-1]
+    axis = V(-0.10, -0.38, 0.20).nrm()
+    origin = wr + V(0.012, -0.018, 0.008) - axis * 0.05
+    return origin, axis
+
+
+FAN_HANDLE_LEN = 0.22
+FAN_HANDLE_R = 0.009
+
+
+def _sleeve_path(side, raised):
+    return poly_bezier(arm_chain(side, raised), 8)
 
 
 def build_sleeves():
     parts = []
     for side, raised, tag in ((1.0, True, "R"), (-1.0, False, "L")):
         path = _sleeve_path(side, raised)
-        # oval profile grows toward cuff, with fold waves
         n_u = 24
         T, N, B = bishop_frames(path)
         grid_outer = []
         grid_inner = []
         for i, p in enumerate(path):
             t = i / max(1, len(path) - 1)
-            rx = lerp(0.055, 0.13 if not raised else 0.10, t ** 0.8)
-            ry = lerp(0.045, 0.09 if not raised else 0.07, t ** 0.8)
+            # Root is wide enough to bury in the yoke; grows toward cuff
+            rx = lerp(0.078, 0.12 if not raised else 0.095, t ** 0.8)
+            ry = lerp(0.062, 0.085 if not raised else 0.068, t ** 0.8)
             row_o, row_i = [], []
             for j in range(n_u):
                 a = 2 * math.pi * j / n_u
-                fold = 1.0 + 0.10 * abs(math.sin(4.0 * a + t * 2.0)) * (0.4 + 0.6 * t)
-                # gravity hang: extra +down on lower half of sleeve
-                hang = 0.0
-                # B is roughly binormal; add a downward bias on the lower side
+                fold = 1.0 + 0.08 * abs(math.sin(4.0 * a + t * 2.0)) * (0.3 + 0.7 * t)
                 world_down = V(0, 0, -1)
                 q = N[i] * math.cos(a) + B[i] * math.sin(a)
+                hang = 0.0
                 if q.dot(world_down) > 0:
-                    hang = 0.012 * t * q.dot(world_down)
+                    hang = 0.010 * t * q.dot(world_down)
                 po = p + N[i] * (math.cos(a) * rx * fold) + B[i] * (math.sin(a) * ry * fold) + world_down * hang
                 pi = p + N[i] * (math.cos(a) * (rx * fold - 0.012)) + B[i] * (math.sin(a) * (ry * fold - 0.010))
                 row_o.append(po)
@@ -1145,9 +1202,27 @@ def build_sleeves():
         inner = Mesh("SleeveInner_%s" % tag, "M_RobeIvory")
         inner.add_grid(grid_inner, closed_u=True, closed_v=False, flip=True)
         parts.extend([outer, inner])
-        # Clear cuff — single swept band, no jagged overlapping shells
+        # Close the shoulder hole (was a see-through tube) and the cuff mouth under the band.
+        # Normals face out of the sleeve volume (into the yoke at the root; out of the cuff).
+        parts.append(
+            annulus_between(
+                grid_outer[0],
+                grid_inner[0],
+                "SleeveCapShoulder_%s" % tag,
+                "M_RobeIvory",
+                outward=-T[0],
+            )
+        )
+        parts.append(
+            annulus_between(
+                grid_outer[-1],
+                grid_inner[-1],
+                "SleeveCapCuff_%s" % tag,
+                "M_RobeIvory",
+                outward=T[-1],
+            )
+        )
         cuff_path = grid_outer[-1] + [grid_outer[-1][0]]
-        # recenter slightly outward
         cuff = sweep_profile(
             cuff_path,
             _rounded_rect(0.038, 0.016, 4),
@@ -1156,15 +1231,12 @@ def build_sleeves():
             closed_profile=True,
         )
         parts.append(cuff)
-        # gold piping rings at cuff outer edges (thin)
         for pi, scale in enumerate((1.02, 0.92)):
-            ring_pts = []
             c0 = V(0, 0, 0)
             for q in grid_outer[-1]:
                 c0 = c0 + q
             c0 = c0 * (1.0 / len(grid_outer[-1]))
-            for q in grid_outer[-1]:
-                ring_pts.append(c0 + (q - c0) * scale)
+            ring_pts = [c0 + (q - c0) * scale for q in grid_outer[-1]]
             ring_pts.append(ring_pts[0])
             parts.append(
                 sweep_profile(
@@ -1204,15 +1276,16 @@ def build_trims():
             True,
         )
     )
-    # collar trim along over-lapel
+    # collar trim along the single wrap (front V), still one band
     cpath = poly_bezier(
         [
-            V(0.02, -0.125, SHOULDER_Z + 0.03),
-            V(0.09, -0.155, CHEST_Z + 0.09),
-            V(0.05, -0.175, CHEST_Z - 0.01),
-            V(-0.02, -0.12, WAIST_Z + 0.14),
+            V(0.06, -0.09, SHOULDER_Z + 0.06),
+            V(0.10, -0.12, CHEST_Z + 0.14),
+            V(0.04, -0.14, CHEST_Z + 0.04),
+            V(-0.04, -0.12, CHEST_Z - 0.02),
+            V(-0.08, -0.09, SHOULDER_Z + 0.04),
         ],
-        7,
+        6,
     )
     parts.append(
         sweep_profile(cpath, _rounded_rect(0.022, 0.010, 3), "Trim_Collar", "M_CyanGreen", True)
@@ -1258,101 +1331,134 @@ def build_shoes():
     return parts
 
 
-# Fan handle placement — right hand grips this
-FAN_ORIGIN = V(0.22, -0.18, CHEST_Z - 0.02)
-FAN_DIR = V(-0.12, -0.42, 0.18).nrm()  # toward body/up, feathers fan the other way
-FAN_HANDLE_LEN = 0.22
-FAN_HANDLE_R = 0.009
-
-
 def build_hands():
-    """Fingers actually wrap the fan handle (right). Left relaxed on the robe."""
+    """Hands emerge from cuffs. Right is a C-grip palm+phalanges, not a torus around the handle."""
     parts = []
-    # ----- Right hand: grip -----
-    handle_p0 = FAN_ORIGIN
-    axis = FAN_DIR
-    # palm sits on +X side of handle
-    radial = V(1, 0, 0)
-    radial = (radial - axis * radial.dot(axis)).nrm()
-    palm_c = handle_p0 + axis * (FAN_HANDLE_LEN * 0.42) + radial * (FAN_HANDLE_R + 0.018)
-    # palm loft
-    n = 16
-    palm_rings = []
-    for k, (rx, ry, along, out) in enumerate(
-        [
-            (0.028, 0.016, 0.01, 0.012),
-            (0.038, 0.022, 0.04, 0.018),
-            (0.032, 0.018, 0.07, 0.014),
-        ]
-    ):
-        across = axis.cross(radial).nrm()
-        c = handle_p0 + axis * (FAN_HANDLE_LEN * 0.28 + along) + radial * out
-        ring = []
-        for j in range(n):
-            a = 2 * math.pi * j / n
-            ring.append(c + across * (math.cos(a) * rx) + axis * (math.sin(a) * ry))
-        palm_rings.append(ring)
-    palm = loft_closed(palm_rings, "Hand_R_Palm", "M_Skin")
+    origin, axis = fan_pose()
+
+    def palm_slab(wrist, along, nrm, across, length, width, thick, name):
+        n = 12
+        rings = []
+        specs = (
+            (0.00, width * 0.32, thick * 0.65),
+            (0.22, width * 0.46, thick * 0.90),
+            (0.55, width * 0.52, thick * 1.00),
+            (0.82, width * 0.48, thick * 0.88),
+            (1.00, width * 0.40, thick * 0.72),
+        )
+        along = along.nrm()
+        nrm = nrm.nrm()
+        across = across.nrm()
+        for t, rx, ry in specs:
+            c = wrist + along * (length * t)
+            ring = []
+            for j in range(n):
+                a = 2.0 * math.pi * j / n
+                ring.append(c + across * (math.cos(a) * rx) + nrm * (math.sin(a) * ry))
+            rings.append(ring)
+        m = loft_closed(rings, name, "M_Skin")
+        m.cap_ring(0, n, wrist - along * 0.008, flip=True)
+        knuckle = wrist + along * length
+        return m, knuckle
+
+    def phalanges(root, dir0, lengths, curls, bend_axis, rad0, name):
+        pts = [root]
+        d = dir0.nrm()
+        p = root
+        for L, ang in zip(lengths, curls):
+            d = rotate_around(d, bend_axis, ang).nrm()
+            p = p + d * L
+            pts.append(p)
+        path = sample_polyline(pts, 7)
+        return tube_along(path, lambda t, r=rad0: r * (1.0 - 0.42 * t), 8, name, "M_Skin")
+
+    # ----- Right: wrist inside cuff, palm slab, C-grip fingers -----
+    r_chain = arm_chain(1.0, True)
+    r_wr = r_chain[-1]
+    r_el = r_chain[-2]
+    along = (r_wr - r_el).nrm()
+    # palm faces the handle
+    nrm = axis.cross(along)
+    if nrm.length() < 1e-6:
+        nrm = V(0, -1, 0)
+    nrm = nrm.nrm()
+    handle_mid = origin + axis * (FAN_HANDLE_LEN * 0.38)
+    if (handle_mid - r_wr).dot(nrm) < 0:
+        nrm = -nrm
+    across = along.cross(nrm).nrm()
+    palm, knuckles = palm_slab(r_wr, along, nrm, across, 0.088, 0.072, 0.024, "Hand_R_Palm")
     parts.append(palm)
+    parts.append(
+        tube_along(
+            sample_polyline([r_el.lerp(r_wr, 0.35), r_wr], 5),
+            lambda t: 0.030 - 0.006 * t,
+            10,
+            "Hand_R_Wrist",
+            "M_Skin",
+        )
+    )
+    finger_specs = (
+        ("Index", 0.026, [0.026, 0.020, 0.016], [0.28, 0.48, 0.38], 0.0074),
+        ("Middle", 0.008, [0.030, 0.022, 0.016], [0.32, 0.52, 0.40], 0.0078),
+        ("Ring", -0.010, [0.028, 0.020, 0.015], [0.30, 0.50, 0.36], 0.0072),
+        ("Pinky", -0.026, [0.022, 0.016, 0.012], [0.26, 0.44, 0.32], 0.0060),
+    )
+    bend = across
+    for name, off, lens, curls, rad in finger_specs:
+        root = knuckles + across * off + nrm * (rad * 0.4) + along * 0.004
+        parts.append(phalanges(root, along * 0.4 + nrm * 0.6, lens, curls, bend, rad, "Hand_R_%s" % name))
+    th_root = r_wr + along * 0.028 - across * 0.028 + nrm * 0.008
+    th_dir = (across * 0.2 + along * 0.3 + nrm * 0.7).nrm()
+    parts.append(
+        phalanges(th_root, th_dir, [0.026, 0.018], [0.40, 0.45], (along * 0.4 + across * 0.6).nrm(), 0.008, "Hand_R_Thumb")
+    )
 
-    def wrap_finger(name, start, start_radial, arc, lengths, rad0):
-        # Fingertips march around the handle cylinder so the grip is a wrap, not a poke.
-        r0 = (start - (handle_p0 + axis * axis.dot(start - handle_p0))).nrm()
-        along0 = axis.dot(start - handle_p0)
-        reach = FAN_HANDLE_R + rad0 + 0.004
-        pts = []
-        acc = 0.0
-        dist_acc = 0.0
-        pts.append(handle_p0 + axis * along0 + r0 * reach)
-        for L in lengths:
-            acc += arc / len(lengths)
-            ca, sa = math.cos(acc), math.sin(acc)
-            rvec = r0 * ca + axis.cross(r0) * sa + axis * r0.dot(axis) * (1 - ca)
-            dist_acc += L
-            along = along0 + dist_acc * 0.05
-            pts.append(handle_p0 + axis * along + rvec.nrm() * reach)
-        path = sample_polyline(pts, 8)
-        return tube_along(path, lambda t: rad0 * (1.0 - 0.45 * t), 8, name, "M_Skin")
-
-    # finger roots along palm (across axis)
-    across = axis.cross(radial).nrm()
-    roots = [
-        ("Index", 0.028, 1.35, [0.028, 0.022, 0.018], 0.0075),
-        ("Middle", 0.008, 1.50, [0.032, 0.024, 0.018], 0.0080),
-        ("Ring", -0.012, 1.38, [0.028, 0.022, 0.016], 0.0072),
-        ("Pinky", -0.030, 1.15, [0.022, 0.016, 0.012], 0.0060),
-    ]
-    base = handle_p0 + axis * (FAN_HANDLE_LEN * 0.38) + radial * (FAN_HANDLE_R + 0.016)
-    for name, off, arc, lens, rad in roots:
-        st = base + across * off + axis * 0.02
-        parts.append(wrap_finger("Hand_R_%s" % name, st, radial, arc, lens, rad))
-    # thumb opposes
-    th_start = handle_p0 + axis * (FAN_HANDLE_LEN * 0.34) - across * 0.018 + radial * 0.01
-    parts.append(wrap_finger("Hand_R_Thumb", th_start, -across * 0.4 + radial * 0.6, 1.2, [0.024, 0.018], 0.008))
-
-    # ----- Left hand: relaxed, resting on abdomen -----
-    lc = V(-0.12, -0.14, WAIST_Z + 0.14)
-    lrings = []
-    for rx, ry, z in ((0.026, 0.016, 0.0), (0.034, 0.020, 0.035), (0.028, 0.016, 0.065)):
-        lrings.append(ellipse_ring(lc.x, lc.y, lc.z + z, rx, ry, 14))
-    parts.append(loft_closed(lrings, "Hand_L_Palm", "M_Skin"))
-    for i, (name, dx, dy) in enumerate(
-        (("Index", 0.018, -0.02), ("Middle", 0.006, -0.028), ("Ring", -0.008, -0.022), ("Pinky", -0.020, -0.012), ("Thumb", 0.028, 0.012))
-    ):
-        path = [
-            V(lc.x + dx, lc.y + dy * 0.2, lc.z + 0.06),
-            V(lc.x + dx * 1.2, lc.y + dy, lc.z + 0.03),
-            V(lc.x + dx * 1.3, lc.y + dy * 1.15, lc.z + 0.005),
-        ]
-        parts.append(tube_along(path, lambda t, r=0.007 if "Pinky" not in name else 0.0055: r * (1 - 0.4 * t), 8, "Hand_L_%s" % name, "M_Skin"))
+    # ----- Left: wrist + palm emerge from hanging cuff -----
+    l_chain = arm_chain(-1.0, False)
+    l_wr = l_chain[-1]
+    l_el = l_chain[-2]
+    l_along = (l_wr - l_el).nrm()
+    l_nrm = V(0, -1, 0.15).nrm()
+    l_across = l_along.cross(l_nrm).nrm()
+    l_nrm = l_across.cross(l_along).nrm()
+    lp, lkn = palm_slab(l_wr, l_along, l_nrm, l_across, 0.080, 0.066, 0.022, "Hand_L_Palm")
+    parts.append(lp)
+    parts.append(
+        tube_along(
+            sample_polyline([l_el.lerp(l_wr, 0.35), l_wr], 5),
+            lambda t: 0.028 - 0.006 * t,
+            10,
+            "Hand_L_Wrist",
+            "M_Skin",
+        )
+    )
+    relaxed = (
+        ("Index", 0.022, [0.024, 0.018, 0.014], [0.12, 0.18, 0.14], 0.0070),
+        ("Middle", 0.006, [0.026, 0.019, 0.014], [0.14, 0.20, 0.15], 0.0074),
+        ("Ring", -0.010, [0.024, 0.017, 0.013], [0.12, 0.18, 0.14], 0.0068),
+        ("Pinky", -0.024, [0.020, 0.014, 0.011], [0.10, 0.16, 0.12], 0.0058),
+    )
+    for name, off, lens, curls, rad in relaxed:
+        root = lkn + l_across * off + l_nrm * (rad * 0.3)
+        parts.append(phalanges(root, l_along * 0.7 + l_nrm * 0.2, lens, curls, l_across, rad, "Hand_L_%s" % name))
+    parts.append(
+        phalanges(
+            l_wr + l_along * 0.022 - l_across * 0.024 + l_nrm * 0.006,
+            (l_across * 0.3 + l_along * 0.4 + l_nrm * 0.5).nrm(),
+            [0.022, 0.016],
+            [0.25, 0.22],
+            l_along,
+            0.0075,
+            "Hand_L_Thumb",
+        )
+    )
     return parts
 
 
 def build_fan():
     """White feather fan: thin vanes with thickness + veins. No sausage cylinders."""
     parts = []
-    p0 = FAN_ORIGIN
-    axis = FAN_DIR
+    p0, axis = fan_pose()
     p1 = p0 + axis * FAN_HANDLE_LEN
     # handle from lathe of a tapering profile, then oriented
     hprof = [
@@ -1628,6 +1734,7 @@ def assemble_all():
     char.extend(build_eyes())
     char.extend(build_ears())
     char.append(build_neck())
+    char.append(build_yoke())
     char.extend(build_hair())
     char.extend(build_guan())
     char.extend(build_beard())
@@ -1916,21 +2023,173 @@ def setup_lights():
     area("Rim_Warm", (0.6, 2.8, 2.4), 1.6, 90.0, (1.0, 0.85, 0.65), (0, 0, 1.1))
 
 
-def setup_cameras():
-    cams = {}
-    specs = {
-        "Cam_Front": ((0.0, -3.15, 1.55), (0.0, 0.15, 0.95), 55),
-        "Cam_Side": ((3.2, -0.15, 1.45), (0.0, 0.0, 0.95), 55),
-        "Cam_Back": ((0.0, 3.35, 1.55), (0.0, 0.4, 0.95), 55),
-        "Cam_LookDown": ((1.55, -2.15, 2.45), (0.0, 0.25, 0.85), 50),
+def _camera_basis(location, target):
+    fwd = (target - location).nrm()
+    up_w = V(0, 0, 1)
+    right = fwd.cross(up_w)
+    if right.length() < 1e-6:
+        right = fwd.cross(V(0, 1, 0))
+    right = right.nrm()
+    up = right.cross(fwd).nrm()
+    return fwd, right, up
+
+
+def _fit_cam_distance(corners, view_from, target, lens_mm, res_x, res_y, sensor_w=36.0, ndc_limit=0.80):
+    """Distance along view_from so the character AABB sits in the frame with 10% margin each side.
+
+    ndc_limit 0.80 = 10% of the image empty on left/right/top/bottom.
+    """
+    aspect = res_x / float(res_y)
+    fov_h = 2.0 * math.atan((sensor_w * 0.5) / float(lens_mm))
+    tan_h = math.tan(fov_h * 0.5)
+    tan_v = tan_h / aspect
+    view_from = view_from.nrm()
+    target = V(target)
+
+    def fits(dist):
+        loc = target + view_from * dist
+        fwd, right, up = _camera_basis(loc, target)
+        for p in corners:
+            rel = p - loc
+            z = rel.dot(fwd)
+            if z < 0.08:
+                return False
+            ndc_x = (rel.dot(right) / z) / tan_h
+            ndc_y = (rel.dot(up) / z) / tan_v
+            if abs(ndc_x) > ndc_limit or abs(ndc_y) > ndc_limit:
+                return False
+        return True
+
+    lo, hi = 0.5, 48.0
+    if not fits(hi):
+        return hi
+    for _ in range(28):
+        mid = 0.5 * (lo + hi)
+        if fits(mid):
+            hi = mid
+        else:
+            lo = mid
+    return hi * 1.03
+
+
+def _aabb_corners(bb):
+    mn, mx = bb["min"], bb["max"]
+    return [V(x, y, z) for x in (mn[0], mx[0]) for y in (mn[1], mx[1]) for z in (mn[2], mx[2])]
+
+
+def _project_ndc(corners, loc, target, lens_mm, res_x, res_y, sensor_w=36.0):
+    """Project AABB corners into camera NDC. |ndc|<=1 is the film; 0.80 is a 10% margin."""
+    aspect = res_x / float(res_y)
+    fov_h = 2.0 * math.atan((sensor_w * 0.5) / float(lens_mm))
+    tan_h = math.tan(fov_h * 0.5)
+    tan_v = tan_h / aspect
+    loc = V(loc)
+    target = V(target)
+    fwd, right, up = _camera_basis(loc, target)
+    xs, ys = [], []
+    behind = 0
+    for p in corners:
+        rel = p - loc
+        z = rel.dot(fwd)
+        if z < 0.08:
+            behind += 1
+            continue
+        xs.append(abs((rel.dot(right) / z) / tan_h))
+        ys.append(abs((rel.dot(up) / z) / tan_v))
+    max_x = max(xs) if xs else None
+    max_y = max(ys) if ys else None
+    in_margin = bool(xs) and behind == 0 and max_x <= 0.80 + 1e-6 and max_y <= 0.80 + 1e-6
+    return {
+        "max_abs_ndc_x": None if max_x is None else round(max_x, 4),
+        "max_abs_ndc_y": None if max_y is None else round(max_y, 4),
+        "behind_count": behind,
+        "in_frame_10pct_margin": in_margin,
     }
-    for name, (loc, tgt, lens) in specs.items():
+
+
+def review_camera_plan(bb, res_x=1920, res_y=1080):
+    """No-bpy preview of the four review cameras. Does not touch the palace stage."""
+    if not bb or "min" not in bb or "max" not in bb:
+        return None
+    mn, mx = bb["min"], bb["max"]
+    target = V(0.5 * (mn[0] + mx[0]), 0.5 * (mn[1] + mx[1]), 0.5 * (mn[2] + mx[2]))
+    corners = _aabb_corners(bb)
+    lens = 50.0
+    el = math.radians(40.0)
+    az = math.radians(22.0)
+    lookdown_from = V(math.sin(az) * math.cos(el), -math.cos(az) * math.cos(el), math.sin(el))
+    views = (
+        ("Cam_Front", V(0.0, -1.0, 0.0)),
+        ("Cam_Side", V(1.0, 0.0, 0.0)),
+        ("Cam_Back", V(0.0, 1.0, 0.0)),
+        ("Cam_LookDown", lookdown_from),
+    )
+    planned = {}
+    for name, view_from in views:
+        dist = _fit_cam_distance(corners, view_from, target, lens, res_x, res_y)
+        loc = target + view_from.nrm() * dist
+        ndc = _project_ndc(corners, loc, target, lens, res_x, res_y)
+        planned[name] = {
+            "distance_m": round(dist, 4),
+            "location": [round(loc.x, 4), round(loc.y, 4), round(loc.z, 4)],
+            "target": [round(target.x, 4), round(target.y, 4), round(target.z, 4)],
+            "lens_mm": lens,
+            **ndc,
+        }
+    # 9746c60 hardcoded cameras looked at z=0.95 with 55mm — guan/feet sat outside the film.
+    legacy_front = _project_ndc(
+        corners, V(0.0, -3.15, 1.55), V(0.0, 0.15, 0.95), 55.0, res_x, res_y
+    )
+    return {
+        "margin": "10% on all four sides (ndc_limit 0.80)",
+        "frames": "character AABB including guan and feet",
+        "stage_enlarged_to_hide_crop": False,
+        "views": planned,
+        "legacy_9746c60_Cam_Front": {
+            "location": [0.0, -3.15, 1.55],
+            "target": [0.0, 0.15, 0.95],
+            "lens_mm": 55.0,
+            **legacy_front,
+            "note": "Cropped guan/feet on Mac art review. Replaced by bbox-fit cameras.",
+        },
+    }
+
+
+def setup_cameras(bb, res_x=1920, res_y=1080):
+    """Review cameras (view_front/side/back/lookdown). Frame character bbox + 10% margin.
+    Does not grow the palace stage.
+    """
+    if not bb:
+        raise RuntimeError("setup_cameras requires the character bbox")
+    mn, mx = bb["min"], bb["max"]
+    target = V(0.5 * (mn[0] + mx[0]), 0.5 * (mn[1] + mx[1]), 0.5 * (mn[2] + mx[2]))
+    corners = [
+        V(x, y, z) for x in (mn[0], mx[0]) for y in (mn[1], mx[1]) for z in (mn[2], mx[2])
+    ]
+    lens = 50.0
+    el = math.radians(40.0)
+    az = math.radians(22.0)
+    lookdown_from = V(math.sin(az) * math.cos(el), -math.cos(az) * math.cos(el), math.sin(el))
+    views = (
+        ("Cam_Front", V(0.0, -1.0, 0.0)),
+        ("Cam_Side", V(1.0, 0.0, 0.0)),
+        ("Cam_Back", V(0.0, 1.0, 0.0)),
+        ("Cam_LookDown", lookdown_from),
+    )
+    cams = {}
+    for name, view_from in views:
+        dist = _fit_cam_distance(corners, view_from, target, lens, res_x, res_y)
+        loc = target + view_from.nrm() * dist
         data = bpy.data.cameras.new(name)
         data.lens = lens
+        data.sensor_width = 36.0
+        data.sensor_fit = "HORIZONTAL"
+        data.clip_start = 0.05
+        data.clip_end = max(40.0, dist * 4.0)
         obj = bpy.data.objects.new(name, data)
-        obj.location = loc
+        obj.location = (loc.x, loc.y, loc.z)
         bpy.context.scene.collection.objects.link(obj)
-        look_at(obj, tgt)
+        look_at(obj, (target.x, target.y, target.z))
         cams[name] = obj
     return cams
 
@@ -2050,7 +2309,8 @@ def blender_build(args, char, env, stats):
         mesh_to_object(m, mat_map, palace)
 
     setup_lights()
-    cams = setup_cameras()
+    char_bb = union_bbox_from_census(stats.get("character") or {})
+    cams = setup_cameras(char_bb)
     engine = choose_eevee(scene)
 
     os.makedirs(args.output_dir, exist_ok=True)
@@ -2083,6 +2343,8 @@ def blender_build(args, char, env, stats):
             "Do not claim this character can walk.",
             "Screenshot count is not art approval; Codex reviews on Mac Blender 5.2.1.",
             "GLB is character-only (ZhugeLiang_Root). Stage/ground/cameras/lights/roof remain in the .blend.",
+            "Review cameras fit the character AABB with 10% margin (guan+feet). Stage was not enlarged.",
+            "Mac 9746c60 art FAILED. This export is ① cameras + ② joins; ③ deferred. Not a publish.",
         ],
         glb_measured=glb_measured,
     )
@@ -2107,6 +2369,84 @@ def union_bbox_from_census(cs):
     if mins[0] is None:
         return None
     return {"min": [round(v, 4) for v in mins], "max": [round(v, 4) for v in maxs]}
+
+
+def _aabb6_overlap(a, b, pad=0.0):
+    if not a or not b or len(a) != 6 or len(b) != 6:
+        return False
+    return all(a[i] <= b[i + 3] + pad and b[i] <= a[i + 3] + pad for i in range(3))
+
+
+def topology_join_from_census(char_stats):
+    """Generator-side join audit. Not a Mac render, not art approval."""
+    parts = {p["name"]: p for p in (char_stats.get("parts") or []) if p.get("name")}
+
+    def bb(name):
+        p = parts.get(name) or {}
+        return p.get("bbox")
+
+    def mid(name):
+        b = bb(name)
+        if not b:
+            return None
+        return [round(0.5 * (b[i] + b[i + 3]), 4) for i in range(3)]
+
+    pairs = (
+        ("Neck", "Robe_Yoke", "neck_yoke"),
+        ("Robe_Yoke", "Robe_Torso", "yoke_torso"),
+        ("Neck", "Robe_Torso", "neck_torso"),
+        ("Neck", "Collar", "neck_collar"),
+        ("Collar", "Robe_Yoke", "collar_yoke"),
+        ("Sleeve_L", "Robe_Yoke", "sleeveL_yoke"),
+        ("Sleeve_R", "Robe_Yoke", "sleeveR_yoke"),
+        ("Hand_L_Wrist", "Cuff_L", "left_wrist_cuff"),
+        ("Hand_L_Palm", "Cuff_L", "left_palm_cuff"),
+        ("Hand_R_Wrist", "Cuff_R", "right_wrist_cuff"),
+        ("Hand_R_Palm", "Cuff_R", "right_palm_cuff"),
+    )
+    overlap = []
+    for a, b, label in pairs:
+        overlap.append(
+            {
+                "label": label,
+                "a": a,
+                "b": b,
+                "present": a in parts and b in parts,
+                "bbox_overlap": _aabb6_overlap(bb(a), bb(b), pad=0.004),
+            }
+        )
+    required = (
+        "Robe_Yoke",
+        "SleeveCapShoulder_L",
+        "SleeveCapShoulder_R",
+        "SleeveCapCuff_L",
+        "SleeveCapCuff_R",
+        "Hand_L_Palm",
+        "Hand_R_Palm",
+        "Hand_R_Index",
+        "Hand_R_Thumb",
+        "Collar",
+    )
+    missing = [n for n in required if n not in parts]
+    collar_names = [n for n in parts if n == "Collar" or n.startswith("Collar_")]
+    left_mid = mid("Hand_L_Palm")
+    # 9746c60 pasted the left hand on the abdomen (near x=0, chest height).
+    left_on_abdomen = False
+    if left_mid:
+        left_on_abdomen = abs(left_mid[0]) < 0.12 and 0.95 < left_mid[2] < 1.30
+    return {
+        "required_parts_missing": missing,
+        "collar_part_names": collar_names,
+        "collar_is_single_wrap": collar_names == ["Collar"],
+        "right_hand_is_grip": all(n in parts for n in ("Hand_R_Palm", "Hand_R_Index", "Hand_R_Thumb"))
+        and "Hand_R_Wrap" not in parts,
+        "left_palm_center": left_mid,
+        "left_hand_pasted_on_abdomen": left_on_abdomen,
+        "bbox_overlaps": overlap,
+        "all_join_overlaps": all(item["present"] and item["bbox_overlap"] for item in overlap),
+        "pass_3_soft_folds_beard_fan": False,
+        "pass_3_note": "③ deferred; this audit is ② connections/joins only.",
+    }
 
 
 def try_measure_glb(path):
@@ -2251,12 +2591,13 @@ def build_report_payload(
     ]
     if execution_kind != "real":
         unfinished.append("Cloud VM has no Blender; visual sign-off is Codex on Mac.")
-        unfinished.append("GLB / .blend / view PNGs are absent until Blender 5.2.1 is run.")
+        unfinished.append("GLB / .blend / view PNGs are absent until Blender 5.2.1 is re-run on this revision.")
         unfinished.append("GLB interface measured_* fields are UNKNOWN until a real export exists.")
         unfinished.append(
-            "Mac Blender 5.2.1 run of 64a0192: mesh build succeeded; GLB export failed with FileNotFoundError filepath=''. "
-            "Cause: filter_op_kwargs used Operator class bl_rna (no filepath) instead of bpy.ops.*.get_rna_type().properties. "
-            "Fix is in this handoff and unverified until re-run. No valid GLB/renders; no art approval."
+            "Mac 9746c60 exported GLB/blend/four views (structure OK). Art review FAILED: cropped guan/feet; "
+            "floating sleeve holes; neck detached; left hand not at cuff; right hand torus; chest as two plates. "
+            "This handoff is ① review-camera 10% bbox margin + ② topology/join only. "
+            "③ soft folds / beard / fan refine is deferred. No art approval."
         )
     if tris_note and "Over 45k" in tris_note:
         unfinished.append(tris_note)
@@ -2275,18 +2616,29 @@ def build_report_payload(
         "render_engine": engine,
         "timestamp_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "mac_real_run": {
-            "commit_tested": "64a0192232c16f94e3d162c0098986fecbfe0827",
+            "filepath_bug_commit": "64a0192232c16f94e3d162c0098986fecbfe0827",
+            "export_ok_commit": "9746c6099a40168bbd87ee5d2c65f7bfd4276be2",
             "blender": "5.2.1",
             "environment": "Mac factory-startup, background, independent output-dir",
             "mesh_build": "succeeded",
-            "glb_export": "failed",
-            "error": "FileNotFoundError [Errno 2] No such file or directory: ''",
-            "cause": "filter_op_kwargs used bpy.types.EXPORT_SCENE_OT_gltf.bl_rna (filepath absent) instead of bpy.ops.export_scene.gltf.get_rna_type().properties (filepath present).",
-            "fix": "Filter kwargs via the live operator get_rna_type() RNA for gltf and save_as_mainfile; refuse missing/empty filepath instead of calling with ''.",
-            "this_cloud_status": "UNRUN" if execution_kind != "real" else "reexport_attempted",
-            "valid_glb": False if execution_kind != "real" else None,
+            "glb_export_on_9746c60": "succeeded",
+            "structure_on_9746c60": "issues=[], height 1.8553m, feet 0, no skin/animation",
+            "art_review": "FAILED",
             "art_approval": False,
-            "note": "Mac failure is real. This cloud did not re-export. Do not treat UNRUN JSON as a successful GLB.",
+            "art_rejection": [
+                "Head/crown and feet cropped in front+lookdown",
+                "Both shoulder sleeves float with holes",
+                "Neck clearly detached from torso",
+                "Left hand pasted on abdomen, not joined to cuff",
+                "Right hand is a ring-like block",
+                "Chest like two hard plates",
+                "Feathers thick vertical cards — ③ deferred",
+                "Skirt still a smooth cone — ③ deferred",
+            ],
+            "this_commit_scope": "① review cameras frame character bbox with 10% margin; ② topology/join (neck-yoke-sleeve-hand, cuff join, C-grip, one collar). ③ not started.",
+            "this_cloud_status": "UNRUN",
+            "valid_glb_on_cloud": False,
+            "note": "9746c60 Mac export was real. This cloud did not re-export. Do not treat UNRUN JSON as art approval or as a new measured GLB.",
         },
         "units": iface["units"],
         "rootName": iface["rootName"],
@@ -2339,7 +2691,10 @@ def build_report_payload(
             "screenshot_count_is_not_approval": True,
             "this_handoff_claims_approval": False,
             "approval_authority": "Codex local review on Mac Blender 5.2.1",
+            "mac_9746c60_art_review": "FAILED",
         },
+        "review_cameras": review_camera_plan(iface["bbox"].get("expected_blender_zup")),
+        "topology_join": topology_join_from_census(char_stats),
         "outputs": outputs,
         "static_checks": static_checks or {},
         "notes": notes,
@@ -2403,7 +2758,7 @@ def mesh_stats_main(args):
         notes=[
             "Generator census only. No GLB/blend/png written because this was --mesh-stats or bpy is missing.",
             "Static posed meshes. No armature. Cannot walk.",
-            "Mac 64a0192 real run: mesh OK, GLB filepath empty because class bl_rna dropped it. Filter now uses get_rna_type(); cloud still UNRUN.",
+            "Mac 9746c60 art review FAILED. This revision: ① cameras + ② joins. ③ deferred. Cloud UNRUN.",
         ],
         static_checks={
             "mesh_stats": "written",

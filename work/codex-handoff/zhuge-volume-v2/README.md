@@ -15,7 +15,7 @@ v1 was rejected for egg head + dotted features, cylinder beard, bucket hat, smoo
 ## Scene / figure (for reviewers)
 
 - 宫苑, warm sunlight from upper-left, cool fill, blue-green roof tiles, stone courtyard.
-- Look-down miniature, about 35–45° (`view_lookdown.png` plus front / side / back).
+- Look-down miniature, about 35–45° (`view_lookdown.png` plus front / side / back). Review cameras frame the **character AABB** with **10% margin** on all four sides (guan and feet in frame). The palace stage is not enlarged to hide cropping.
 - Adult Zhuge Liang, ~1.8 m, ~7.35 heads, feet at Blender Z = 0. Ivory thick robe, cyan-green thick trim with a little gold, cyan-green guan, black hair and long layered beard, white feather fan.
 - Single empty `ZhugeLiang_Root`. Palace under `Palace_Root`. Part names are stable for later rigging. Origins are **world-layout, not joint-centered**.
 
@@ -73,7 +73,19 @@ Codex ran factory-startup background on Mac Blender 5.2.1. Mesh build succeeded.
 
 `filepath` is **not** on `bpy.types.EXPORT_SCENE_OT_gltf.bl_rna.properties` but **is** on `bpy.ops.export_scene.gltf.get_rna_type().properties`. The old filter used class `bl_rna` and dropped `filepath`, so the exporter opened `''`.
 
-This handoff filters through `bpy.ops.*.get_rna_type().properties` (gltf and `save_as_mainfile`). If `filepath` would be missing or empty after filtering, the script raises instead of calling the operator. **No valid GLB or renders yet. Not art approval.** Re-run the same Blender command.
+This handoff filters through `bpy.ops.*.get_rna_type().properties` (gltf and `save_as_mainfile`). If `filepath` would be missing or empty after filtering, the script raises instead of calling the operator. Mac commit `9746c60` confirmed GLB/blend/four views export.
+
+## Mac art review (commit 9746c60) — FAILED, not a publish
+
+Structure was OK (height 1.8553 m, feet 0, no skin/animation). Front + lookdown review failed: guan/feet cropped; floating sleeve holes; neck detached; left hand not at cuff; right hand a torus block; chest as two plates. Feathers/skirt notes are **③ and deferred**.
+
+This revision is **① + ② only**:
+1. Review cameras (`view_front/side/back/lookdown`) fit the character bbox with 10% frame margin.
+2. Topology/join: yoke + neck flare into torso; sleeves start on the torso and are capped (no see-through shoulder holes); left hand/wrist at the left cuff; right hand is a palm slab + C-grip phalanges; one continuous collar wrap (not two boards).
+
+**No art approval.** Cloud did not re-export (UNRUN). ③ (soft folds / beard / fan) is not in this commit.
+
+`report.json` records generator `review_cameras` (AABB + 10% NDC margin vs the cropped 9746c60 55mm setup) and `topology_join` overlaps. Those are census checks, not a Mac render and not approval.
 
 ## Cloud / no Blender
 
