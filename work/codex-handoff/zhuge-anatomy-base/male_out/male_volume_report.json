@@ -1,0 +1,134 @@
+{
+  "task_id": "CT-BASE-02",
+  "title": "Adult-male fuller-volume anatomy candidate (not Zhuge)",
+  "status": "UNRUN",
+  "execution_kind": "expected",
+  "not_a_zhuge_product": true,
+  "g1_g5_claimed": false,
+  "art_approval": false,
+  "armature": false,
+  "can_walk": false,
+  "declaration": "Static anatomy mesh only. No armature. Do not claim it can walk.",
+  "baseline_mac_613317c": {
+    "commit": "613317c710e4e339dda3663365dedb54871e4f14",
+    "blender": "5.2.1",
+    "exit": 0,
+    "glb_bytes": 626508,
+    "mesh": 1,
+    "tris": 26756,
+    "height_m": 1.77999997,
+    "minY": 0,
+    "uvs": 14517,
+    "finite_indices": true,
+    "keep_for_comparison": true
+  },
+  "pinned_base_obj": "8e761e6624b8f54536409135d1636da63b32486a90d4897f84e121d144f6fb4c",
+  "pinned_commit": "437dd513888a92399d1d3200d2e80859fae55abc",
+  "morphs": [
+    {
+      "path": "/workspace/work/codex-handoff/zhuge-anatomy-base/source/targets/asian-male-young.target.gz",
+      "bytes": 130005,
+      "sha256": "0928ed8b9f08f60afb9884cf9e9f33a939ed3a85d7f136de9ccc88a76981d6d7",
+      "pin_ok": true,
+      "repo_path": "src/mpfb/data/targets/macrodetails/asian-male-young.target.gz",
+      "weight": 1.0,
+      "rows": 19150,
+      "max_index": 19149
+    },
+    {
+      "path": "/workspace/work/codex-handoff/zhuge-anatomy-base/source/targets/universal-male-young-maxmuscle-averageweight.target.gz",
+      "bytes": 45597,
+      "sha256": "833caafc302bd9306de494f32ee1bc51d3a2e6641183329b031ac06ef0f4277e",
+      "pin_ok": true,
+      "repo_path": "src/mpfb/data/targets/macrodetails/universal-male-young-maxmuscle-averageweight.target.gz",
+      "weight": 1.0,
+      "rows": 6825,
+      "max_index": 19149
+    }
+  ],
+  "license": {
+    "path": "/workspace/work/codex-handoff/zhuge-anatomy-base/source/targets/LICENSE.md",
+    "bytes": 3188,
+    "sha256": "5cefb60680cb9efd4550a2e65d719021cfbec9dad3658481d11d48ae863ce04d",
+    "pin_ok": true
+  },
+  "applied": [
+    {
+      "file": "asian-male-young.target.gz",
+      "weight": 1.0,
+      "rows": 19150,
+      "max_index": 19149
+    },
+    {
+      "file": "universal-male-young-maxmuscle-averageweight.target.gz",
+      "weight": 1.0,
+      "rows": 6825,
+      "max_index": 19149
+    }
+  ],
+  "source_vert_compatibility": {
+    "source_verts": 19158,
+    "target_index_range_ok": true,
+    "remaining_faces": 13378,
+    "remaining_verts": 13380,
+    "remaining_uvs": 14517,
+    "baseline_faces": 13378,
+    "uv_preserved": true,
+    "topology_preserved": true
+  },
+  "not_uniform_x_widen": {
+    "ok": true,
+    "max_abs_delta": 0.8490000000000002,
+    "dx_vs_x_r2": 0.143453,
+    "dy_std": 0.296889,
+    "dz_std": 0.146812,
+    "note": "ok means not a uniform X-widen"
+  },
+  "remaining_face_count_measured": 13378,
+  "remaining_vert_count_measured": 13380,
+  "remaining_uv_count_measured": 14517,
+  "height": {
+    "target_m": 1.78,
+    "expected_blender_m": 1.78,
+    "footOffset_blender_z_min": 0.0,
+    "uniform_scale": 0.10931646502487256
+  },
+  "bbox": {
+    "expected_blender_zup": {
+      "min": [
+        -0.582405,
+        -0.24171,
+        0.0
+      ],
+      "max": [
+        0.582405,
+        0.24171,
+        1.78
+      ]
+    }
+  },
+  "finite_checks": {
+    "verts": true,
+    "indices": true,
+    "normals": true,
+    "zero_area_faces": 0
+  },
+  "glb_export": {
+    "rootName": "AnatomyMale_Root",
+    "grey_shader": true,
+    "yup": true,
+    "bytes": "UNKNOWN"
+  },
+  "blender_present": false,
+  "blender_version_actual": null,
+  "outputs": [],
+  "notes": [
+    "Morph full hm08 verts then body-group filter. Cloud does not run Blender.",
+    "Not a Zhuge product. G1–G5 not claimed. Compare grey views to BASE-01."
+  ],
+  "unverified_until_mac_blender": [
+    "grey 4-view vs BASE-01 chest/waist/hip read as adult male",
+    "Y-up GLB import, height 1.78 m, minY 0 after exporter",
+    "UV still attached after glTF"
+  ]
+}
