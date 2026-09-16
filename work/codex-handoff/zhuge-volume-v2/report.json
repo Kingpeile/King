@@ -8,7 +8,21 @@
   "blender_version_expected": "5.2.1",
   "blender_version_actual": null,
   "render_engine": null,
-  "timestamp_utc": "2026-09-16T08:42:36Z",
+  "timestamp_utc": "2026-09-16T09:07:53Z",
+  "mac_real_run": {
+    "commit_tested": "64a0192232c16f94e3d162c0098986fecbfe0827",
+    "blender": "5.2.1",
+    "environment": "Mac factory-startup, background, independent output-dir",
+    "mesh_build": "succeeded",
+    "glb_export": "failed",
+    "error": "FileNotFoundError [Errno 2] No such file or directory: ''",
+    "cause": "filter_op_kwargs used bpy.types.EXPORT_SCENE_OT_gltf.bl_rna (filepath absent) instead of bpy.ops.export_scene.gltf.get_rna_type().properties (filepath present).",
+    "fix": "Filter kwargs via the live operator get_rna_type() RNA for gltf and save_as_mainfile; refuse missing/empty filepath instead of calling with ''.",
+    "this_cloud_status": "UNRUN",
+    "valid_glb": false,
+    "art_approval": false,
+    "note": "Mac failure is real. This cloud did not re-export. Do not treat UNRUN JSON as a successful GLB."
+  },
   "units": "meters",
   "rootName": "ZhugeLiang_Root",
   "root": "ZhugeLiang_Root",
@@ -163,12 +177,15 @@
       "banned_api_hits": [],
       "root_name": true,
       "declares_no_walk": true,
-      "character_only_glb": true
-    }
+      "character_only_glb": true,
+      "uses_get_rna_type_filter": true
+    },
+    "filepath_guard": "pass"
   },
   "notes": [
     "Generator census only. No GLB/blend/png written because this was --mesh-stats or bpy is missing.",
-    "Static posed meshes. No armature. Cannot walk."
+    "Static posed meshes. No armature. Cannot walk.",
+    "Mac 64a0192 real run: mesh OK, GLB filepath empty because class bl_rna dropped it. Filter now uses get_rna_type(); cloud still UNRUN."
   ],
   "unfinished": [
     "No armature / no walk cycle (intentional for this static first version).",
@@ -176,6 +193,7 @@
     "Roof glaze shares M_CyanGreen with robe trim/guan to stay at 8 materials (blend stage only).",
     "Cloud VM has no Blender; visual sign-off is Codex on Mac.",
     "GLB / .blend / view PNGs are absent until Blender 5.2.1 is run.",
-    "GLB interface measured_* fields are UNKNOWN until a real export exists."
+    "GLB interface measured_* fields are UNKNOWN until a real export exists.",
+    "Mac Blender 5.2.1 run of 64a0192: mesh build succeeded; GLB export failed with FileNotFoundError filepath=''. Cause: filter_op_kwargs used Operator class bl_rna (no filepath) instead of bpy.ops.*.get_rna_type().properties. Fix is in this handoff and unverified until re-run. No valid GLB/renders; no art approval."
   ]
 }

@@ -65,6 +65,16 @@ Expected writes **only** into `--output-dir` (overwrite of known names, never a 
 
 `--output-dir` defaults to this script’s directory if omitted.
 
+## Mac 5.2.1 regression (commit 64a0192)
+
+Codex ran factory-startup background on Mac Blender 5.2.1. Mesh build succeeded. GLB export failed:
+
+`FileNotFoundError [Errno 2] No such file or directory: ''`
+
+`filepath` is **not** on `bpy.types.EXPORT_SCENE_OT_gltf.bl_rna.properties` but **is** on `bpy.ops.export_scene.gltf.get_rna_type().properties`. The old filter used class `bl_rna` and dropped `filepath`, so the exporter opened `''`.
+
+This handoff filters through `bpy.ops.*.get_rna_type().properties` (gltf and `save_as_mainfile`). If `filepath` would be missing or empty after filtering, the script raises instead of calling the operator. **No valid GLB or renders yet. Not art approval.** Re-run the same Blender command.
+
 ## Cloud / no Blender
 
 ```bash

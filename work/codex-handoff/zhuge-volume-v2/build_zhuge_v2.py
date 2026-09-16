@@ -1693,12 +1693,101 @@ def census(meshes):
 # ---------------------------------------------------------------------------
 # Blender I/O
 # ---------------------------------------------------------------------------
-def filter_op_kwargs(type_name, kwargs):
-    cls = getattr(bpy.types, type_name, None) if bpy else None
-    if cls is None:
-        return kwargs
-    valid = {p.identifier for p in cls.bl_rna.properties if p.identifier != "rna_type"}
-    return {k: v for k, v in kwargs.items() if k in valid}
+def _op_label(op):
+    if op is None:
+        return "operator"
+    for attr in ("idname", "bl_idname"):
+        val = getattr(op, attr, None)
+        if val:
+            return str(val)
+    return repr(op)
+
+
+def operator_property_ids(op):
+    """Ids from the *live operator* RNA.
+
+    Blender 5.2.1 (Mac, verified): ``filepath`` is NOT on
+    ``bpy.types.EXPORT_SCENE_OT_gltf.bl_rna.properties`` but IS on
+    ``bpy.ops.export_scene.gltf.get_rna_type().properties``. Filtering the
+    class ``bl_rna`` silently drops ``filepath`` and the exporter opens ``''``.
+    """
+    if op is None:
+        return None
+    getter = getattr(op, "get_rna_type", None)
+    if not callable(getter):
+        return None
+    try:
+        rna = getter()
+    except Exception:
+        return None
+    props = getattr(rna, "properties", None) if rna is not None else None
+    if props is None:
+        return None
+    ids = set()
+    keys_fn = getattr(props, "keys", None)
+    if callable(keys_fn):
+        for ident in keys_fn():
+            if ident != "rna_type":
+                ids.add(ident)
+        return ids
+    for p in props:
+        ident = getattr(p, "identifier", None)
+        if ident and ident != "rna_type":
+            ids.add(ident)
+    return ids
+
+
+def assert_required_paths(op_label, original, filtered, required=("filepath",)):
+    """Never call export/save with a silently dropped or empty filepath."""
+    for key in required:
+        if key not in original:
+            continue
+        orig = original.get(key)
+        got = filtered.get(key)
+        orig_empty = orig is None or (isinstance(orig, str) and not str(orig).strip())
+        got_empty = got is None or (isinstance(got, str) and not str(got).strip())
+        if orig_empty:
+            raise RuntimeError(
+                "%s: required %r is empty (%r). Refusing to call with ''."
+                % (op_label, key, orig)
+            )
+        if key not in filtered or got_empty:
+            raise RuntimeError(
+                "%s: required %r was dropped or emptied by RNA filter "
+                "(got %r). Use bpy.ops.*.get_rna_type().properties, not "
+                "Operator class bl_rna. Refusing to call with ''."
+                % (op_label, key, got)
+            )
+    return filtered
+
+
+def filter_op_kwargs(op, kwargs, required=("filepath",)):
+    """Keep kwargs the live operator RNA accepts. Never drop a required path."""
+    ids = operator_property_ids(op)
+    if not ids:
+        filtered = dict(kwargs)
+    else:
+        filtered = {k: v for k, v in kwargs.items() if k in ids}
+    return assert_required_paths(_op_label(op), kwargs, filtered, required)
+
+
+def _selftest_filepath_guard():
+    try:
+        assert_required_paths("gltf", {"filepath": "/tmp/x.glb"}, {}, ("filepath",))
+        return "fail_did_not_raise_on_drop"
+    except RuntimeError:
+        pass
+    try:
+        assert_required_paths("gltf", {"filepath": "/tmp/x.glb"}, {"filepath": ""}, ("filepath",))
+        return "fail_did_not_raise_on_empty"
+    except RuntimeError:
+        pass
+    kept = assert_required_paths(
+        "gltf", {"filepath": "/tmp/x.glb"}, {"filepath": "/tmp/x.glb"}, ("filepath",)
+    )
+    if kept.get("filepath") != "/tmp/x.glb":
+        return "fail_did_not_keep"
+    return "pass"
 
 
 def make_principled(name, color, metallic, roughness):
@@ -1880,8 +1969,10 @@ def export_glb_character_only(path, root_name="ZhugeLiang_Root"):
             scene_col.objects.unlink(obj)
             parked.append(obj)
     try:
+        if not path:
+            raise RuntimeError("export_glb_character_only: filepath is empty; refusing to call gltf with ''")
         kwargs = filter_op_kwargs(
-            "EXPORT_SCENE_OT_gltf",
+            bpy.ops.export_scene.gltf,
             {
                 "filepath": path,
                 "export_format": "GLB",
@@ -1968,7 +2059,12 @@ def blender_build(args, char, env, stats):
     blend_path = safe_join(args.output_dir, blend_name)
     glb_path = safe_join(args.output_dir, glb_name)
 
-    bpy.ops.wm.save_as_mainfile(**filter_op_kwargs("WM_OT_save_as_mainfile", {"filepath": blend_path, "check_existing": False}))
+    bpy.ops.wm.save_as_mainfile(
+        **filter_op_kwargs(
+            bpy.ops.wm.save_as_mainfile,
+            {"filepath": blend_path, "check_existing": False},
+        )
+    )
     # Blend already has palace + cameras + lights. GLB unlinks those for the write only.
     export_glb_character_only(glb_path, "ZhugeLiang_Root")
     glb_measured = try_measure_glb(glb_path)
@@ -2157,6 +2253,11 @@ def build_report_payload(
         unfinished.append("Cloud VM has no Blender; visual sign-off is Codex on Mac.")
         unfinished.append("GLB / .blend / view PNGs are absent until Blender 5.2.1 is run.")
         unfinished.append("GLB interface measured_* fields are UNKNOWN until a real export exists.")
+        unfinished.append(
+            "Mac Blender 5.2.1 run of 64a0192: mesh build succeeded; GLB export failed with FileNotFoundError filepath=''. "
+            "Cause: filter_op_kwargs used Operator class bl_rna (no filepath) instead of bpy.ops.*.get_rna_type().properties. "
+            "Fix is in this handoff and unverified until re-run. No valid GLB/renders; no art approval."
+        )
     if tris_note and "Over 45k" in tris_note:
         unfinished.append(tris_note)
     return {
@@ -2173,6 +2274,20 @@ def build_report_payload(
         "blender_version_actual": blender_version,
         "render_engine": engine,
         "timestamp_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "mac_real_run": {
+            "commit_tested": "64a0192232c16f94e3d162c0098986fecbfe0827",
+            "blender": "5.2.1",
+            "environment": "Mac factory-startup, background, independent output-dir",
+            "mesh_build": "succeeded",
+            "glb_export": "failed",
+            "error": "FileNotFoundError [Errno 2] No such file or directory: ''",
+            "cause": "filter_op_kwargs used bpy.types.EXPORT_SCENE_OT_gltf.bl_rna (filepath absent) instead of bpy.ops.export_scene.gltf.get_rna_type().properties (filepath present).",
+            "fix": "Filter kwargs via the live operator get_rna_type() RNA for gltf and save_as_mainfile; refuse missing/empty filepath instead of calling with ''.",
+            "this_cloud_status": "UNRUN" if execution_kind != "real" else "reexport_attempted",
+            "valid_glb": False if execution_kind != "real" else None,
+            "art_approval": False,
+            "note": "Mac failure is real. This cloud did not re-export. Do not treat UNRUN JSON as a successful GLB.",
+        },
         "units": iface["units"],
         "rootName": iface["rootName"],
         "root": iface["rootName"],
@@ -2250,6 +2365,7 @@ def source_guards(script_path):
         "root_name": "ZhugeLiang_Root" in src,
         "declares_no_walk": "can_walk" in src,
         "character_only_glb": "export_glb_character_only" in src,
+        "uses_get_rna_type_filter": "get_rna_type" in src and "assert_required_paths" in src,
     }
 
 
@@ -2287,12 +2403,14 @@ def mesh_stats_main(args):
         notes=[
             "Generator census only. No GLB/blend/png written because this was --mesh-stats or bpy is missing.",
             "Static posed meshes. No armature. Cannot walk.",
+            "Mac 64a0192 real run: mesh OK, GLB filepath empty because class bl_rna dropped it. Filter now uses get_rna_type(); cloud still UNRUN.",
         ],
         static_checks={
             "mesh_stats": "written",
             "py_compile": "pass" if compile_ok else "fail",
             "py_compile_error": compile_err,
             "source_guards": guards,
+            "filepath_guard": _selftest_filepath_guard(),
         },
     )
     write_report(safe_join(args.output_dir, "report.json"), report)
