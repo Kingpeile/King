@@ -60,7 +60,10 @@ MIN_CLEAR_M = 0.025
 EXPLODE_DISP_M = 1.50
 EXPLODE_SPEED_M_S = 40.0
 COVER_Z_SLACK_M = 0.030
-THROUGH_Z_BELOW_M = 0.040
+# Position-only: verts in target XY whose z is below the shoulder apex.
+# External drape along the outside of the body also sits below that apex.
+# Not an inside-body / penetration count.
+BELOW_APEX_Z_M = 0.040
 
 PARAMS = {
     "frames": [FRAME_START, FRAME_END],
@@ -81,6 +84,10 @@ PARAMS = {
         "self_distance_min": SELF_DISTANCE_MIN,
     },
     "body_COLLISION": {"thickness_outer": BODY_THICKNESS_OUTER},
+    "point_cache": {
+        "use_disk_cache": False,
+        "note": "Both arms use in-memory PointCache. Disk cache is not a verified isolation method.",
+    },
     "note": "One set. collision_on vs collision_off only flips cloth use_collision.",
 }
 
@@ -362,7 +369,7 @@ def cover_metrics(cloth_verts, body, rest_verts):
     ry1 = max(p[1] for p in region)
     top_z = max(p[2] for p in region)
     over = []
-    through = []
+    below_apex = []
     disp = []
     finite = True
     for i, p in enumerate(cloth_verts):
@@ -375,8 +382,8 @@ def cover_metrics(cloth_verts, body, rest_verts):
         in_xy = (rx0 - 0.02) <= p[0] <= (rx1 + 0.02) and (ry0 - 0.02) <= p[1] <= (ry1 + 0.02)
         if in_xy and p[2] >= top_z - COVER_Z_SLACK_M:
             over.append(i)
-        if in_xy and p[2] <= top_z - THROUGH_Z_BELOW_M:
-            through.append(i)
+        if in_xy and p[2] <= top_z - BELOW_APEX_Z_M:
+            below_apex.append(i)
     max_disp = max(disp) if disp else 0.0
     mean_disp = sum(disp) / float(len(disp) if disp else 1)
     com = (
@@ -391,8 +398,15 @@ def cover_metrics(cloth_verts, body, rest_verts):
         "mean_disp_m": round(mean_disp, 5),
         "real_displacement": mean_disp > 0.015 and max_disp > 0.020,
         "exploded": (not finite) or max_disp > EXPLODE_DISP_M,
-        "cover_vert_n": len(over),
-        "through_vert_n": len(through),
+        "near_shoulder_apex_in_target_xy_n": len(over),
+        "below_shoulder_apex_in_target_xy_n": len(below_apex),
+        "below_apex_is_not_inside_body": True,
+        "position_note": (
+            "below_shoulder_apex_in_target_xy_n is a position description / "
+            "deviation from the shoulder-top target. External drape along the "
+            "outside of the body also falls below the apex. Not inside-body, "
+            "not a penetration count."
+        ),
         "shoulder_top_z": round(top_z, 5),
         "com": [round(c, 5) for c in com],
         "com_drop_m": round(rest_com_z - com[2], 5),
@@ -401,57 +415,77 @@ def cover_metrics(cloth_verts, body, rest_verts):
     }
 
 
+def _overlap_count(run):
+    if not run:
+        return None
+    ov = run.get("overlap") or {}
+    n = ov.get("pair_count")
+    if n is None:
+        return None
+    return int(n)
+
+
 def interpret_pair(on_run, off_run):
-    """Only for real physics. Cloud must not call this as PASS."""
+    """Evidence fields only. Never auto-PASS the sample from numeric thresholds."""
+    empty = {
+        "ready": False,
+        "verdict": "UNRUN",
+        "physics_response_observed": False,
+        "target_coverage_needs_visual_review": True,
+        "can_claim_pass": False,
+        "reason": "physics not executed",
+        "caveat": (
+            "below_shoulder_apex_in_target_xy is not inside-body. "
+            "BVH pair_count==0 is not a no-penetration proof. "
+            "can_claim_pass stays false until root visual verification."
+        ),
+    }
     if on_run is None or off_run is None:
-        return {
-            "ready": False,
-            "verdict": "UNRUN",
-            "can_claim_pass": False,
-            "reason": "physics not executed",
-        }
+        return empty
     on = on_run["cover"]
     off = off_run["cover"]
-    reasons = []
-    on_ok = (
-        on["finite"]
-        and not on["exploded"]
-        and on["real_displacement"]
-        and on["cover_vert_n"] >= 8
-        and on["through_vert_n"] <= max(2, on["cover_vert_n"] // 8)
-    )
-    off_shows_miss = off["through_vert_n"] >= 8 and (
-        off["through_vert_n"] > on["through_vert_n"] + 4
-        or off["min_z"] < on["min_z"] - 0.03
-        or off["com_drop_m"] > on["com_drop_m"] + 0.03
-    )
-    if not on["finite"] or on["exploded"]:
-        reasons.append("collision_on exploded or non-finite")
-    if not on["real_displacement"]:
-        reasons.append("collision_on had no real drape displacement")
-    if on["cover_vert_n"] < 8:
-        reasons.append("collision_on did not cover the shoulder (cover_vert_n=%s)" % on["cover_vert_n"])
-    if on["through_vert_n"] > max(2, on["cover_vert_n"] // 8):
-        reasons.append("collision_on still has through-body candidates %s" % on["through_vert_n"])
-    if not off_shows_miss:
-        reasons.append(
-            "collision_off did not expose missing collision "
-            "(through_on=%s through_off=%s minz_on=%s minz_off=%s) — check has no discriminating power"
-            % (on["through_vert_n"], off["through_vert_n"], on["min_z"], off["min_z"])
+    on_bvh = _overlap_count(on_run)
+    off_bvh = _overlap_count(off_run)
+    notes = []
+    finite_ok = on["finite"] and off["finite"] and (not on["exploded"]) and (not off["exploded"])
+    motion_ok = on["real_displacement"] and off["real_displacement"]
+    rna_diff = bool(on_run.get("use_collision")) and (not bool(off_run.get("use_collision")))
+    bvh_diff = on_bvh is not None and off_bvh is not None and on_bvh != off_bvh
+    physics_response_observed = bool(finite_ok and motion_ok and rna_diff and bvh_diff)
+    if not finite_ok:
+        notes.append("non-finite or exploded verts")
+    if not motion_ok:
+        notes.append("missing real displacement on one or both arms")
+    if not rna_diff:
+        notes.append("use_collision RNA did not differ as on=true / off=false")
+    if not bvh_diff:
+        notes.append(
+            "BVH pair counts did not differ (on=%s off=%s); limited meaning, not penetration"
+            % (on_bvh, off_bvh)
         )
-    can_pass = on_ok and off_shows_miss
+    notes.append(
+        "below_shoulder_apex_in_target_xy on=%s off=%s is position/deviation, not inside-body"
+        % (
+            on.get("below_shoulder_apex_in_target_xy_n"),
+            off.get("below_shoulder_apex_in_target_xy_n"),
+        )
+    )
+    notes.append(
+        "BVH candidates on=%s off=%s. pair_count==0 is not a no-penetration proof."
+        % (on_bvh, off_bvh)
+    )
+    notes.append("target coverage needs pixel/root review; this script never claims sample PASS")
     return {
         "ready": True,
-        "collision_on_ok": on_ok,
-        "collision_off_exposes_gap": off_shows_miss,
-        "can_claim_pass": can_pass,
-        "verdict": "PHYSICS_PAIR_PASS" if can_pass else "PHYSICS_PAIR_FAIL",
-        "reasons": reasons,
-        "caveat": (
-            "through/cover use XY occupancy vs shoulder AABB + z vs shoulder top. "
-            "BVH overlap is a candidate list, not exact penetration. "
-            "Not a Zhuge / 03 quality claim."
-        ),
+        "verdict": "NO_SAMPLE_PASS",
+        "physics_response_observed": physics_response_observed,
+        "target_coverage_needs_visual_review": True,
+        "can_claim_pass": False,
+        "bvh_pair_count_on": on_bvh,
+        "bvh_pair_count_off": off_bvh,
+        "bvh_not_exact_penetration": True,
+        "notes": notes,
+        "caveat": empty["caveat"],
     }
 
 
@@ -517,11 +551,34 @@ def apply_cloth_settings(cloth_mod, use_collision):
     cs.collision_quality = COLLISION_QUALITY
     cs.use_self_collision = USE_SELF_COLLISION
     cs.self_distance_min = SELF_DISTANCE_MIN
+    force_memory_cache(cloth_mod)
+    return read_cloth_rna(cloth_mod)
+
+
+def force_memory_cache(cloth_mod):
+    """Both arms: in-memory PointCache. Do not use disk; do not glob-delete files."""
     pc = cloth_mod.point_cache
     pc.frame_start = FRAME_START
     pc.frame_end = FRAME_END
     if hasattr(pc, "use_disk_cache"):
-        pc.use_disk_cache = True
+        pc.use_disk_cache = False
+    if hasattr(pc, "use_external_cache"):
+        pc.use_external_cache = False
+
+
+def read_cache_actual(cloth_mod):
+    pc = cloth_mod.point_cache
+    return {
+        "use_disk_cache": bool(getattr(pc, "use_disk_cache", False)),
+        "cache_frame_start": int(pc.frame_start),
+        "cache_frame_end": int(pc.frame_end),
+    }
+
+
+def read_cloth_rna(cloth_mod):
+    s = cloth_mod.settings
+    cs = cloth_mod.collision_settings
+    cache = read_cache_actual(cloth_mod)
     return {
         "use_collision_actual": bool(cs.use_collision),
         "quality": int(s.quality),
@@ -533,10 +590,49 @@ def apply_cloth_settings(cloth_mod, use_collision):
         "collision_quality": int(cs.collision_quality),
         "use_self_collision": bool(cs.use_self_collision),
         "self_distance_min": float(cs.self_distance_min),
-        "cache_frame_start": int(pc.frame_start),
-        "cache_frame_end": int(pc.frame_end),
-        "use_disk_cache": bool(getattr(pc, "use_disk_cache", False)),
+        "cache_frame_start": cache["cache_frame_start"],
+        "cache_frame_end": cache["cache_frame_end"],
+        "use_disk_cache": cache["use_disk_cache"],
     }
+
+
+def assert_memory_cache_stable(before, after, label):
+    if before["use_disk_cache"] or after["use_disk_cache"]:
+        raise RuntimeError(
+            "%s expected in-memory cache (use_disk_cache=false) both ends, got before=%s after=%s"
+            % (label, before, after)
+        )
+    if before != after:
+        raise RuntimeError(
+            "%s cache RNA changed during sim: before=%s after=%s" % (label, before, after)
+        )
+
+
+def free_this_object_point_cache(obj, cloth_mod):
+    """Free only this object's PointCache. Do not delete input or other files."""
+    bpy = B.bpy
+    pc = cloth_mod.point_cache
+    try:
+        with bpy.context.temp_override(
+            scene=bpy.context.scene,
+            active_object=obj,
+            object=obj,
+            point_cache=pc,
+        ):
+            op = bpy.ops.ptcache.free_bake
+            if op.poll():
+                op()
+    except Exception:
+        return
+
+
+def save_arm_blend(path):
+    B.bpy.ops.wm.save_as_mainfile(
+        **B.filter_op_kwargs(
+            B.bpy.ops.wm.save_as_mainfile,
+            {"filepath": path, "check_existing": False},
+        )
+    )
 
 
 def setup_world_and_lights(root):
@@ -613,7 +709,10 @@ def bvh_overlap_candidates(cloth_obj, body_obj):
         "pair_count": len(pairs),
         "sample_pairs": sample,
         "not_exact_penetration": True,
-        "note": "BVHTree.overlap polygon index pairs. Candidates only, not a watertight penetration test.",
+        "note": (
+            "BVHTree.overlap polygon index pairs. Candidates only. "
+            "pair_count==0 is not a no-penetration proof."
+        ),
     }
 
 
@@ -676,22 +775,24 @@ def run_one_arm(label, use_collision, body, cloth, local_bb, out_dir, skip_rende
     for idx in sorted(free):
         vg.add([idx], 0.0, "REPLACE")
     cloth_mod = cloth_obj.modifiers.new("Cloth", "CLOTH")
-    rna = apply_cloth_settings(cloth_mod, use_collision)
-    rna["collision_modifier"] = col.type if col is not None else None
-    rna["body_hidden"] = bool(body_obj.hide_render)
-    rna["pin_weight_1_n"] = len(cloth["pin_indices"])
-    rna["free_vert_n"] = len(free)
+    apply_cloth_settings(cloth_mod, use_collision)
     cams = B.setup_cameras(local_bb)
     arm_dir = B.safe_join(out_dir, label)
     os.makedirs(arm_dir, exist_ok=True)
     refuse_frozen_writes(arm_dir)
     blend_path = B.safe_join(arm_dir, "proof.blend")
-    B.bpy.ops.wm.save_as_mainfile(
-        **B.filter_op_kwargs(
-            B.bpy.ops.wm.save_as_mainfile,
-            {"filepath": blend_path, "check_existing": False},
-        )
-    )
+    # Each arm gets its own filepath before stepping so on/off are symmetric.
+    save_arm_blend(blend_path)
+    force_memory_cache(cloth_mod)
+    cache_before = read_cache_actual(cloth_mod)
+    if cache_before["use_disk_cache"]:
+        raise RuntimeError("%s use_disk_cache is true before sim; expected memory cache" % label)
+    rna = read_cloth_rna(cloth_mod)
+    rna["collision_modifier"] = col.type if col is not None else None
+    rna["body_hidden"] = bool(body_obj.hide_render)
+    rna["pin_weight_1_n"] = len(cloth["pin_indices"])
+    rna["free_vert_n"] = len(free)
+    rna["cache_before"] = cache_before
     frames = []
     prev = None
     timed_out = False
@@ -737,6 +838,10 @@ def run_one_arm(label, use_collision, body, cloth, local_bb, out_dir, skip_rende
         )
         prev = verts
     elapsed = time.monotonic() - t0
+    cache_after = read_cache_actual(cloth_mod)
+    assert_memory_cache_stable(cache_before, cache_after, label)
+    rna["cache_after"] = cache_after
+    rna["use_disk_cache"] = cache_after["use_disk_cache"]
     if last_verts is None:
         last_verts = list(cloth["verts"])
     cover = cover_metrics(last_verts, body, cloth["verts"])
@@ -748,14 +853,15 @@ def run_one_arm(label, use_collision, body, cloth, local_bb, out_dir, skip_rende
         try:
             overlap = bvh_overlap_candidates(cloth_obj, body_obj)
         except Exception as exc:
-            overlap = {"pair_count": None, "error": str(exc), "not_exact_penetration": True}
-    B.bpy.ops.wm.save_as_mainfile(
-        **B.filter_op_kwargs(
-            B.bpy.ops.wm.save_as_mainfile,
-            {"filepath": blend_path, "check_existing": False},
-        )
-    )
+            overlap = {
+                "pair_count": None,
+                "error": str(exc),
+                "not_exact_penetration": True,
+                "note": "BVH pair_count==0 is not a no-penetration proof.",
+            }
     pngs = render_local(cams, arm_dir, skip_render)
+    save_arm_blend(blend_path)
+    free_this_object_point_cache(cloth_obj, cloth_mod)
     timing = {
         "label": label,
         "use_collision": use_collision,
@@ -792,6 +898,47 @@ def write_evidence(output_dir, payload):
     return path
 
 
+def evidence_metric_selfcheck():
+    """Pure-Python: old through-body threshold must not become PASS or inside-body."""
+    def fake(use_collision, bvh, below_n, cover_n):
+        return {
+            "use_collision": use_collision,
+            "cover": {
+                "finite": True,
+                "exploded": False,
+                "real_displacement": True,
+                "near_shoulder_apex_in_target_xy_n": cover_n,
+                "below_shoulder_apex_in_target_xy_n": below_n,
+                "min_z": 1.20,
+                "com_drop_m": 0.22,
+            },
+            "overlap": {
+                "pair_count": bvh,
+                "not_exact_penetration": True,
+            },
+        }
+
+    # Historical e8-like: on BVH 0, off BVH 65, many verts below shoulder apex.
+    pair = interpret_pair(fake(True, 0, 77, 0), fake(False, 65, 77, 0))
+    if pair["can_claim_pass"]:
+        raise RuntimeError("selfcheck: can_claim_pass must stay false")
+    if not pair["target_coverage_needs_visual_review"]:
+        raise RuntimeError("selfcheck: coverage must remain visual-review")
+    if not pair["physics_response_observed"]:
+        raise RuntimeError("selfcheck: on0/off65 BVH should observe a response")
+    if pair["verdict"] == "PHYSICS_PAIR_PASS":
+        raise RuntimeError("selfcheck: must not auto-PASS")
+    unrun = interpret_pair(None, None)
+    if unrun["can_claim_pass"] or unrun["physics_response_observed"]:
+        raise RuntimeError("selfcheck: UNRUN must not claim response or PASS")
+    return {
+        "ok": True,
+        "e8_like_physics_response_observed": pair["physics_response_observed"],
+        "e8_like_can_claim_pass": pair["can_claim_pass"],
+        "e8_like_coverage_visual": pair["target_coverage_needs_visual_review"],
+    }
+
+
 def cloud_payload(body, cloth, selfcheck, local_bb, blender_present, blender_version, physics):
     pair = interpret_pair(
         None if physics is None else physics.get("collision_on"),
@@ -821,8 +968,9 @@ def cloud_payload(body, cloth, selfcheck, local_bb, blender_present, blender_ver
         "armature": False,
         "can_walk": False,
         "declaration": (
-            "Sample cloth sheet on frozen posed male body. Decides whether the "
-            "CLOTH+COLLISION route is usable. Not a Zhuge quality or 03 pass."
+            "Sample cloth sheet on frozen posed male body. Collision response may be "
+            "observed; this package does not claim sample PASS or costume 03. "
+            "Not a Zhuge quality pass."
         ),
         "input": {
             "pr17_head": INPUT_HEAD,
@@ -838,8 +986,13 @@ def cloud_payload(body, cloth, selfcheck, local_bb, blender_present, blender_ver
             "whole_sheet_pinned": False,
             "pin_n": PIN_COUNT,
             "pair": ["collision_on", "collision_off"],
-            "cache": "isolated per-arm blend + disk cache; sequential frame_set 1..60",
+            "cache": (
+                "per-arm in-memory PointCache; use_disk_cache=false on both arms; "
+                "actual RNA read before and after stepping and asserted equal; "
+                "cleanup frees this object's cache only. Disk isolation is not claimed."
+            ),
             "param_search": False,
+            "evidence_fix": "CT-CLOTH-PROOF-01-EVIDENCE",
         },
         "params": PARAMS,
         "support_body_faces": body["support_faces"],
@@ -851,13 +1004,16 @@ def cloud_payload(body, cloth, selfcheck, local_bb, blender_present, blender_ver
         "construction_selfcheck": selfcheck,
         "local_camera_bbox": local_bb,
         "pair_verdict": pair,
+        "physics_response_observed": pair["physics_response_observed"],
+        "target_coverage_needs_visual_review": pair["target_coverage_needs_visual_review"],
+        "can_claim_pass": False,
+        "evidence_metric_selfcheck": evidence_metric_selfcheck(),
         "physics": physics,
         "blender_present": blender_present,
         "blender_version_actual": blender_version,
         "unverified_until_mac_blender": [
-            "CLOTH + COLLISION drape on posed shoulder (images + BVH candidates)",
-            "collision_off actually falls through vs on resting on shoulder",
-            "120s wall clock on Mac Blender 5.2.1",
+            "Same-parameter re-run after evidence-code fix: both arms use_disk_cache actual false and stable",
+            "target coverage still needs pixel review; do not treat BVH 0 as no-penetration",
         ],
     }
 
@@ -892,7 +1048,7 @@ def main():
     if B.bpy is None:
         payload = cloud_payload(body, cloth, selfcheck, local_bb, False, None, None)
         write_evidence(args.output_dir, payload)
-        print("cloth proof UNRUN construction_ok=%s" % selfcheck["ok"])
+        print("cloth proof UNRUN construction_ok=%s metric_selfcheck=%s" % (selfcheck["ok"], payload["evidence_metric_selfcheck"]["ok"]))
         after = os.stat(args.source_obj)
         if (after.st_mtime, after.st_size) != (src_stat.st_mtime, src_stat.st_size):
             raise RuntimeError("source obj was modified")
