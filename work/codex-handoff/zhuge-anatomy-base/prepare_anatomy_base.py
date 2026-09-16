@@ -52,7 +52,10 @@ class V:
 
     def __init__(self, x, y=None, z=None):
         if y is None:
-            self.x, self.y, self.z = float(x[0]), float(x[1]), float(x[2])
+            if isinstance(x, V):
+                self.x, self.y, self.z = x.x, x.y, x.z
+            else:
+                self.x, self.y, self.z = float(x[0]), float(x[1]), float(x[2])
         else:
             self.x, self.y, self.z = float(x), float(y), float(z)
 
@@ -939,7 +942,31 @@ def blender_prepare(args, source_info, parsed, body, blender_verts, bbox, scale,
     return report
 
 
+def v_copy_selftest():
+    """Pure-Python type-boundary check. No bpy. Camera numbers unchanged."""
+    a = V(1.0, 2.0, 3.0)
+    try:
+        float(a[0])
+        print("repro: FAILED to raise")
+        return 1
+    except TypeError as exc:
+        print("repro: %s: %s" % (type(exc).__name__, exc))
+    copied = V(a)
+    print("pass: V<-V (%s, %s, %s)" % (copied.x, copied.y, copied.z))
+    from_tuple = V((0.0, 0.0, 0.0))
+    print("pass: tuple->V (%s, %s, %s)" % (from_tuple.x, from_tuple.y, from_tuple.z))
+    corners = [
+        V(x, y, z) for x in (-0.2, 0.2) for y in (-0.2, 0.2) for z in (0.0, 1.78)
+    ]
+    dist = _fit_cam_distance(corners, V(0.0, -1.0, 0.0), V(0.0, 0.0, 0.89), 50.0, 1920, 1080)
+    ok = math.isfinite(dist) and dist > 0.0
+    print("pass: _fit_cam_distance V target dist=%s finite_positive=%s" % (dist, ok))
+    return 0 if ok else 1
+
+
 def main():
+    if "--v-copy-selftest" in argv_after_dash():
+        return v_copy_selftest()
     args = parse_cli()
     refuse_frozen_dir(args.output_dir)
     source_info = verify_source(args.source_obj)
