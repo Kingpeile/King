@@ -8,13 +8,26 @@
   "blender_version_expected": "5.2.1",
   "blender_version_actual": null,
   "render_engine": null,
-  "timestamp_utc": "2026-09-16T10:33:06Z",
+  "timestamp_utc": "2026-09-16T11:12:12Z",
   "mac_real_run": {
     "filepath_bug_commit": "64a0192232c16f94e3d162c0098986fecbfe0827",
     "export_ok_commit": "9746c6099a40168bbd87ee5d2c65f7bfd4276be2",
     "art_fail_then_framing_commit": "e5282c0bd63246ee616a19c49e8848d4496ab95c",
+    "aae56dcd_commit": "aae56dcdf517eeedee60329d77d889589c0cbce4",
     "blender": "5.2.1",
     "environment": "Mac factory-startup, background, independent output-dir",
+    "aae56dcd_mac": {
+      "exit": 0,
+      "glb_bytes": 816144,
+      "tris": 35504,
+      "mesh": 66,
+      "materials": 7,
+      "minY": 0,
+      "validator_issues": [],
+      "keep": "shoulder holes gone; side/back feet unobstructed; side feathers visible",
+      "art_review": "CHANGES_REQUESTED",
+      "published": false
+    },
     "e5282c0_mac": {
       "exit": 0,
       "glb_bytes": 917288,
@@ -42,10 +55,17 @@
       "Beard still wires, not natural bundles",
       "Guan crown must not show holes"
     ],
-    "this_commit_scope": "① review views hide palace + neutral ground + separate palace lookdown; ② one Robe_Body, disk-capped buried sleeve roots, 交领 bands on chest; ③ gravity folds, fan normals, beard bundles, guan caps. Not art approval.",
+    "art_rejection_aae56dcd": [
+      "Collar is a floating X ribbon — not on Robe_Body",
+      "Hem cyan trim broken floating chunks — old 48-seg contour vs BODY_N40 skirt",
+      "Skirt front/back still a smooth cone; side waist has a step",
+      "Front fan is a knife-edge (face yawed sideways); square stacked plates",
+      "Beard still parallel hard rods"
+    ],
+    "this_commit_scope": "Four items only: (1) 右衽 collar projected 2–4mm onto Robe_Body; (2) hem trim+gold from Skirt_Outer bottom ring; (3) waist ring shared with skirt, long/short folds not gear; (4) fan yawed around grip + pointed vanes; beard converging arcs. Did not touch shoulders/review cameras/wrists. Not art approval.",
     "this_cloud_status": "UNRUN",
     "valid_glb_on_cloud": false,
-    "note": "e5282c0 Mac export was real and still CHANGES_REQUESTED. This cloud did not re-export. Do not treat UNRUN JSON as art approval or as a new measured GLB."
+    "note": "aae56dcd Mac export was real and still CHANGES_REQUESTED. This cloud did not re-export. Do not treat UNRUN JSON as art approval or as a new measured GLB."
   },
   "units": "meters",
   "rootName": "ZhugeLiang_Root",
@@ -66,12 +86,12 @@
     "expected_blender_zup": {
       "min": [
         -0.4729,
-        -0.6284,
+        -0.3879,
         0.0
       ],
       "max": [
-        0.3158,
-        0.2639,
+        0.3902,
+        0.2424,
         1.8633
       ]
     },
@@ -138,8 +158,8 @@
   "tris_note": "Inside 20k–45k target band (character GLB census; stage is .blend-only).",
   "stats_character": {
     "part_count": 66,
-    "verts": 18729,
-    "tris": 35504,
+    "verts": 17885,
+    "tris": 33760,
     "material_count": 7,
     "materials_used": [
       "M_CyanGreen",
@@ -153,8 +173,8 @@
   },
   "stats_all": {
     "part_count": 85,
-    "verts": 22615,
-    "tris": 40128,
+    "verts": 21771,
+    "tris": 38384,
     "material_count": 8,
     "materials_used": [
       "M_CyanGreen",
@@ -190,7 +210,9 @@
     "this_handoff_claims_approval": false,
     "approval_authority": "Codex local review on Mac Blender 5.2.1",
     "mac_9746c60_art_review": "FAILED",
-    "mac_e5282c0_art_review": "CHANGES_REQUESTED"
+    "mac_e5282c0_art_review": "CHANGES_REQUESTED",
+    "mac_aae56dcd_art_review": "CHANGES_REQUESTED",
+    "this_revision_art_approval": false
   },
   "review_cameras": {
     "margin": "10% on all four sides (ndc_limit 0.80)",
@@ -202,74 +224,74 @@
     "ndc_in_frame_is_not_enough": true,
     "views": {
       "Cam_Front": {
-        "distance_m": 6.383,
+        "distance_m": 6.2481,
         "location": [
-          -0.0785,
-          -6.5652,
+          -0.0413,
+          -6.3208,
           0.9316
         ],
         "target": [
-          -0.0785,
-          -0.1822,
+          -0.0413,
+          -0.0728,
           0.9316
         ],
         "lens_mm": 50.0,
-        "max_abs_ndc_x": 0.1845,
-        "max_abs_ndc_y": 0.7749,
+        "max_abs_ndc_x": 0.2021,
+        "max_abs_ndc_y": 0.7755,
         "behind_count": 0,
         "in_frame_10pct_margin": true
       },
       "Cam_Side": {
-        "distance_m": 6.3296,
+        "distance_m": 6.368,
         "location": [
-          6.2511,
-          -0.1822,
+          6.3266,
+          -0.0728,
           0.9316
         ],
         "target": [
-          -0.0785,
-          -0.1822,
+          -0.0413,
+          -0.0728,
           0.9316
         ],
         "lens_mm": 50.0,
-        "max_abs_ndc_x": 0.2088,
-        "max_abs_ndc_y": 0.7752,
+        "max_abs_ndc_x": 0.1475,
+        "max_abs_ndc_y": 0.775,
         "behind_count": 0,
         "in_frame_10pct_margin": true
       },
       "Cam_Back": {
-        "distance_m": 6.383,
+        "distance_m": 6.2481,
         "location": [
-          -0.0785,
-          6.2007,
+          -0.0413,
+          6.1753,
           0.9316
         ],
         "target": [
-          -0.0785,
-          -0.1822,
+          -0.0413,
+          -0.0728,
           0.9316
         ],
         "lens_mm": 50.0,
-        "max_abs_ndc_x": 0.1845,
-        "max_abs_ndc_y": 0.7749,
+        "max_abs_ndc_x": 0.2021,
+        "max_abs_ndc_y": 0.7755,
         "behind_count": 0,
         "in_frame_10pct_margin": true
       },
       "Cam_LookDown": {
-        "distance_m": 7.0058,
+        "distance_m": 6.6512,
         "location": [
-          1.9319,
-          -5.1582,
-          5.4349
+          1.8673,
+          -4.7969,
+          5.207
         ],
         "target": [
-          -0.0785,
-          -0.1822,
+          -0.0413,
+          -0.0728,
           0.9316
         ],
         "lens_mm": 50.0,
-        "max_abs_ndc_x": 0.2386,
-        "max_abs_ndc_y": 0.7761,
+        "max_abs_ndc_x": 0.2418,
+        "max_abs_ndc_y": 0.7758,
         "behind_count": 0,
         "in_frame_10pct_margin": true
       }
@@ -286,8 +308,8 @@
         0.95
       ],
       "lens_mm": 55.0,
-      "max_abs_ndc_x": 0.5959,
-      "max_abs_ndc_y": 2.115,
+      "max_abs_ndc_x": 0.5429,
+      "max_abs_ndc_y": 1.8699,
       "behind_count": 0,
       "in_frame_10pct_margin": false,
       "note": "Cropped guan/feet on Mac art review. Replaced by bbox-fit cameras."
@@ -306,6 +328,8 @@
     "sleeve_root_disk_caps": true,
     "no_shoulder_annulus_caps": true,
     "collar_chest_bands": true,
+    "collar_projected_on_robe_body": true,
+    "hem_trim_from_skirt_outer": true,
     "guan_crown": true,
     "part_names": [
       "Head",
@@ -396,7 +420,7 @@
   "notes": [
     "Generator census only. No GLB/blend/png written because this was --mesh-stats or bpy is missing.",
     "Static posed meshes. No armature. Cannot walk.",
-    "Mac e5282c0 art still CHANGES_REQUESTED. This revision: ①②③ together. Cloud UNRUN."
+    "Mac aae56dcd still CHANGES_REQUESTED. This revision: collar/hem/skirt/fan-beard four items only. Cloud UNRUN."
   ],
   "unfinished": [
     "No armature / no walk cycle (intentional for this static first version).",
@@ -405,6 +429,6 @@
     "Cloud VM has no Blender; visual sign-off is Codex on Mac.",
     "GLB / .blend / view PNGs are absent until Blender 5.2.1 is re-run on this revision.",
     "GLB interface measured_* fields are UNKNOWN until a real export exists.",
-    "Mac e5282c0 exported GLB/blend/four views (917288B, 39144 tris, 64 mesh, minY 0, issues=[]). Art still CHANGES_REQUESTED: side/back feet hidden by railing; lookdown shoulder holes; chest plates; annulus rims; intersecting yoke/torso/collar; folds/fan/beard/guan. This handoff is one ①②③ candidate. Cloud UNRUN. No art approval."
+    "Mac aae56dcd exported (816144B, 35504 tris, 66 mesh, minY 0, issues=[]). KEEP: shoulder holes gone, side/back feet unobstructed, side feathers visible. Still CHANGES_REQUESTED: floating X collar; hem trim not on skirt ring; waist step / cone skirt; fan knife-edge in front; beard parallel rods. This handoff is those four items only. Cloud UNRUN. No art approval."
   ]
 }

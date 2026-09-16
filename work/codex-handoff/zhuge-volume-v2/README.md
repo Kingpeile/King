@@ -95,6 +95,19 @@ This revision is **one ①②③ candidate**:
 
 **No art approval.** Cloud did not re-export (UNRUN). `construction_audit` is an inventory, not PASS.
 
+## Mac five-view re-review (commit aae56dcd) — CHANGES_REQUESTED, not a publish
+
+Mac Blender 5.2.1 exit 0 on `aae56dcdf517eeedee60329d77d889589c0cbce4`. GLB 816144B / 35504 tris / 66 mesh / 7 materials, minY 0, validator issues=[]. **KEEP:** shoulder holes gone, side/back feet unobstructed, side feathers visible. Still not published.
+
+Remaining (this revision packages **only** these four; no generic polish; do not regress shoulders / review cameras / wrists):
+
+1. Collar was a floating X ribbon (`build_collar` = arbitrary 3D path + Bishop). Now each vertex is sampled on `Robe_Body` and offset 2–4 mm along the surface normal. True 右衽 (right lapel over left) ending at the waist side — not a left-right symmetric X hanging in air.
+2. Hem cyan trim was broken floating chunks (old 48-seg / 12-wave contour vs `BODY_N` 40 skirt). Trim + gold piping are lofted from the same `Skirt_Outer` bottom-ring vertices/normals.
+3. Skirt front/back was a smooth cone; side waist had a step. Outer skirt now starts on the exact body waist ring. Long/short gravity folds (`cloth_fold_ring`), not 8 equal gear teeth. Full fabric volume kept.
+4. Front fan was a knife-edge (face yawed sideways). Fan is rotated around the grip so front/lookdown read feather faces; side thickness kept; tips taper to a point. Beard is converging arc bundles with uneven tails, not parallel rods.
+
+**No art approval.** Cloud did not re-export (UNRUN). Do not treat generator census as a Mac five-view.
+
 ## Cloud / no Blender
 
 ```bash
