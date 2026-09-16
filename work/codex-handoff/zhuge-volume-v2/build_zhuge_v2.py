@@ -412,30 +412,79 @@ def gravity_fold_ring(cx, cy, cz, rx, ry, n, amp=0.0, n_folds=FOLD_COUNT, back_e
 # Long/short hanging folds (radians). Not 8 equal gear teeth.
 # a=0 +X (wearer's right), a=π/2 +Y back, a=π -X left, a=-π/2 -Y front.
 CLOTH_FOLDS = (
-    (-1.48, 0.42, 0.026),  # front, long
-    (-1.95, 0.28, 0.014),  # front-right, shorter
-    (-0.92, 0.32, 0.018),  # front-left
-    (1.18, 0.44, 0.022),  # back, long
-    (2.10, 0.26, 0.010),  # back-left short
-    (0.42, 0.24, 0.009),  # back-right short
+    (-1.48, 0.40, 0.036),  # front, long
+    (-1.95, 0.26, 0.018),  # front-right, shorter
+    (-0.92, 0.30, 0.024),  # front-left
+    (1.18, 0.42, 0.032),  # back, long
+    (2.10, 0.24, 0.014),  # back-left short
+    (0.42, 0.22, 0.012),  # back-right short
+)
+CLOTH_RIDGES = (
+    (-1.70, 0.12, 0.014),
+    (-1.15, 0.11, 0.012),
+    (0.80, 0.13, 0.016),
+    (1.55, 0.12, 0.014),
 )
 
 
 def cloth_fold_ring(cx, cy, cz, rx, ry, n, fold_scale=1.0):
-    """Full-volume skirt/body ring. Local long/short folds, not a cone and not a gear."""
+    """Full-volume skirt/body ring. Local long/short folds + ridges, not a cone and not a gear."""
     ring = []
     for i in range(n):
         a = 2.0 * math.pi * i / n
         rmod = 1.0
         hang = 0.0
         if fold_scale > 1e-6:
-            rmod += 0.006 * fold_scale * math.sin(2.0 * a + 0.55)
+            rmod += 0.008 * fold_scale * math.sin(2.0 * a + 0.55)
             for ang, width, depth in CLOTH_FOLDS:
                 d = abs(math.atan2(math.sin(a - ang), math.cos(a - ang)))
                 well = math.exp(-((d / max(width, 1e-4)) ** 2))
                 rmod -= (depth / max(rx, 1e-4)) * fold_scale * well
-                hang += depth * fold_scale * well * 0.18
+                hang += depth * fold_scale * well * 0.22
+            for ang, width, height in CLOTH_RIDGES:
+                d = abs(math.atan2(math.sin(a - ang), math.cos(a - ang)))
+                ridge = math.exp(-((d / max(width, 1e-4)) ** 2))
+                rmod += (height / max(rx, 1e-4)) * fold_scale * ridge
         ring.append(V(cx + math.cos(a) * rx * rmod, cy + math.sin(a) * ry * rmod, cz - hang))
+    return ring
+
+
+def superellipse_ring(cx, cy, cz, rx, ry, n, p=3.6):
+    """Boxy rounded-rect ring (p>2). Used for partitioned 诸葛巾 boards, not a barrel."""
+    ring = []
+    e = 2.0 / max(p, 1.01)
+    for i in range(n):
+        a = 2.0 * math.pi * i / n
+        c, s = math.cos(a), math.sin(a)
+        x = math.copysign(abs(c) ** e, c) * rx
+        y = math.copysign(abs(s) ** e, s) * ry
+        ring.append(V(cx + x, cy + y, cz))
+    return ring
+
+
+def panel_arc_ring(cx, cy, cz, rx, ry, a0, a1, n, folds, ridges, fold_scale, outward=0.0):
+    """Open longitude arc. Wells + ridges so lookdown gets shading turns, not ring noise."""
+    ring = []
+    for i in range(n):
+        t = i / max(1, n - 1)
+        a = lerp(a0, a1, t)
+        rmod = 1.0
+        hang = 0.0
+        if fold_scale > 1e-6:
+            rmod += 0.022 * fold_scale * math.sin(2.4 * a + 0.35)
+            for ang, width, depth in folds:
+                d = abs(math.atan2(math.sin(a - ang), math.cos(a - ang)))
+                well = math.exp(-((d / max(width, 1e-4)) ** 2))
+                rmod -= (depth / max(rx, 1e-4)) * fold_scale * well
+                hang += depth * fold_scale * well * 0.40
+            for ang, width, height in ridges:
+                d = abs(math.atan2(math.sin(a - ang), math.cos(a - ang)))
+                ridge = math.exp(-((d / max(width, 1e-4)) ** 2))
+                rmod += (height / max(rx, 1e-4)) * fold_scale * ridge
+        x = cx + math.cos(a) * rx * rmod
+        y = cy + math.sin(a) * ry * rmod
+        rad = V(math.cos(a), math.sin(a), 0.0)
+        ring.append(V(x, y, cz - hang) + rad * outward)
     return ring
 
 
@@ -983,13 +1032,13 @@ def build_robe_body():
 
 
 def _you_ren_paths():
-    """右衽: outer lapel from wearer's right neck, across the front, to the left waist side.
+    """右衽: outer lapel from the jaw/neck, across the front, to the left waist side.
     Inner lapel is shorter, under the right, not a mirror X hanging in air.
     Angles: 0=+X right, -π/2=-Y front, π=-X left.
     """
     right = (
-        (SHOULDER_Z + 0.058, -0.42),
-        (SHOULDER_Z + 0.010, -0.72),
+        (SHOULDER_Z + 0.078, -0.38),
+        (SHOULDER_Z + 0.030, -0.70),
         (CHEST_Z + 0.090, -1.15),
         (CHEST_Z + 0.010, -1.55),
         (CHEST_Z - 0.070, -2.05),
@@ -997,8 +1046,8 @@ def _you_ren_paths():
         (WAIST_Z + 0.015, -3.05),
     )
     left = (
-        (SHOULDER_Z + 0.056, -2.72),
-        (SHOULDER_Z + 0.008, -2.35),
+        (SHOULDER_Z + 0.076, -2.75),
+        (SHOULDER_Z + 0.020, -2.38),
         (CHEST_Z + 0.080, -1.95),
         (CHEST_Z - 0.020, -1.62),
         (CHEST_Z - 0.080, -1.42),
@@ -1044,9 +1093,180 @@ def _lapel_on_body(rings, za_pairs, offset, width0, width1, name, n_path=20, nu=
 def build_collar(body_rings):
     """交领 projected onto Robe_Body (2–4 mm along the chest normal). True 右衽, not a floating X."""
     right_za, left_za = _you_ren_paths()
-    outer, outer_pts = _lapel_on_body(body_rings, right_za, 0.0035, 0.028, 0.046, "Collar_R")
-    inner, _ = _lapel_on_body(body_rings, left_za, 0.0022, 0.024, 0.038, "Collar_L")
+    outer, outer_pts = _lapel_on_body(body_rings, right_za, 0.0035, 0.032, 0.050, "Collar_R")
+    inner, _ = _lapel_on_body(body_rings, left_za, 0.0022, 0.028, 0.042, "Collar_L")
     return [inner, outer], outer_pts
+
+
+def _neck_arc_ring(z, rx, ry, a0, a1, n):
+    ring = []
+    for i in range(n):
+        a = lerp(a0, a1, i / max(1, n - 1))
+        ring.append(V(math.cos(a) * rx, math.sin(a) * ry, z))
+    return ring
+
+
+def build_standing_collar():
+    """High 交领 wrapping the neck column up to the jaw so lookdown is not a long bare neck."""
+    n = 16
+    # Right outer stands from robe neck opening up to the jaw, wrapping front.
+    right_specs = [
+        (SHOULDER_Z + 0.070, 0.082, 0.074, -0.28, -3.05),
+        (CHIN_Z - 0.070, 0.070, 0.064, -0.32, -3.00),
+        (CHIN_Z - 0.012, 0.062, 0.058, -0.38, -2.92),
+        (CHIN_Z + 0.022, 0.058, 0.054, -0.45, -2.80),
+    ]
+    left_specs = [
+        (SHOULDER_Z + 0.070, 0.080, 0.072, -2.72, -0.95),
+        (CHIN_Z - 0.070, 0.068, 0.062, -2.65, -1.05),
+        (CHIN_Z - 0.012, 0.060, 0.056, -2.55, -1.15),
+        (CHIN_Z + 0.016, 0.056, 0.052, -2.48, -1.22),
+    ]
+    parts = []
+    for name, specs, offset, mat, thick in (
+        ("CollarStand_R", right_specs, 0.006, "M_RobeIvory", 0.0045),
+        ("CollarStand_L", left_specs, 0.0035, "M_RobeIvory", 0.0038),
+        ("CollarStandInner_R", right_specs, 0.0018, "M_CyanGreen", 0.0022),
+        ("CollarStandInner_L", left_specs, 0.0012, "M_CyanGreen", 0.0018),
+    ):
+        grid = []
+        for z, rx, ry, a0, a1 in specs:
+            row = _neck_arc_ring(z, rx + offset, ry + offset, a0, a1, n)
+            grid.append(row)
+        parts.append(thicken_sheet(grid, lambda tt, uu: thick, name, mat))
+    return parts
+
+
+PANEL_FOLDS_R = (
+    (-0.55, 0.30, 0.052),
+    (0.15, 0.22, 0.030),
+    (0.85, 0.34, 0.056),
+    (1.40, 0.20, 0.024),
+)
+PANEL_RIDGES_R = (
+    (-0.90, 0.14, 0.024),
+    (0.48, 0.13, 0.020),
+    (1.12, 0.15, 0.026),
+)
+PANEL_FOLDS_L = (
+    (-2.20, 0.30, 0.050),
+    (-2.85, 0.22, 0.028),
+    (-3.55, 0.34, 0.054),
+    (-4.10, 0.20, 0.022),
+)
+PANEL_RIDGES_L = (
+    (-1.85, 0.14, 0.022),
+    (-2.50, 0.13, 0.018),
+    (-3.20, 0.15, 0.024),
+)
+
+
+def _panel_keyframes():
+    """Wide shoulders, waist cinch, flared hem. Radii are outside Robe_Body."""
+    return [
+        (0.305, 0.228, SHOULDER_Z + 0.006, 0.16, 0.010),
+        (0.292, 0.218, SHOULDER_Z - 0.070, 0.28, 0.012),
+        (0.268, 0.202, CHEST_Z + 0.020, 0.42, 0.014),
+        (0.232, 0.178, WAIST_Z + 0.030, 0.58, 0.012),
+        (0.248, 0.190, WAIST_Z - 0.035, 0.72, 0.014),
+        (0.295, 0.228, HIP_Z - 0.070, 0.88, 0.016),
+        (0.338, 0.255, 0.38, 1.00, 0.018),
+        (0.362, 0.272, HEM_Z + 0.038, 1.00, 0.016),
+    ]
+
+
+def _interp_panel_spec(keys, t):
+    u = t * (len(keys) - 1)
+    k = min(int(u), len(keys) - 2)
+    f = u - k
+    a, b = keys[k], keys[k + 1]
+    return tuple(lerp(a[i], b[i], f) for i in range(5))
+
+
+def build_outer_panels():
+    """Left/right open outer-robe panels. Volumetric long/short folds + waist cinch.
+    Not a closed cone. Front opening shows the inner robe / cyan facing.
+    """
+    keys = _panel_keyframes()
+    nv, nu = 16, 18
+    cy = 0.012
+    parts = []
+    hem_arcs = []
+    for tag, a0, a1, folds, ridges in (
+        ("R", -1.18, 1.72, PANEL_FOLDS_R, PANEL_RIDGES_R),
+        ("L", -1.92, -4.48, PANEL_FOLDS_L, PANEL_RIDGES_L),
+    ):
+        grid = []
+        for i in range(nv):
+            t = i / (nv - 1)
+            rx, ry, z, fs, outw = _interp_panel_spec(keys, t)
+            grid.append(panel_arc_ring(0.0, cy, z, rx, ry, a0, a1, nu, folds, ridges, fs, outw))
+        parts.append(thicken_sheet(grid, lambda tt, uu: 0.0075, "Robe_Panel_%s" % tag, "M_RobeIvory"))
+        hem_arcs.append(grid[-1])
+        # Cyan facing along the front opening edge (column 0)
+        edge = [row[0] for row in grid]
+        parts.append(
+            sweep_profile(
+                edge,
+                _rounded_rect(0.018, 0.006, 3),
+                "Robe_PanelFacing_%s" % tag,
+                "M_CyanGreen",
+                True,
+            )
+        )
+        hem = grid[-1][:]
+        parts.append(
+            sweep_profile(
+                hem,
+                _rounded_rect(0.028, 0.010, 3),
+                "Robe_PanelHem_%s" % tag,
+                "M_CyanGreen",
+                True,
+            )
+        )
+    return parts, hem_arcs
+
+
+def build_sash():
+    """Cyan waist sash + front knot + hanging tassel. Makes the cinch readable."""
+    n = 28
+    z = WAIST_Z + 0.012
+    path = ellipse_ring(0.0, 0.012, z, 0.236, 0.182, n)
+    path = path + [path[0]]
+    parts = [
+        sweep_profile(path, _rounded_rect(0.046, 0.016, 4), "Sash_Band", "M_CyanGreen", True)
+    ]
+    knot = Mesh("Sash_Knot", "M_CyanGreen")
+    # Small wrapped volume at the front waist
+    krings = [
+        ellipse_ring(0.02, -0.175, z + 0.018, 0.028, 0.016, 12),
+        ellipse_ring(0.02, -0.188, z + 0.002, 0.034, 0.018, 12),
+        ellipse_ring(0.02, -0.182, z - 0.016, 0.026, 0.014, 12),
+    ]
+    knot.add_grid(krings, closed_u=True, closed_v=False)
+    knot.cap_ring(0, 12, V(0.02, -0.170, z + 0.024), flip=True)
+    knot.cap_ring(24, 12, V(0.02, -0.178, z - 0.022), flip=False)
+    parts.append(knot)
+    tassel_path = poly_bezier(
+        [
+            V(0.02, -0.190, z - 0.012),
+            V(0.028, -0.200, z - 0.070),
+            V(0.022, -0.195, z - 0.130),
+            V(0.018, -0.188, z - 0.175),
+        ],
+        6,
+    )
+    parts.append(
+        sweep_profile(
+            tassel_path,
+            _rounded_rect(0.016, 0.008, 3),
+            "Sash_Tassel",
+            "M_CyanGreen",
+            True,
+            scale_fn=lambda t: 1.0 - 0.45 * t,
+        )
+    )
+    return parts
 
 
 def build_skirt(waist_ring):
@@ -1131,53 +1351,76 @@ def build_hair():
 
 
 def build_guan():
-    """诸葛巾: brim band, folded crown, hairpin volumes. Not a bucket."""
+    """诸葛巾 as partitioned boards: brim, boxy crown, sagittal/side boards. Not a plastic barrel."""
     parts = []
     n = 36
-    # Headband / brim — sweep a thick rounded-rect around an oval, sitting on hairline
     band_path = ellipse_ring(0, 0.000, BROW_Z + 0.018, 0.095, 0.100, n)
-    # order path as a loop — ellipse_ring is already closed logically; duplicate first
     band_path = band_path + [band_path[0]]
-    brim = sweep_profile(
-        band_path,
-        _rounded_rect(0.034, 0.018, 4),
-        "Guan_Brim",
-        "M_CyanGreen",
-        closed_profile=True,
+    parts.append(
+        sweep_profile(
+            band_path,
+            _rounded_rect(0.034, 0.018, 4),
+            "Guan_Brim",
+            "M_CyanGreen",
+            closed_profile=True,
+        )
     )
-    parts.append(brim)
 
-    # Crown: loft of scalloped (folded) closed profiles — wider mid, pinched top, not a cylinder
+    # Flat-top superellipse boards — pinched dome was the barrel.
     crown_rings = []
     specs = [
-        (0.090, 0.094, BROW_Z + 0.028, 6, 0.004),
-        (0.100, 0.102, BROW_Z + 0.055, 6, 0.010),
-        (0.104, 0.100, BROW_Z + 0.085, 6, 0.016),  # widest, fold ridges
-        (0.092, 0.088, BROW_Z + 0.112, 6, 0.012),
-        (0.070, 0.066, BROW_Z + 0.132, 6, 0.006),
-        (0.038, 0.036, BROW_Z + 0.142, 0, 0.0),
+        (0.090, 0.096, BROW_Z + 0.026, 3.4),
+        (0.102, 0.106, BROW_Z + 0.052, 3.8),
+        (0.100, 0.102, BROW_Z + 0.078, 4.2),
+        (0.092, 0.094, BROW_Z + 0.100, 4.0),
+        (0.080, 0.082, BROW_Z + 0.116, 3.6),
     ]
-    for rx, ry, z, fn, fa in specs:
-        crown_rings.append(ellipse_ring(0, -0.004, z, rx, ry, n, fold_n=fn, fold_amp=fa / max(rx, 1e-6)))
+    for rx, ry, z, p in specs:
+        crown_rings.append(superellipse_ring(0, -0.004, z, rx, ry, n, p))
     crown = loft_closed(crown_rings, "Guan_Crown", "M_CyanGreen")
-    crown.cap_ring(0, n, V(0, -0.004, BROW_Z + 0.024), flip=True)
-    crown.cap_ring(n * (len(crown_rings) - 1), n, V(0, -0.004, BROW_Z + 0.148), flip=False)
+    crown.cap_ring(0, n, V(0, -0.004, BROW_Z + 0.022), flip=True)
+    crown.cap_ring(n * (len(crown_rings) - 1), n, V(0, -0.004, BROW_Z + 0.122), flip=False)
     parts.append(crown)
 
-    # Extra fold ridges as small tubes on the crown (cloth creases)
-    folds = []
-    for k in range(6):
-        a = 2 * math.pi * k / 6 + 0.2
-        path = []
-        for t in range(8):
-            tt = t / 7
-            z = lerp(BROW_Z + 0.040, BROW_Z + 0.128, tt)
-            r = lerp(0.102, 0.055, tt * tt) + 0.006 * math.sin(tt * math.pi)
-            path.append(V(math.cos(a) * r, math.sin(a) * r - 0.004, z))
-        folds.append(tube_along(path, lambda t: 0.0045 * (1.0 - 0.3 * t), 8, "Guan_Fold_%d" % k, "M_CyanGreen"))
-    parts.append(merge_meshes("Guan_Folds", folds, "M_CyanGreen"))
+    # Sagittal partition (center fold board)
+    sag_grid = []
+    for z, y0, y1, xw in (
+        (BROW_Z + 0.028, -0.090, 0.088, 0.0),
+        (BROW_Z + 0.072, -0.100, 0.096, 0.0),
+        (BROW_Z + 0.112, -0.084, 0.078, 0.0),
+    ):
+        sag_grid.append([V(0.0, lerp(y0, y1, j / 7.0), z) for j in range(8)])
+    parts.append(thicken_sheet(sag_grid, lambda tt, uu: 0.008, "Guan_Board_Center", "M_CyanGreen"))
 
-    # Back knot / trailing cloth
+    # Front board
+    front_grid = []
+    for z, rx, rz_off in (
+        (BROW_Z + 0.028, 0.078, 0.0),
+        (BROW_Z + 0.068, 0.082, 0.0),
+        (BROW_Z + 0.100, 0.070, 0.0),
+    ):
+        row = []
+        for j in range(8):
+            a = lerp(-0.85, 0.85, j / 7.0) - math.pi * 0.5
+            row.append(V(math.cos(a) * rx, math.sin(a) * 0.100, z))
+        front_grid.append(row)
+    parts.append(thicken_sheet(front_grid, lambda tt, uu: 0.007, "Guan_Board_Front", "M_CyanGreen"))
+
+    # Side boards
+    for side, tag in ((1.0, "R"), (-1.0, "L")):
+        grid = []
+        for z, ry in (
+            (BROW_Z + 0.030, 0.078),
+            (BROW_Z + 0.072, 0.082),
+            (BROW_Z + 0.108, 0.070),
+        ):
+            row = []
+            for j in range(6):
+                y = lerp(-0.055, 0.055, j / 5.0)
+                row.append(V(side * 0.102, y, z))
+            grid.append(row)
+        parts.append(thicken_sheet(grid, lambda tt, uu: 0.007, "Guan_Board_%s" % tag, "M_CyanGreen"))
+
     knot_path = poly_bezier(
         [
             V(0.0, 0.095, BROW_Z + 0.040),
@@ -1198,27 +1441,21 @@ def build_guan():
         )
     )
 
-    # Hairpin 簪 — lathe of a pin profile, then rotated to pierce the guan
     pin_prof = [
         (0.000, -0.095),
         (0.0028, -0.090),
         (0.0026, -0.020),
         (0.0032, 0.020),
         (0.0048, 0.055),
-        (0.0090, 0.068),  # ornament
+        (0.0090, 0.068),
         (0.0070, 0.078),
         (0.000, 0.086),
     ]
     pin = lathe_rz(pin_prof, 12, "Guan_Hairpin", "M_Gold")
-    # rotate around Y then Z so it lies along +X through the crown
-    ca, sa = math.cos(math.pi / 2), math.sin(math.pi / 2)
-    # currently along Z; map Z->X, Y->Y, X->-Z then lift
     for i, v in enumerate(pin.verts):
-        # rot around Y: (z, y, -x) after 90° : x' = z, z' = -x
         x, y, z = v.z, v.y, -v.x
         pin.verts[i] = V(x, y - 0.01, z + BROW_Z + 0.078)
     parts.append(pin)
-    # small jade bead at the ornamented end
     bead_prof = [(0.0, -0.007), (0.007, -0.003), (0.008, 0.0), (0.007, 0.003), (0.0, 0.007)]
     bead = lathe_rz(bead_prof, 12, "Guan_HairpinBead", "M_Gold")
     for i, v in enumerate(bead.verts):
@@ -1231,11 +1468,11 @@ def _beard_strand(origin, mid, tip, w0, th0, name, n_path=14, n_u=10):
     path = bezier([origin, origin.lerp(mid, 0.35) + V(0, 0.01, 0), mid, tip], n_path - 1)
 
     def rad(t):
-        # keep body width; only taper the last third so it reads as a bundle, not a wire
-        if t < 0.62:
-            return w0 * (1.0 - 0.18 * t)
-        u = (t - 0.62) / 0.38
-        return max(0.0035, w0 * (0.82 - 0.55 * (u ** 1.2)))
+        # volumetric bundle: full belly, blunt uneven tail — not a wire
+        if t < 0.55:
+            return w0 * (1.0 + 0.18 * math.sin(t / 0.55 * math.pi))
+        u = (t - 0.55) / 0.45
+        return max(0.012, w0 * (1.12 - 0.45 * (u ** 1.1)))
 
     profile = []
     for j in range(n_u):
@@ -1245,47 +1482,56 @@ def _beard_strand(origin, mid, tip, w0, th0, name, n_path=14, n_u=10):
 
 
 def build_beard():
-    """Converging arc bundles with uneven tails. Not parallel hard rods."""
+    """Three volumetric bundles hanging in front of the chest, uneven blunt tails.
+    Not dozens of parallel wires and not a back ponytail.
+    """
     parts = []
-    for bi, side in enumerate((1.0, -1.0)):
-        for k in range(2):
-            ox = side * (0.010 + k * 0.011)
-            origin = V(ox, -0.078, MOUTH_Z - 0.004)
-            mid = V(ox * 1.15 + side * 0.022, -0.058 - k * 0.006, MOUTH_Z - 0.052 - k * 0.018)
-            tip = V(ox * 0.55 + side * 0.034, -0.032, MOUTH_Z - 0.092 - k * 0.022)
-            parts.append(_beard_strand(origin, mid, tip, 0.011, 0.0040, "Beard_Mustache_%d_%d" % (bi, k)))
-    for bi, side in enumerate((1.0, -1.0)):
-        origin = V(side * 0.046, -0.050, MOUTH_Z + 0.010)
-        mid = V(side * 0.038, -0.042, MOUTH_Z - 0.048)
-        tip = V(side * 0.018, -0.030, MOUTH_Z - 0.100)
-        parts.append(_beard_strand(origin, mid, tip, 0.010, 0.0038, "Beard_Cheek_%d" % bi))
+    # Mustache as two small masses, not four wires
+    for side, tag in ((1.0, "R"), (-1.0, "L")):
+        origin = V(side * 0.016, -0.078, MOUTH_Z - 0.002)
+        mid = V(side * 0.038, -0.095, MOUTH_Z - 0.048)
+        tip = V(side * 0.042, -0.088, MOUTH_Z - 0.082)
+        parts.append(_beard_strand(origin, mid, tip, 0.018, 0.008, "Beard_Mustache_%s" % tag, n_path=12, n_u=12))
     bundles = (
-        (0.0, -1.62, 0.92, 3),
-        (0.018, -1.35, 0.84, 3),
-        (-0.018, -1.88, 1.00, 3),
+        # center, longest, hangs in front of the chest
+        (
+            "C",
+            V(0.000, -0.074, CHIN_Z + 0.010),
+            V(0.010, -0.155, CHEST_Z + 0.10),
+            V(0.016, -0.172, CHEST_Z - 0.04),
+            0.042,
+            0.020,
+        ),
+        # wearer's left, shorter
+        (
+            "L",
+            V(-0.036, -0.066, CHIN_Z + 0.006),
+            V(-0.058, -0.138, CHEST_Z + 0.14),
+            V(-0.050, -0.148, CHEST_Z + 0.02),
+            0.036,
+            0.017,
+        ),
+        # wearer's right, medium, uneven vs left
+        (
+            "R",
+            V(0.036, -0.066, CHIN_Z + 0.006),
+            V(0.060, -0.142, CHEST_Z + 0.12),
+            V(0.054, -0.158, CHEST_Z - 0.01),
+            0.038,
+            0.018,
+        ),
     )
-    for bi, (xoff, tip_a, len_k, nstr) in enumerate(bundles):
-        tip_focus = V(math.cos(tip_a) * 0.028, -0.018 + 0.01 * math.sin(bi), CHEST_Z - 0.02 - 0.05 * len_k)
-        for k in range(nstr):
-            u = (k - (nstr - 1) * 0.5) / max(1, nstr - 1)
-            origin = V(xoff + u * 0.020, -0.070, CHIN_Z + 0.014)
-            sag = 0.048 + 0.022 * (k % 3) + 0.01 * bi
-            tail = 0.78 + 0.22 * ((k * 3 + bi) % 5) / 4.0
-            mid = origin.lerp(tip_focus, 0.42) + V(u * 0.006, -sag, -0.02)
-            tip = origin.lerp(tip_focus, tail) + V(u * 0.003, -0.008 * (k % 2), -0.01 * (k == 0))
-            w0 = 0.013 if bi == 0 else 0.011
-            parts.append(_beard_strand(origin, mid, tip, w0, 0.0046, "Beard_Long_%d_%d" % (bi, k), n_path=16))
-    for k in range(3):
-        fx = (k - 1) * 0.010
-        origin = V(fx, -0.060, CHIN_Z + 0.004)
-        tip = V(fx * 0.4, -0.048, CHIN_Z - 0.050 - 0.012 * (k % 2))
-        mid = origin.lerp(tip, 0.45) + V(0, -0.014, 0)
-        parts.append(_beard_strand(origin, mid, tip, 0.009, 0.0034, "Beard_ChinUnder_%d" % k))
+    for tag, origin, mid, tip, w0, th0 in bundles:
+        parts.append(_beard_strand(origin, mid, tip, w0, th0, "Beard_Long_%s" % tag, n_path=16, n_u=14))
+        # one fat split at the tail so the end is uneven, not a second wire
+        split = origin.lerp(tip, 0.62) + V(0.0, -0.008, 0.0)
+        tip2 = tip + V(0.012 if tag != "L" else -0.010, -0.010, -0.018)
+        parts.append(
+            _beard_strand(split, split.lerp(tip2, 0.45), tip2, w0 * 0.55, th0 * 0.70, "Beard_Long_%s_tail" % tag, n_path=10, n_u=10)
+        )
     return [
         merge_meshes("Beard_Mustache", [m for m in parts if m.name.startswith("Beard_Mustache")]),
-        merge_meshes("Beard_Cheek", [m for m in parts if m.name.startswith("Beard_Cheek")]),
         merge_meshes("Beard_Long", [m for m in parts if m.name.startswith("Beard_Long")]),
-        merge_meshes("Beard_ChinUnder", [m for m in parts if m.name.startswith("Beard_ChinUnder")]),
     ]
 
 
@@ -1326,8 +1572,8 @@ def build_sleeves():
         n_u = 24
         T, N, B = bishop_frames(path)
         grid_outer = []
-        r_end = 0.12 if not raised else 0.095
-        ry_end = 0.085 if not raised else 0.068
+        r_end = 0.16 if not raised else 0.108
+        ry_end = 0.112 if not raised else 0.076
         for i, p in enumerate(path):
             t = i / max(1, len(path) - 1)
             # Small buried root, then flare after leaving the body
@@ -1342,7 +1588,7 @@ def build_sleeves():
                 q = N[i] * math.cos(a) + B[i] * math.sin(a)
                 hang = 0.0
                 if q.dot(world_down) > 0:
-                    hang = 0.012 * grow * q.dot(world_down)
+                    hang = 0.032 * grow * q.dot(world_down)
                 po = p + N[i] * (math.cos(a) * rx * fold) + B[i] * (math.sin(a) * ry * fold) + world_down * hang
                 row_o.append(po)
             grid_outer.append(row_o)
@@ -1644,41 +1890,40 @@ def build_fan():
         fer.verts[i] = p0 + xax * v.x + yax * v.y + zax * v.z
     parts.append(fer)
 
-    # Feathers radiate from ferrule as thin two-sided sheets. Normals stay on one fan face
-    # so side vanes do not disappear under backface culling.
-    n_feathers = 9
-    spread = math.radians(96)
-    # Center rachis lies in the fan plane (perp to the face normal), not world-up.
+    # Feathers: thin quill, full upper belly, blunt ROUND tips. Short layer over long.
+    # Facing kept toward front (-Y) + a bit +X/+Z. Do not taper 0.05→0 (that was the needle spike).
     rachis_zero = yax * 0.20 + zax * 0.12 + V(0, 0, 1) * 0.78
     rachis_zero = (rachis_zero - fan_normal * rachis_zero.dot(fan_normal)).nrm()
     hinge = p1 - zax * 0.01
     vanes = []
-    for fi in range(n_feathers):
-        t = fi / (n_feathers - 1)  # 0..1
+
+    def _one_vane(fi, t, length, stack, spread, tag):
         ang = (t - 0.5) * spread
         ca, sa = math.cos(ang), math.sin(ang)
         rdir = rachis_zero * ca + fan_normal.cross(rachis_zero) * sa + fan_normal * fan_normal.dot(rachis_zero) * (1 - ca)
         rdir = rdir.nrm()
-        stack = fan_normal * ((fi - (n_feathers - 1) * 0.5) * 0.0022)
-        length = 0.355 - 0.040 * abs(t - 0.42) - 0.012 * (fi % 3)
         rachis = bezier(
             [
                 hinge + stack,
-                hinge + stack + rdir * (length * 0.35) + V(0, 0, 0.01),
-                hinge + stack + rdir * (length * 0.7) + V(0, 0, -0.012),
-                hinge + stack + rdir * length + V(0, 0, -0.028),
+                hinge + stack + rdir * (length * 0.32) + V(0, 0, 0.008),
+                hinge + stack + rdir * (length * 0.68) + V(0, 0, -0.008),
+                hinge + stack + rdir * length + V(0, 0, -0.018),
             ],
-            12,
+            14,
         )
         T, N, B = bishop_frames(rachis)
-        nu, nv = 10, len(rachis)
+        nu, nv = 11, len(rachis)
 
         def width_at(tt):
-            # quill → full vane → pointed tip (not a square cut)
-            if tt < 0.12:
-                return lerp(0.0035, 0.050, (tt / 0.12) ** 0.65)
-            u = (tt - 0.12) / 0.88
-            return 0.050 * max(0.0, (1.0 - u) ** 1.45)
+            # quill → full belly → blunt round (never 0)
+            if tt < 0.16:
+                return lerp(0.0055, 0.074, (tt / 0.16) ** 0.72)
+            if tt < 0.68:
+                u = (tt - 0.16) / 0.52
+                return 0.074 + 0.014 * math.sin(u * math.pi)
+            u = (tt - 0.68) / 0.32
+            # cosine down to 22 mm, not a needle
+            return lerp(0.084, 0.022, 0.5 - 0.5 * math.cos(min(1.0, u) * math.pi))
 
         grid = []
         prev_side = None
@@ -1699,21 +1944,57 @@ def build_fan():
             row = []
             for j in range(nu):
                 u = j / (nu - 1) * 2.0 - 1.0
-                ww = w * math.sqrt(max(0.0, 1.0 - 0.12 * u * u))
-                th = 0.00055 * (1.0 - 0.45 * abs(u)) * (1.0 - 0.15 * tt)
+                # rounder cross-section at the tip
+                round_u = math.sqrt(max(0.0, 1.0 - 0.22 * u * u))
+                ww = w * round_u
+                th = 0.00055 * (1.0 - 0.45 * abs(u)) * (1.0 - 0.10 * tt)
                 if abs(u) < 0.10:
-                    th += 0.0011 * (1.0 - abs(u) / 0.10)
+                    th += 0.0014 * (1.0 - abs(u) / 0.10)  # thin mid-rib
                 row.append(p + side * (u * ww) + face * (th * 0.5))
+            grid.append(row)
+        # blunt round cap: 4 extra rows that close as a semicircle, not a point-spike
+        tip_p = rachis[-1]
+        tip_T = T[-1]
+        tip_side = prev_side
+        tip_face = tip_side.cross(tip_T).nrm()
+        if tip_face.dot(fan_normal) < 0:
+            tip_face = -tip_face
+        w_end = width_at(1.0)
+        for k in range(1, 5):
+            s = k / 4.0
+            cap_w = w_end * math.sqrt(max(0.0, 1.0 - s * s))
+            cap_p = tip_p + tip_T * (0.020 * s)
+            row = []
+            for j in range(nu):
+                u = j / (nu - 1) * 2.0 - 1.0
+                row.append(cap_p + tip_side * (u * cap_w * math.sqrt(max(0.0, 1.0 - 0.3 * u * u))) + tip_face * 0.0003)
             grid.append(row)
 
         def thick(tt, uu):
             u = uu * 2 - 1
-            base = 0.00085 * (1.0 - 0.4 * abs(u)) * (1.0 - 0.15 * tt)
+            base = 0.0009 * (1.0 - 0.35 * abs(u)) * (1.0 - 0.08 * tt)
             if abs(u) < 0.1:
-                base += 0.0012 * (1.0 - abs(u) / 0.1)
+                base += 0.0014 * (1.0 - abs(u) / 0.1)
             return max(0.00055, base)
 
-        vanes.append(thicken_sheet(grid, thick, "Fan_Feather_%d" % fi, "M_Feather"))
+        return thicken_sheet(grid, thick, "Fan_Feather_%s_%d" % (tag, fi), "M_Feather")
+
+    spread_long = math.radians(118)
+    spread_short = math.radians(102)
+    # long back layer
+    n_long = 7
+    for fi in range(n_long):
+        t = fi / (n_long - 1)
+        length = 0.385 - 0.022 * abs(t - 0.5)
+        stack = fan_normal * (-0.0036)
+        vanes.append(_one_vane(fi, t, length, stack, spread_long, "L"))
+    # short over long (complete fan)
+    n_short = 6
+    for fi in range(n_short):
+        t = fi / (n_short - 1)
+        length = 0.295 - 0.028 * abs(t - 0.48)
+        stack = fan_normal * (0.0032 + 0.0012 * (fi % 2))
+        vanes.append(_one_vane(fi, t, length, stack, spread_short, "S"))
     parts.append(merge_meshes("Fan_Vanes", vanes, "M_Feather"))
     return parts
 
@@ -1898,8 +2179,12 @@ def assemble_all():
     char.extend(build_beard())
     collar_parts, collar_edge = build_collar(body_rings)
     char.extend(collar_parts)
+    char.extend(build_standing_collar())
     skirt_parts, hem_ring, hem_prev = build_skirt(body_rings[-1])
     char.extend(skirt_parts)
+    panel_parts, _hem_arcs = build_outer_panels()
+    char.extend(panel_parts)
+    char.extend(build_sash())
     char.extend(build_sleeves())
     char.extend(build_trims(hem_ring, hem_prev, collar_edge))
     char.extend(build_shoes())
@@ -2549,7 +2834,7 @@ def blender_build(args, char, env, stats):
             "Screenshot count is not art approval; Codex reviews on Mac Blender 5.2.1.",
             "GLB is character-only (ZhugeLiang_Root). Stage/ground/cameras/lights/roof remain in the .blend.",
             "Review views hide Palace_Root and use Review_Ground. view_lookdown_palace.png is the 宫苑 fusion.",
-            "Mac aae56dcd five-view re-review: shoulders/feet/side feathers KEEP. Collar/hem/skirt/fan/beard still CHANGES_REQUESTED. Not a publish.",
+            "Mac 176c7f3 five-view: collar-on-chest, cyan hem, front fan confirmed better. Overall art FAIL. This revision is the bounded silhouette/fan/head sculpt. Not a publish.",
         ],
         glb_measured=glb_measured,
     )
@@ -2602,7 +2887,11 @@ def construction_audit(char_stats):
         "no_shoulder_annulus_caps": not has("SleeveCapShoulder_L") and not has("SleeveCapShoulder_R"),
         "collar_chest_bands": has("Collar_L") and has("Collar_R") and "Collar" not in s,
         "collar_projected_on_robe_body": has("Collar_L") and has("Collar_R"),
+        "standing_collar_covers_neck": has("CollarStand_R") and has("CollarStand_L"),
+        "outer_robe_panels": has("Robe_Panel_L") and has("Robe_Panel_R"),
+        "waist_sash": has("Sash_Band"),
         "hem_trim_from_skirt_outer": has("Trim_Hem") and has("Skirt_Outer"),
+        "board_guan": has("Guan_Board_Center") and has("Guan_Board_Front"),
         "guan_crown": has("Guan_Crown"),
         "part_names": names,
         "note": (
@@ -2757,10 +3046,12 @@ def build_report_payload(
         unfinished.append("GLB / .blend / view PNGs are absent until Blender 5.2.1 is re-run on this revision.")
         unfinished.append("GLB interface measured_* fields are UNKNOWN until a real export exists.")
         unfinished.append(
-            "Mac aae56dcd exported (816144B, 35504 tris, 66 mesh, minY 0, issues=[]). "
-            "KEEP: shoulder holes gone, side/back feet unobstructed, side feathers visible. "
-            "Still CHANGES_REQUESTED: floating X collar; hem trim not on skirt ring; waist step / cone skirt; "
-            "fan knife-edge in front; beard parallel rods. This handoff is those four items only. Cloud UNRUN. No art approval."
+            "Mac 176c7f3 exported (780188B, 33760 tris, 66 mesh, minY 0, issues=[]). "
+            "KEEP: shoulder-sleeve closure, review cameras, wrists, output interface. "
+            "Confirmed better: collar-on-chest, continuous cyan hem, front-readable fan. "
+            "Overall art FAIL: narrow cone robe, barrel guan, bare neck, wire beard, spike fan. "
+            "This handoff is the bounded sculpt ① outer panels+cinch ② fan belly/blunt tips ③ neck/guan/beard. "
+            "Cloud UNRUN. Structure inventory is not art PASS."
         )
     if tris_note and "Over 45k" in tris_note:
         unfinished.append(tris_note)
@@ -2783,8 +3074,22 @@ def build_report_payload(
             "export_ok_commit": "9746c6099a40168bbd87ee5d2c65f7bfd4276be2",
             "art_fail_then_framing_commit": "e5282c0bd63246ee616a19c49e8848d4496ab95c",
             "aae56dcd_commit": "aae56dcdf517eeedee60329d77d889589c0cbce4",
+            "sculpt_base_commit": "176c7f39224d7d8aee203a66c7b79eb05ec1984b",
             "blender": "5.2.1",
             "environment": "Mac factory-startup, background, independent output-dir",
+            "mac_176c7f3": {
+                "exit": 0,
+                "glb_bytes": 780188,
+                "tris": 33760,
+                "mesh": 66,
+                "materials": 7,
+                "minY": 0,
+                "validator_issues": [],
+                "keep": "shoulder-sleeve closure; review cameras; wrists; output interface",
+                "confirmed_better": "collar-on-chest; continuous cyan hem; front-readable fan",
+                "art_review": "FAIL",
+                "published": False,
+            },
             "aae56dcd_mac": {
                 "exit": 0,
                 "glb_bytes": 816144,
@@ -2811,8 +3116,15 @@ def build_report_payload(
                 "art_review": "CHANGES_REQUESTED",
                 "published": False,
             },
-            "art_review": "CHANGES_REQUESTED",
+            "art_review": "FAIL",
             "art_approval": False,
+            "art_rejection_176c7f3": [
+                "Narrow column + smooth cone skirt — lookdown has no fold shading turns",
+                "Fan vanes taper 0.05→0 as needle spikes",
+                "Long bare neck",
+                "Plastic barrel guan",
+                "Wire / ponytail beard, not 3 volumetric bundles",
+            ],
             "art_rejection_e5282c0": [
                 "Side/back feet hidden by foreground railing — NDC-in-frame is not enough",
                 "Lookdown still holes/folded edges on both shoulders",
@@ -2831,10 +3143,10 @@ def build_report_payload(
                 "Front fan is a knife-edge (face yawed sideways); square stacked plates",
                 "Beard still parallel hard rods",
             ],
-            "this_commit_scope": "Four items only: (1) 右衽 collar projected 2–4mm onto Robe_Body; (2) hem trim+gold from Skirt_Outer bottom ring; (3) waist ring shared with skirt, long/short folds not gear; (4) fan yawed around grip + pointed vanes; beard converging arcs. Did not touch shoulders/review cameras/wrists. Not art approval.",
+            "this_commit_scope": "Bounded sculpt only: (1) left/right outer-robe panels with volumetric long/short folds + waist cinch/sash; (2) fan thin-root / full-belly / blunt round tips, short-over-long; (3) standing collar covering neck, partitioned board guan, 3-bundle volumetric beard. KEEP shoulder-sleeve roots, review cameras, wrists, interface. Did not paste the reference PNG. Not art approval.",
             "this_cloud_status": "UNRUN",
             "valid_glb_on_cloud": False,
-            "note": "aae56dcd Mac export was real and still CHANGES_REQUESTED. This cloud did not re-export. Do not treat UNRUN JSON as art approval or as a new measured GLB.",
+            "note": "176c7f3 Mac export was real and overall art FAIL. This cloud did not re-export. Do not treat UNRUN JSON as art approval or as a new measured GLB.",
         },
         "units": iface["units"],
         "rootName": iface["rootName"],
@@ -2890,7 +3202,9 @@ def build_report_payload(
             "mac_9746c60_art_review": "FAILED",
             "mac_e5282c0_art_review": "CHANGES_REQUESTED",
             "mac_aae56dcd_art_review": "CHANGES_REQUESTED",
+            "mac_176c7f3_art_review": "FAIL",
             "this_revision_art_approval": False,
+            "structure_pass_is_not_art_pass": True,
         },
         "review_cameras": review_camera_plan(iface["bbox"].get("expected_blender_zup")),
         "construction_audit": construction_audit(char_stats),
@@ -2957,7 +3271,7 @@ def mesh_stats_main(args):
         notes=[
             "Generator census only. No GLB/blend/png written because this was --mesh-stats or bpy is missing.",
             "Static posed meshes. No armature. Cannot walk.",
-            "Mac aae56dcd still CHANGES_REQUESTED. This revision: collar/hem/skirt/fan-beard four items only. Cloud UNRUN.",
+            "Mac 176c7f3 overall art FAIL. This revision: bounded sculpt ① panels+cinch ② fan belly ③ neck/guan/beard. Cloud UNRUN.",
         ],
         static_checks={
             "mesh_stats": "written",

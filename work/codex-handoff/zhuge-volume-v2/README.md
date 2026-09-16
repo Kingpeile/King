@@ -108,6 +108,20 @@ Remaining (this revision packages **only** these four; no generic polish; do not
 
 **No art approval.** Cloud did not re-export (UNRUN). Do not treat generator census as a Mac five-view.
 
+## Mac five-view (commit 176c7f3) — overall art FAIL
+
+Mac Blender 5.2.1 exit 0 on `176c7f39224d7d8aee203a66c7b79eb05ec1984b`. GLB 780188B / 33760 tris / 66 mesh / 7 materials, minY 0, issues=[]. **KEEP:** shoulder-sleeve closure, review cameras, wrists, output interface. Confirmed better: collar-on-chest, continuous cyan hem, front-readable fan. Still not published.
+
+Lookdown vs King-approved fuller-volume still: narrow cone robe, barrel guan, long bare neck, wire beard, spike-triangle fan.
+
+This revision is **one bounded sculpt** (native meshes only — the reference PNG is not pasted as cards/planes; palace background is not copied):
+
+1. Left/right open outer-robe panels with volumetric long/short folds and a waist cinch + cyan sash. Lookdown should read shading turns, not a smooth cone with ring noise.
+2. Fan: thin quill, full upper belly, blunt round tips (no 0.05→0 needles). Short layer over long into a complete fan. Facing kept.
+3. Standing collar covering the neck; partitioned board 诸葛巾 (not a barrel); three volumetric beard bundles with uneven tails hanging in front of the chest.
+
+**No art approval.** Structure inventory is not art PASS. Cloud did not re-export (UNRUN).
+
 ## Cloud / no Blender
 
 ```bash

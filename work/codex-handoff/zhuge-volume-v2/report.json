@@ -8,14 +8,28 @@
   "blender_version_expected": "5.2.1",
   "blender_version_actual": null,
   "render_engine": null,
-  "timestamp_utc": "2026-09-16T11:12:12Z",
+  "timestamp_utc": "2026-09-16T11:46:58Z",
   "mac_real_run": {
     "filepath_bug_commit": "64a0192232c16f94e3d162c0098986fecbfe0827",
     "export_ok_commit": "9746c6099a40168bbd87ee5d2c65f7bfd4276be2",
     "art_fail_then_framing_commit": "e5282c0bd63246ee616a19c49e8848d4496ab95c",
     "aae56dcd_commit": "aae56dcdf517eeedee60329d77d889589c0cbce4",
+    "sculpt_base_commit": "176c7f39224d7d8aee203a66c7b79eb05ec1984b",
     "blender": "5.2.1",
     "environment": "Mac factory-startup, background, independent output-dir",
+    "mac_176c7f3": {
+      "exit": 0,
+      "glb_bytes": 780188,
+      "tris": 33760,
+      "mesh": 66,
+      "materials": 7,
+      "minY": 0,
+      "validator_issues": [],
+      "keep": "shoulder-sleeve closure; review cameras; wrists; output interface",
+      "confirmed_better": "collar-on-chest; continuous cyan hem; front-readable fan",
+      "art_review": "FAIL",
+      "published": false
+    },
     "aae56dcd_mac": {
       "exit": 0,
       "glb_bytes": 816144,
@@ -42,8 +56,15 @@
       "art_review": "CHANGES_REQUESTED",
       "published": false
     },
-    "art_review": "CHANGES_REQUESTED",
+    "art_review": "FAIL",
     "art_approval": false,
+    "art_rejection_176c7f3": [
+      "Narrow column + smooth cone skirt — lookdown has no fold shading turns",
+      "Fan vanes taper 0.05→0 as needle spikes",
+      "Long bare neck",
+      "Plastic barrel guan",
+      "Wire / ponytail beard, not 3 volumetric bundles"
+    ],
     "art_rejection_e5282c0": [
       "Side/back feet hidden by foreground railing — NDC-in-frame is not enough",
       "Lookdown still holes/folded edges on both shoulders",
@@ -62,10 +83,10 @@
       "Front fan is a knife-edge (face yawed sideways); square stacked plates",
       "Beard still parallel hard rods"
     ],
-    "this_commit_scope": "Four items only: (1) 右衽 collar projected 2–4mm onto Robe_Body; (2) hem trim+gold from Skirt_Outer bottom ring; (3) waist ring shared with skirt, long/short folds not gear; (4) fan yawed around grip + pointed vanes; beard converging arcs. Did not touch shoulders/review cameras/wrists. Not art approval.",
+    "this_commit_scope": "Bounded sculpt only: (1) left/right outer-robe panels with volumetric long/short folds + waist cinch/sash; (2) fan thin-root / full-belly / blunt round tips, short-over-long; (3) standing collar covering neck, partitioned board guan, 3-bundle volumetric beard. KEEP shoulder-sleeve roots, review cameras, wrists, interface. Did not paste the reference PNG. Not art approval.",
     "this_cloud_status": "UNRUN",
     "valid_glb_on_cloud": false,
-    "note": "aae56dcd Mac export was real and still CHANGES_REQUESTED. This cloud did not re-export. Do not treat UNRUN JSON as art approval or as a new measured GLB."
+    "note": "176c7f3 Mac export was real and overall art FAIL. This cloud did not re-export. Do not treat UNRUN JSON as art approval or as a new measured GLB."
   },
   "units": "meters",
   "rootName": "ZhugeLiang_Root",
@@ -85,21 +106,21 @@
   "bbox": {
     "expected_blender_zup": {
       "min": [
-        -0.4729,
-        -0.3879,
+        -0.5156,
+        -0.4359,
         0.0
       ],
       "max": [
-        0.3902,
-        0.2424,
-        1.8633
+        0.4732,
+        0.3037,
+        1.8373
       ]
     },
     "expected_note": "Generator vertex AABB in Blender Z-up meters. Not a GLB measurement.",
     "measured_glb_yup": "UNKNOWN"
   },
   "height": {
-    "expected_blender_m": 1.8633,
+    "expected_blender_m": 1.8373,
     "expected_note": "generator max.z - min.z (includes guan). Design crown height is 1.8 m.",
     "measured_glb_m": "UNKNOWN"
   },
@@ -157,9 +178,9 @@
   "tris_policy": "If look would clearly degrade to hit the band, keep quality and report honestly.",
   "tris_note": "Inside 20k–45k target band (character GLB census; stage is .blend-only).",
   "stats_character": {
-    "part_count": 66,
-    "verts": 17885,
-    "tris": 33760,
+    "part_count": 80,
+    "verts": 22485,
+    "tris": 42940,
     "material_count": 7,
     "materials_used": [
       "M_CyanGreen",
@@ -172,9 +193,9 @@
     ]
   },
   "stats_all": {
-    "part_count": 85,
-    "verts": 21771,
-    "tris": 38384,
+    "part_count": 99,
+    "verts": 26371,
+    "tris": 47564,
     "material_count": 8,
     "materials_used": [
       "M_CyanGreen",
@@ -212,7 +233,9 @@
     "mac_9746c60_art_review": "FAILED",
     "mac_e5282c0_art_review": "CHANGES_REQUESTED",
     "mac_aae56dcd_art_review": "CHANGES_REQUESTED",
-    "this_revision_art_approval": false
+    "mac_176c7f3_art_review": "FAIL",
+    "this_revision_art_approval": false,
+    "structure_pass_is_not_art_pass": true
   },
   "review_cameras": {
     "margin": "10% on all four sides (ndc_limit 0.80)",
@@ -224,74 +247,74 @@
     "ndc_in_frame_is_not_enough": true,
     "views": {
       "Cam_Front": {
-        "distance_m": 6.2481,
+        "distance_m": 6.2217,
         "location": [
-          -0.0413,
-          -6.3208,
-          0.9316
+          -0.0212,
+          -6.2878,
+          0.9186
         ],
         "target": [
-          -0.0413,
-          -0.0728,
-          0.9316
+          -0.0212,
+          -0.0661,
+          0.9186
         ],
         "lens_mm": 50.0,
-        "max_abs_ndc_x": 0.2021,
-        "max_abs_ndc_y": 0.7755,
+        "max_abs_ndc_x": 0.2347,
+        "max_abs_ndc_y": 0.7752,
         "behind_count": 0,
         "in_frame_10pct_margin": true
       },
       "Cam_Side": {
-        "distance_m": 6.368,
+        "distance_m": 6.35,
         "location": [
-          6.3266,
-          -0.0728,
-          0.9316
+          6.3288,
+          -0.0661,
+          0.9186
         ],
         "target": [
-          -0.0413,
-          -0.0728,
-          0.9316
+          -0.0212,
+          -0.0661,
+          0.9186
         ],
         "lens_mm": 50.0,
-        "max_abs_ndc_x": 0.1475,
-        "max_abs_ndc_y": 0.775,
+        "max_abs_ndc_x": 0.1754,
+        "max_abs_ndc_y": 0.7747,
         "behind_count": 0,
         "in_frame_10pct_margin": true
       },
       "Cam_Back": {
-        "distance_m": 6.2481,
+        "distance_m": 6.2217,
         "location": [
-          -0.0413,
-          6.1753,
-          0.9316
+          -0.0212,
+          6.1556,
+          0.9186
         ],
         "target": [
-          -0.0413,
-          -0.0728,
-          0.9316
+          -0.0212,
+          -0.0661,
+          0.9186
         ],
         "lens_mm": 50.0,
-        "max_abs_ndc_x": 0.2021,
-        "max_abs_ndc_y": 0.7755,
+        "max_abs_ndc_x": 0.2347,
+        "max_abs_ndc_y": 0.7752,
         "behind_count": 0,
         "in_frame_10pct_margin": true
       },
       "Cam_LookDown": {
-        "distance_m": 6.6512,
+        "distance_m": 6.824,
         "location": [
-          1.8673,
-          -4.7969,
-          5.207
+          1.9371,
+          -4.913,
+          5.3051
         ],
         "target": [
-          -0.0413,
-          -0.0728,
-          0.9316
+          -0.0212,
+          -0.0661,
+          0.9186
         ],
         "lens_mm": 50.0,
-        "max_abs_ndc_x": 0.2418,
-        "max_abs_ndc_y": 0.7758,
+        "max_abs_ndc_x": 0.2713,
+        "max_abs_ndc_y": 0.776,
         "behind_count": 0,
         "in_frame_10pct_margin": true
       }
@@ -308,8 +331,8 @@
         0.95
       ],
       "lens_mm": 55.0,
-      "max_abs_ndc_x": 0.5429,
-      "max_abs_ndc_y": 1.8699,
+      "max_abs_ndc_x": 0.6016,
+      "max_abs_ndc_y": 1.9157,
       "behind_count": 0,
       "in_frame_10pct_margin": false,
       "note": "Cropped guan/feet on Mac art review. Replaced by bbox-fit cameras."
@@ -329,7 +352,11 @@
     "no_shoulder_annulus_caps": true,
     "collar_chest_bands": true,
     "collar_projected_on_robe_body": true,
+    "standing_collar_covers_neck": true,
+    "outer_robe_panels": true,
+    "waist_sash": true,
     "hem_trim_from_skirt_outer": true,
+    "board_guan": true,
     "guan_crown": true,
     "part_names": [
       "Head",
@@ -346,18 +373,32 @@
       "Hair_Lock_R",
       "Guan_Brim",
       "Guan_Crown",
-      "Guan_Folds",
+      "Guan_Board_Center",
+      "Guan_Board_Front",
+      "Guan_Board_R",
+      "Guan_Board_L",
       "Guan_Trail",
       "Guan_Hairpin",
       "Guan_HairpinBead",
       "Beard_Mustache",
-      "Beard_Cheek",
       "Beard_Long",
-      "Beard_ChinUnder",
       "Collar_L",
       "Collar_R",
+      "CollarStand_R",
+      "CollarStand_L",
+      "CollarStandInner_R",
+      "CollarStandInner_L",
       "Skirt_Inner",
       "Skirt_Outer",
+      "Robe_Panel_R",
+      "Robe_PanelFacing_R",
+      "Robe_PanelHem_R",
+      "Robe_Panel_L",
+      "Robe_PanelFacing_L",
+      "Robe_PanelHem_L",
+      "Sash_Band",
+      "Sash_Knot",
+      "Sash_Tassel",
       "Sleeve_R",
       "SleeveRootCap_R",
       "SleeveInner_R",
@@ -420,7 +461,7 @@
   "notes": [
     "Generator census only. No GLB/blend/png written because this was --mesh-stats or bpy is missing.",
     "Static posed meshes. No armature. Cannot walk.",
-    "Mac aae56dcd still CHANGES_REQUESTED. This revision: collar/hem/skirt/fan-beard four items only. Cloud UNRUN."
+    "Mac 176c7f3 overall art FAIL. This revision: bounded sculpt ① panels+cinch ② fan belly ③ neck/guan/beard. Cloud UNRUN."
   ],
   "unfinished": [
     "No armature / no walk cycle (intentional for this static first version).",
@@ -429,6 +470,6 @@
     "Cloud VM has no Blender; visual sign-off is Codex on Mac.",
     "GLB / .blend / view PNGs are absent until Blender 5.2.1 is re-run on this revision.",
     "GLB interface measured_* fields are UNKNOWN until a real export exists.",
-    "Mac aae56dcd exported (816144B, 35504 tris, 66 mesh, minY 0, issues=[]). KEEP: shoulder holes gone, side/back feet unobstructed, side feathers visible. Still CHANGES_REQUESTED: floating X collar; hem trim not on skirt ring; waist step / cone skirt; fan knife-edge in front; beard parallel rods. This handoff is those four items only. Cloud UNRUN. No art approval."
+    "Mac 176c7f3 exported (780188B, 33760 tris, 66 mesh, minY 0, issues=[]). KEEP: shoulder-sleeve closure, review cameras, wrists, output interface. Confirmed better: collar-on-chest, continuous cyan hem, front-readable fan. Overall art FAIL: narrow cone robe, barrel guan, bare neck, wire beard, spike fan. This handoff is the bounded sculpt ① outer panels+cinch ② fan belly/blunt tips ③ neck/guan/beard. Cloud UNRUN. Structure inventory is not art PASS."
   ]
 }
