@@ -288,6 +288,8 @@ def position_aabb(gltf, blob):
 
 STAGE_NAME_MARKERS = (
     "Palace_Root",
+    "Review_Root",
+    "Review_Ground",
     "Courtyard",
     "Roof_Tiles",
     "Roof_Ridge",

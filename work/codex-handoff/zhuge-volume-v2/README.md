@@ -15,7 +15,8 @@ v1 was rejected for egg head + dotted features, cylinder beard, bucket hat, smoo
 ## Scene / figure (for reviewers)
 
 - 宫苑, warm sunlight from upper-left, cool fill, blue-green roof tiles, stone courtyard.
-- Look-down miniature, about 35–45° (`view_lookdown.png` plus front / side / back). Review cameras frame the **character AABB** with **10% margin** on all four sides (guan and feet in frame). The palace stage is not enlarged to hide cropping.
+- The four **review** views (`view_front/side/back/lookdown`) frame the character AABB with **10% margin**, on a **neutral ground**, with the palace stage **hidden** so railings cannot cover the feet. NDC-in-frame alone is not enough.
+- `view_lookdown_palace.png` is a separate 宫苑 lookdown fusion (character + palace). It is not a review-camera substitute.
 - Adult Zhuge Liang, ~1.8 m, ~7.35 heads, feet at Blender Z = 0. Ivory thick robe, cyan-green thick trim with a little gold, cyan-green guan, black hair and long layered beard, white feather fan.
 - Single empty `ZhugeLiang_Root`. Palace under `Palace_Root`. Part names are stable for later rigging. Origins are **world-layout, not joint-centered**.
 
@@ -59,8 +60,8 @@ Expected writes **only** into `--output-dir` (overwrite of known names, never a 
 |---|---|
 | `zhuge_liang_v2.glb` | Character-only Y-up glTF (`ZhugeLiang_Root`). No stage, ground, cameras, lights, or roof tiles. |
 | `zhuge_liang_v2.blend` | Full scene for rendering (palace + lights + cameras stay here) |
-| `view_front.png` `view_side.png` `view_back.png` | Review cameras |
-| `view_lookdown.png` | ~40° 宫苑 miniature |
+| `view_front.png` `view_side.png` `view_back.png` `view_lookdown.png` | Review cameras: character + neutral ground, palace hidden |
+| `view_lookdown_palace.png` | Separate palace lookdown fusion |
 | `report.json` | Overwritten with `execution_kind: "real"` |
 
 `--output-dir` defaults to this script’s directory if omitted.
@@ -75,17 +76,24 @@ Codex ran factory-startup background on Mac Blender 5.2.1. Mesh build succeeded.
 
 This handoff filters through `bpy.ops.*.get_rna_type().properties` (gltf and `save_as_mainfile`). If `filepath` would be missing or empty after filtering, the script raises instead of calling the operator. Mac commit `9746c60` confirmed GLB/blend/four views export.
 
-## Mac art review (commit 9746c60) — FAILED, not a publish
+## Mac art review (commit e5282c0) — CHANGES_REQUESTED, not a publish
 
-Structure was OK (height 1.8553 m, feet 0, no skin/animation). Front + lookdown review failed: guan/feet cropped; floating sleeve holes; neck detached; left hand not at cuff; right hand a torus block; chest as two plates. Feathers/skirt notes are **③ and deferred**.
+Mac Blender 5.2.1 exit 0 on `e5282c0bd63246ee616a19c49e8848d4496ab95c`. GLB 917288B / 39144 tris / 64 mesh / 7 materials, minY 0, no skin/animation, validator issues=[]. Front/lookdown: head+feet in frame, wrists at cuffs — real improvement. Still not published.
 
-This revision is **① + ② only**:
-1. Review cameras (`view_front/side/back/lookdown`) fit the character bbox with 10% frame margin.
-2. Topology/join: yoke + neck flare into torso; sleeves start on the torso and are capped (no see-through shoulder holes); left hand/wrist at the left cuff; right hand is a palm slab + C-grip phalanges; one continuous collar wrap (not two boards).
+Remaining:
+- Side/back feet hidden by foreground railing (NDC-in-frame is not enough)
+- Lookdown holes / folded edges on both shoulders; chest still armor plates
+- Annulus only sealed thickness rims; yoke/torso/collar were independent intersecting lofts
+- Soft gravity folds, fan vane normals, beard bundles, guan crown holes
 
-**No art approval.** Cloud did not re-export (UNRUN). ③ (soft folds / beard / fan) is not in this commit.
+**Do not treat bbox overlap / annulus / `all_join_overlaps` as connected.**
 
-`report.json` records generator `review_cameras` (AABB + 10% NDC margin vs the cropped 9746c60 55mm setup) and `topology_join` overlaps. Those are census checks, not a Mac render and not approval.
+This revision is **one ①②③ candidate**:
+1. Four review views hide `Palace_Root` and show `Review_Ground`. Separate `view_lookdown_palace.png`.
+2. One `Robe_Body` (no yoke+torso shells). Sleeve roots are filled disks buried in the shoulder. 交领 bands sit on the chest.
+3. Gravity folds + waist transition; thinner fan sheets with consistent face normals; beard as wide bundles; guan crown capped.
+
+**No art approval.** Cloud did not re-export (UNRUN). `construction_audit` is an inventory, not PASS.
 
 ## Cloud / no Blender
 
