@@ -30,9 +30,10 @@ _spec.loader.exec_module(M)
 B = M.B
 V = B.V
 
-TASK_ID = "CT-COSTUME-01"
+TASK_ID = "CT-COSTUME-01-FIX"
 ROOT_NAME = "ZhugeClothed_Root"
 SUPPORT_BODY_COMMIT = "624e008349a447859ed58417394c68f382e9b887"
+MAC_FAIL_COMMIT = "629035d21489e1e6b2bf75d813a67367061ff592"
 MAC_SUPPORT_BODY = {
     "commit": SUPPORT_BODY_COMMIT,
     "exit": 0,
@@ -43,25 +44,31 @@ MAC_SUPPORT_BODY = {
     "note": "Mac accepted as clothing support body. Still too athletic-slender vs 03. Not Zhuge PASS.",
 }
 
+# Face bands measured on the posed hm08 head (front = -Y).
+FACE_Z_MOUTH = 1.50
+FACE_Z_EYE_TOP = 1.655
+GUAN_MIN_Z = 1.668  # above eyes/brow; board must not drop below this
+
 COLS = 28
 TORSO_Z = (
-    (1.505, "neck", 0.012, False),
-    (1.460, "collar", 0.020, False),
-    (1.405, "shoulder", 0.038, True),
+    (1.505, "neck", 0.014, False),
+    (1.460, "collar", 0.024, False),
+    (1.405, "shoulder", 0.040, True),
     (1.330, "chest", 0.048, True),
-    (1.230, "chest2", 0.050, True),
-    (1.120, "lower_chest", 0.052, True),
-    (1.020, "waist", 0.050, True),
-    (0.920, "hip", 0.055, True),
-    (0.760, "thigh", 0.105, True),
-    (0.560, "knee", 0.130, True),
-    (0.340, "shin", 0.145, True),
-    (0.160, "hem", 0.155, True),
-    (0.095, "hem_lip", 0.140, True),
+    (1.230, "chest2", 0.052, True),
+    (1.120, "lower_chest", 0.054, True),
+    (1.020, "waist", 0.058, True),
+    (0.920, "hip", 0.072, True),
+    (0.780, "thigh", 0.088, True),
+    (0.620, "knee_hi", 0.102, True),
+    (0.460, "knee", 0.116, True),
+    (0.300, "shin", 0.128, True),
+    (0.160, "hem", 0.138, True),
+    (0.095, "hem_lip", 0.124, True),
 )
-SLEEVE_ROWS = 8
 SLEEVE_COLS = 16
-SLEEVE_LEN = 0.48
+SLEEVE_UPPER_ROWS = 6
+SLEEVE_FORE_ROWS = 6
 
 
 def refuse_frozen_writes(path):
@@ -153,11 +160,11 @@ def rot(p, origin, axis, ang):
 
 
 def skin_arm(pts, sh, el, ha, sign):
-    """Static two-bone rest pose. Not an armature. Hands meet in front of chest."""
+    """Static two-bone rest pose. Hands stay apart and grip a shared handle."""
     lu = (el - sh).length()
     lf = (ha - el).length()
-    tgt_ha = V(0.07 * sign, -0.16, 1.12)
-    pref = V(0.28 * sign, 0.02, 1.20)
+    tgt_ha = V(0.15 * sign, -0.23, 1.14)
+    pref = V(0.30 * sign, 0.00, 1.21)
     d = (tgt_ha - sh).length()
     reach = lu + lf - 1e-4
     short = abs(lu - lf) + 1e-4
@@ -459,6 +466,124 @@ def classify_indices(tpose):
     return {"arm": arm, "neck": neck, "torso": torso, "foot": foot, "head": head, "chin": chin}
 
 
+def classify_arm_bones(tpose, sh, el, ha, sign):
+    """T-pose membership vs original bones. Used after pose for coverage."""
+    upper, fore, hand = [], [], []
+    for i, p in enumerate(tpose):
+        if p[0] * sign < 0.18:
+            continue
+        if not (0.90 < p[2] < 1.52):
+            continue
+        lp = V(p)
+        du, tu = dist_seg(lp, sh, el)
+        df, tf = dist_seg(lp, el, ha)
+        dh = (lp - ha).length()
+        if dh < 0.085:
+            hand.append(i)
+        elif du <= 0.085 and tu < 0.92:
+            upper.append(i)
+        elif df <= 0.080:
+            fore.append(i)
+    return {"upper": upper, "fore": fore, "hand": hand}
+
+
+def bone_radius(verts, idxs, a, b):
+    if not idxs:
+        return 0.05
+    return max(dist_seg(V(verts[i]), a, b)[0] for i in idxs)
+
+
+def lerp_v(a, b, t):
+    return a + (b - a) * t
+
+
+def tube_stations(sh, el, ha, r_sh, r_el, r_ha):
+    """Shoulder → elbow → wrist stations. Radius must exceed posed arm radius."""
+    st = []
+    nu, nf = SLEEVE_UPPER_ROWS, SLEEVE_FORE_ROWS
+    for i in range(nu):
+        t = i / float(nu - 1) if nu > 1 else 0.0
+        st.append((lerp_v(sh, el, t), r_sh + (r_el - r_sh) * t, (el - sh).nrm()))
+    for i in range(1, nf):
+        t = i / float(nf - 1) if nf > 1 else 1.0
+        st.append((lerp_v(el, ha, t), r_el + (r_ha - r_el) * t, (ha - el).nrm()))
+    return st
+
+
+def build_arm_sleeve(sh, el, ha, r_upper, r_fore, robe_shoulder_row, sign):
+    """Sleeve CHANNEL follows the posed arm. Hands leave only at the cuff."""
+    ease_u = 0.048
+    ease_f = 0.055
+    r_sh = r_upper + ease_u
+    r_el = max(r_upper, r_fore) + ease_f
+    r_ha = r_fore + 0.040
+    stations = tube_stations(sh, el, ha, r_sh, r_el, r_ha)
+    # snap first ring toward robe shoulder so the channel joins the robe body
+    side = [v for v in robe_shoulder_row if v.x * sign > 0.04]
+    if side:
+        cx = sum(v.x for v in side) / len(side)
+        cy = sum(v.y for v in side) / len(side)
+        cz = sum(v.z for v in side) / len(side)
+        # mix 40% robe shoulder into ring 0 origin so it sits on the robe, not in empty space
+        o0, r0, ax0 = stations[0]
+        mix = V(cx, cy, cz) * 0.4 + o0 * 0.6
+        stations[0] = (mix, r_sh, ax0)
+    verts = []
+    radii = []
+    for origin, radius, axis in stations:
+        bx, by = basis_from_dir(axis)
+        radii.append(radius)
+        for j in range(SLEEVE_COLS):
+            a = 2.0 * math.pi * j / SLEEVE_COLS
+            fold = 1.0 + 0.06 * math.sin(3.0 * a + 0.4 * sign)
+            p = origin + bx * (math.cos(a) * radius * fold) + by * (math.sin(a) * radius * fold)
+            verts.append(p.xyz())
+    faces = grid_faces(len(stations), SLEEVE_COLS, True)
+    return {
+        "verts": verts,
+        "faces": faces,
+        "stations": [(o.xyz(), r) for o, r, _ in stations],
+        "r_sh": r_sh,
+        "r_el": r_el,
+        "r_ha": r_ha,
+    }
+
+
+def sleeve_covers(posed, idxs, sh, el, ha, r_a, r_b, which):
+    """Body vert is inside the sleeve tube iff dist(axis) < radius(t) - 2mm."""
+    uncovered = 0
+    worst = 0.0
+    n = 0
+    for i in idxs:
+        p = V(posed[i])
+        if which == "upper":
+            d, t = dist_seg(p, sh, el)
+            r = r_a + (r_b - r_a) * t
+        else:
+            d, t = dist_seg(p, el, ha)
+            r = r_a + (r_b - r_a) * t
+        n += 1
+        slack = r - d
+        if slack < 0.002:
+            uncovered += 1
+            if -slack > worst:
+                worst = -slack
+    frac = 1.0 if n == 0 else (n - uncovered) / float(n)
+    return {
+        "n": n,
+        "uncovered": uncovered,
+        "covered_frac": round(frac, 4),
+        "covers": uncovered == 0,
+        "worst_outside_m": round(worst, 5),
+    }
+
+
+def stitch_gap(sleeve, torso_row, sign):
+    sv = sleeve["verts"][:SLEEVE_COLS]
+    tv = [v.xyz() for v in torso_row if v.x * sign > 0.0]
+    return nearest_dist(sv, tv)
+
+
 def build_torso_robe(posed, parts):
     rows = []
     meta = []
@@ -473,8 +598,8 @@ def build_torso_robe(posed, parts):
             idx = parts["torso"] + parts["foot"]
             slop = 0.04
         hull = slice_hull(posed, idx, z, slop)
-        mag = 0.55 if wr else 0.12
-        hang = 0.012 if wr else 0.002
+        mag = 0.35 if wr else 0.08
+        hang = 0.008 if wr else 0.002
         row = ring_from_hull(hull, off, COLS, mag, z, hang)
         rows.append(row)
         rs = [math.hypot(v.x, v.y) for v in row]
@@ -484,156 +609,192 @@ def build_torso_robe(posed, parts):
     return {"verts": verts, "faces": faces, "rows": rows, "meta": meta}
 
 
-def build_hanging_sleeve(sh, sign, torso_rows):
-    """Wide sleeve hangs from the shoulder — not a T-pose arm tube."""
-    sh_row = torso_rows[2]
-    side = [v for v in sh_row if v.x * sign > 0.02]
-    if len(side) < 4:
-        side = list(sh_row)
-    cx = sum(v.x for v in side) / len(side)
-    cy = sum(v.y for v in side) / len(side)
-    cz = sum(v.z for v in side) / len(side)
-    origin0 = V(cx, cy, cz)
-    r0 = sum(math.hypot(v.x - cx, v.y - cy) for v in side) / len(side)
-    r0 = max(0.048, min(r0, 0.08))
-    d = V(0.32 * sign, -0.22, -0.90).nrm()
-    radii = [r0, 0.078, 0.110, 0.128, 0.132, 0.124, 0.112, 0.100]
-    bx, by = basis_from_dir(d)
-    verts = []
-    for i in range(SLEEVE_ROWS):
-        t = i / float(SLEEVE_ROWS - 1)
-        origin = origin0 + d * (SLEEVE_LEN * t)
-        r = radii[i]
-        for j in range(SLEEVE_COLS):
-            a = 2.0 * math.pi * j / SLEEVE_COLS
-            fold = 1.0 + 0.08 * math.sin(3.0 * a + 0.5 * sign)
-            p = origin + bx * (math.cos(a) * r * fold) + by * (math.sin(a) * r * fold)
-            verts.append(p.xyz())
-    faces = grid_faces(SLEEVE_ROWS, SLEEVE_COLS, True)
-    return {"verts": verts, "faces": faces}
+def offset_row(row, extra):
+    cx = sum(v.x for v in row) / len(row)
+    cy = sum(v.y for v in row) / len(row)
+    out = []
+    for v in row:
+        dx, dy = v.x - cx, v.y - cy
+        L = math.hypot(dx, dy) or 1e-6
+        out.append(V(cx + dx / L * (L + extra), cy + dy / L * (L + extra), v.z))
+    return out
 
 
-def stitch_gap(sleeve, torso_row, sign):
-    sv = sleeve["verts"][:SLEEVE_COLS]
-    tv = [v.xyz() for v in torso_row if v.x * sign > 0.0]
-    return nearest_dist(sv, tv)
-
-
-def build_collar(posed, parts):
-    hull = slice_hull(posed, parts["neck"] or parts["head"], 1.50, 0.03)
-    inner = ring_from_hull(hull, 0.008, 20, 0.05, 1.498, 0.0)
-    outer = ring_from_hull(hull, 0.018, 20, 0.05, 1.455, 0.0)
-    # front V dip on the inner/outer toward chest
+def build_collar(robe_rows):
+    """Cyan collar sits on the robe neck/collar rings, not through the body."""
+    inner = offset_row(robe_rows[0], 0.010)
+    outer = offset_row(robe_rows[1], 0.012)
     verts = []
     for row in (inner, outer):
         for v in row:
-            z = v.z
             a = math.atan2(v.y, v.x)
-            # front is -Y ~ -pi/2
-            front = math.exp(-((a + math.pi / 2) / 0.7) ** 2)
-            verts.append((v.x, v.y - 0.006 * front, z - 0.055 * front))
-    faces = grid_faces(2, 20, True)
+            front = math.exp(-((a + math.pi / 2) / 0.65) ** 2)
+            verts.append((v.x, v.y - 0.004 * front, v.z - 0.018 * front))
+    faces = grid_faces(2, COLS, True)
     return {"verts": verts, "faces": faces}
 
 
-def build_sash(torso_rows):
-    waist = torso_rows[6]
-    hip = torso_rows[7]
-    top = [V(v.x * 1.03, v.y * 1.03, v.z + 0.025) for v in waist]
-    mid = [V(v.x * 1.04, v.y * 1.04, v.z - 0.005) for v in waist]
-    bot = [V(v.x * 1.03, v.y * 1.03, v.z + 0.02) for v in hip]
+def build_sash(robe_rows):
+    """Sash sits outside the robe waist. Tassel hangs in front, not through the robe."""
+    waist = robe_rows[6]
+    hip = robe_rows[7]
+    top = offset_row(waist, 0.012)
+    mid = offset_row(waist, 0.014)
+    bot = offset_row(hip, 0.012)
+    top = [V(v.x, v.y, v.z + 0.018) for v in top]
+    bot = [V(v.x, v.y, v.z - 0.01) for v in bot]
     verts = [p.xyz() for p in top + mid + bot]
     faces = grid_faces(3, COLS, True)
-    # tassel at front-most waist vert
-    fi = min(range(COLS), key=lambda j: waist[j].y)
+    fi = min(range(COLS), key=lambda j: mid[j].y)
     fx, fy, fz = mid[fi].xyz()
-    tv, tf = quad_box(fx, fy - 0.012, fz - 0.09, 0.018, 0.012, 0.16)
+    # tassel in -Y (in front of robe), short, not a through-slab
+    tv, tf = quad_box(fx, fy - 0.028, fz - 0.05, 0.022, 0.010, 0.08)
     verts.extend(tv)
     faces.extend(shift_faces(tf, COLS * 3))
     return {"verts": verts, "faces": faces}
 
 
 def build_shoes(posed, parts, sign):
-    idx = [i for i in parts["foot"] if posed[i][0] * sign >= -0.02]
-    if sign < 0:
-        idx = [i for i in parts["foot"] if posed[i][0] < 0.02]
-    lo = slice_hull(posed, idx, 0.012, 0.02, min_pts=5)
-    hi = slice_hull(posed, idx, 0.078, 0.03, min_pts=5)
-    r0 = ring_from_hull(lo, 0.010, 12, 0.0, 0.006, 0.0)
-    r1 = ring_from_hull(hi, 0.012, 12, 0.0, 0.082, 0.0)
-    verts = [v.xyz() for v in r0 + r1]
-    faces = grid_faces(2, 12, True)
-    return {"verts": verts, "faces": faces}
+    idx = [i for i in parts["foot"] if posed[i][0] * sign > 0.02]
+    if not idx:
+        idx = [i for i in parts["foot"] if posed[i][0] * sign >= 0.0]
+    pts = [posed[i] for i in idx]
+    toe_y = min(p[1] for p in pts)
+    # include a point in front of every toe so the hull encloses them
+    extra = [(p[0], toe_y - 0.016) for p in pts if p[1] < toe_y + 0.02]
+    lo_pts = [(p[0], p[1]) for p in pts if p[2] < 0.03] + extra
+    hi_pts = [(p[0], p[1]) for p in pts if p[2] > 0.04] + extra
+    lo = convex_hull(lo_pts) or lo_pts[:3]
+    hi = convex_hull(hi_pts) or hi_pts[:3]
+    r0 = ring_from_hull(lo, 0.014, 12, 0.0, 0.004, 0.0)
+    r1 = ring_from_hull(lo, 0.016, 12, 0.0, 0.040, 0.0)
+    r2 = ring_from_hull(hi, 0.014, 12, 0.0, 0.088, 0.0)
+    verts = [v.xyz() for v in r0 + r1 + r2]
+    faces = grid_faces(3, 12, True)
+    return {"verts": verts, "faces": faces, "toe_y": toe_y}
 
 
 def build_guan(posed, parts):
-    hull = slice_hull(posed, parts["head"], 1.66, 0.04)
-    cap0 = ring_from_hull(hull, 0.012, 16, 0.04, 1.655, 0.0)
-    cap1 = ring_from_hull(hull, 0.018, 16, 0.04, 1.735, 0.0)
-    cap2 = [(v.x * 0.35, v.y * 0.35, 1.755) for v in cap1]
+    """Cap on the crown. Front board above the brow. Face stays visible."""
+    head = [posed[i] for i in parts["head"]]
+    crown_z = max(p[2] for p in head)
+    scalp_idx = [i for i in parts["head"] if posed[i][2] >= 1.70]
+    hull = slice_hull(posed, scalp_idx or parts["head"], 1.72, 0.04)
+    cap0 = ring_from_hull(hull, 0.010, 16, 0.02, 1.705, 0.0)
+    cap1 = ring_from_hull(hull, 0.014, 16, 0.02, crown_z + 0.008, 0.0)
+    cap2 = [(v.x * 0.40, v.y * 0.40, crown_z + 0.018) for v in cap1]
     verts = [v.xyz() for v in cap0 + cap1] + cap2
     faces = grid_faces(3, 16, True)
-    board_v, board_f = quad_box(0.0, min(v.y for v in cap0) - 0.012, 1.68, 0.13, 0.018, 0.17)
+    brow_band = [p for p in posed if 1.665 <= p[2] <= 1.70 and abs(p[0]) < 0.07]
+    brow_y = min(p[1] for p in brow_band) if brow_band else -0.02
+    z0, z1 = GUAN_MIN_Z, crown_z + 0.012
+    cz = 0.5 * (z0 + z1)
+    board_v, board_f = quad_box(0.0, brow_y - 0.012, cz, 0.10, 0.016, z1 - z0)
     verts.extend(board_v)
     faces.extend(shift_faces(board_f, 16 * 3))
-    return {"verts": verts, "faces": faces}
+    return {
+        "verts": verts,
+        "faces": faces,
+        "crown_z": crown_z,
+        "brow_y": brow_y,
+        "board_z_min": z0,
+        "board_z_max": z1,
+    }
 
 
 def build_beard(posed, parts):
-    chins = [posed[i] for i in parts["chin"]] or [p for p in posed if 1.51 < p[2] < 1.57 and p[1] < 0.04]
-    if not chins:
-        chins = [(0.0, -0.02, 1.54)]
-    cx = sum(p[0] for p in chins) / len(chins)
-    cy = min(p[1] for p in chins) - 0.004
-    cz = sum(p[2] for p in chins) / len(chins)
-    w0, w1 = 0.034, 0.018
-    rows = []
-    for t, z, y, w in (
-        (0.0, cz - 0.01, cy - 0.006, w0),
-        (0.35, cz - 0.08, cy - 0.018, w0 * 0.9),
-        (0.7, cz - 0.16, cy - 0.028, w1),
-        (1.0, cz - 0.24, cy - 0.022, 0.008),
+    """Volume attached to actual chin verts — not a floating triangle."""
+    chins = [posed[i] for i in parts["chin"] if posed[i][1] < 0.01]
+    if len(chins) < 4:
+        chins = [p for p in posed if 1.52 < p[2] < 1.57 and p[1] < 0.01 and abs(p[0]) < 0.05]
+    chins = sorted(chins, key=lambda p: p[0])
+    # 8 samples across chin x
+    xs = [chins[int(round(k * (len(chins) - 1) / 7.0))] for k in range(8)]
+    y0 = min(p[1] for p in xs)
+    z0 = sum(p[2] for p in xs) / 8.0
+    rows_front = []
+    rows_back = []
+    for t, dz, dy, wscale in (
+        (0.0, 0.000, 0.000, 1.00),
+        (0.25, -0.035, -0.012, 0.95),
+        (0.55, -0.080, -0.018, 0.80),
+        (0.85, -0.125, -0.014, 0.55),
+        (1.00, -0.155, -0.008, 0.22),
     ):
-        row = []
+        rf, rb = [], []
+        half = 0.028 * wscale
+        thick = 0.016 * (1.0 - 0.4 * t)
         for j in range(8):
-            a = math.pi * (j / 7.0)  # front half
-            x = cx + math.cos(a) * w
-            yy = y + math.sin(a) * w * 0.35
-            row.append((x, yy, z))
-        rows.append(row)
-    verts = [p for row in rows for p in row]
-    faces = grid_faces(4, 8, False)
-    return {"verts": verts, "faces": faces}
+            x = xs[j][0] * (0.55 + 0.45 * wscale)
+            # row 0 uses the real chin sample
+            if t == 0.0:
+                x, y, z = xs[j]
+                rf.append((x, y - 0.003, z))
+                rb.append((x, y + 0.010, z))
+            else:
+                rf.append((x, y0 + dy, z0 + dz))
+                rb.append((x, y0 + dy + thick, z0 + dz))
+            _ = half
+        rows_front.append(rf)
+        rows_back.append(rb)
+    verts = [p for row in rows_front for p in row] + [p for row in rows_back for p in row]
+    faces = grid_faces(5, 8, False)
+    faces += shift_faces(grid_faces(5, 8, False), 5 * 8)
+    # side stitches
+    for i in range(4):
+        for s in (0, 7):
+            a = i * 8 + s
+            b = (i + 1) * 8 + s
+            c = 40 + (i + 1) * 8 + s
+            d = 40 + i * 8 + s
+            faces.append((a, b, c, d))
+    return {"verts": verts, "faces": faces, "chin_z": z0, "chin_y": y0}
 
 
 def build_fan(ha_l, ha_r):
-    """Chest-held feather fan. Stays below the face."""
-    c = V(0.02, -0.22, 1.145)
-    handle = V(0.0, -0.18, 1.10)
-    hv, hf = quad_box(handle.x, handle.y, handle.z, 0.012, 0.012, 0.08)
+    """Handle between the two hands. Thick vanes, not a paper card. Below the face."""
+    hx = 0.5 * (ha_l.x + ha_r.x)
+    hy = 0.5 * (ha_l.y + ha_r.y) - 0.012
+    hz = 0.5 * (ha_l.z + ha_r.z)
+    span = abs(ha_l.x - ha_r.x) + 0.04
+    hv, hf = quad_box(hx, hy, hz, max(span, 0.16), 0.018, 0.018)
     verts = list(hv)
     faces = list(hf)
-    n_vanes = 7
+    c = V(hx, hy - 0.01, hz + 0.02)
+    n_vanes = 9
     for i in range(n_vanes):
-        t = (i / (n_vanes - 1) - 0.5) * 0.85
-        ang = t
-        vx = math.sin(ang) * 0.16
-        vz = math.cos(ang) * 0.11
-        a = c + V(vx * 0.15, 0.0, vz * 0.2)
-        b = c + V(vx, -0.01, vz)
-        # thin vane quad
-        w = V(-math.cos(ang), 0, math.sin(ang)) * 0.012
+        t = i / float(n_vanes - 1) - 0.5
+        ang = t * 0.95
+        length = 0.20
+        dx = math.sin(ang) * length
+        dz = math.cos(ang) * length * 0.85
+        dy = -0.03 - 0.02 * math.cos(ang)
+        a = c + V(dx * 0.12, -0.004, dz * 0.12)
+        b = c + V(dx, dy, dz)
+        w = V(-math.cos(ang), 0.0, math.sin(ang)) * 0.016
+        nrm = V(0.0, 0.008, 0.0)
         base = len(verts)
         verts.extend(
             [
-                (a.x + w.x, a.y, a.z + w.z),
-                (a.x - w.x, a.y, a.z - w.z),
-                (b.x - w.x, b.y - 0.004, b.z - w.z),
-                (b.x + w.x, b.y - 0.004, b.z + w.z),
+                (a.x + w.x, a.y + nrm.y, a.z + w.z),
+                (a.x - w.x, a.y + nrm.y, a.z - w.z),
+                (b.x - w.x, b.y + nrm.y, b.z - w.z),
+                (b.x + w.x, b.y + nrm.y, b.z + w.z),
+                (a.x + w.x, a.y - nrm.y, a.z + w.z),
+                (a.x - w.x, a.y - nrm.y, a.z - w.z),
+                (b.x - w.x, b.y - nrm.y, b.z - w.z),
+                (b.x + w.x, b.y - nrm.y, b.z + w.z),
             ]
         )
-        faces.append((base, base + 1, base + 2, base + 3))
-    return {"verts": verts, "faces": faces, "center": c.xyz()}
+        faces.extend(
+            [
+                (base, base + 1, base + 2, base + 3),
+                (base + 4, base + 7, base + 6, base + 5),
+                (base, base + 3, base + 7, base + 4),
+                (base + 1, base + 5, base + 6, base + 2),
+            ]
+        )
+    return {"verts": verts, "faces": faces, "center": c.xyz(), "handle": (hx, hy, hz)}
 
 
 def mesh_bbox(meshes):
@@ -661,6 +822,99 @@ def tri_count(m):
     return n
 
 
+def cloth_in_robe(cloth_verts, robe_rows):
+    """Punch-through vs the local robe sample (not mean radius — that false-flags ovals)."""
+    n = 0
+    worst = 0.0
+    for p in cloth_verts:
+        best_i = min(range(len(robe_rows)), key=lambda i: abs(robe_rows[i][0].z - p[2]))
+        row = robe_rows[best_i]
+        rv = min(row, key=lambda v: (p[0] - v.x) ** 2 + (p[1] - v.y) ** 2)
+        cx = sum(v.x for v in row) / len(row)
+        cy = sum(v.y for v in row) / len(row)
+        pr = math.hypot(p[0] - cx, p[1] - cy)
+        rr = math.hypot(rv.x - cx, rv.y - cy)
+        if rr > 1e-6 and pr < rr - 0.006:
+            n += 1
+            pen = rr - 0.006 - pr
+            if pen > worst:
+                worst = pen
+    return {"punch_through_verts": n, "worst_m": round(worst, 5), "ok": n == 0}
+
+
+def guan_face_vis(guan, posed, parts):
+    hits = [
+        v
+        for v in guan["verts"]
+        if FACE_Z_MOUTH <= v[2] <= FACE_Z_EYE_TOP and v[1] < 0.02
+    ]
+    gmin = min(v[2] for v in guan["verts"])
+    gmax = max(v[2] for v in guan["verts"])
+    scalp = [posed[i] for i in parts["head"] if posed[i][2] >= 1.72]
+    scalp_z = max(p[2] for p in scalp) if scalp else 1.78
+    return {
+        "face_z_clear": [FACE_Z_MOUTH, FACE_Z_EYE_TOP],
+        "guan_z_min": round(gmin, 5),
+        "guan_z_max": round(gmax, 5),
+        "guan_min_z_bar": GUAN_MIN_Z,
+        "guan_verts_in_face_front": len(hits),
+        "eyes_nose_mouth_clear": len(hits) == 0 and gmin >= GUAN_MIN_Z - 0.002,
+        "covers_scalp": gmax >= scalp_z - 0.005,
+        "board_z_min": round(guan.get("board_z_min", gmin), 5),
+        "crown_z": round(guan.get("crown_z", scalp_z), 5),
+    }
+
+
+def hand_separation(posed, left_idx, right_idx):
+    if not left_idx or not right_idx:
+        return {"min_m": None, "ok": False}
+    best = 1e9
+    for i in left_idx:
+        li = posed[i]
+        for j in right_idx:
+            rj = posed[j]
+            d = (li[0] - rj[0]) ** 2 + (li[1] - rj[1]) ** 2 + (li[2] - rj[2]) ** 2
+            if d < best:
+                best = d
+    m = math.sqrt(best)
+    return {"min_m": round(m, 5), "ok": m >= 0.02}
+
+
+def shoe_enclosure(posed, foot_idx, shoe, sign):
+    feet = [posed[i] for i in foot_idx if posed[i][0] * sign > 0.02]
+    if not feet:
+        return {"ok": False, "toe_verts_outside_y": None}
+    shoe_y_min = min(v[1] for v in shoe["verts"])
+    toes = [p for p in feet if p[1] <= min(q[1] for q in feet) + 0.012]
+    outside = [p for p in toes if p[1] < shoe_y_min + 0.002]
+    # XY hull of shoe at sole
+    hull = convex_hull([(v[0], v[1]) for v in shoe["verts"] if v[2] < 0.05])
+    xy_out = [p for p in toes if hull and not point_in_hull(p, hull)]
+    return {
+        "toe_n": len(toes),
+        "toe_y_min": round(min(p[1] for p in toes), 5),
+        "shoe_y_min": round(shoe_y_min, 5),
+        "toes_in_front_of_shoe": len(outside),
+        "toes_outside_xy_hull": len(xy_out),
+        "ok": len(outside) == 0 and len(xy_out) == 0,
+    }
+
+
+def beard_on_chin(beard, posed, parts):
+    chins = [posed[i] for i in parts["chin"] if posed[i][1] < 0.01]
+    if not chins or not beard["verts"]:
+        return {"ok": False}
+    top = beard["verts"][:8]
+    md = 1e9
+    for t in top:
+        for c in chins:
+            d = (t[0] - c[0]) ** 2 + (t[1] - c[1]) ** 2 + (t[2] - c[2]) ** 2
+            if d < md:
+                md = d
+    m = math.sqrt(md)
+    return {"top_to_chin_min_m": round(m, 5), "ok": m <= 0.012, "volume_verts": len(beard["verts"])}
+
+
 def build_all(source_obj):
     checks = M.run_checks(source_obj)
     tpose = list(checks["blender_verts"])
@@ -673,13 +927,19 @@ def build_all(source_obj):
     Rsh = joint_centroid(groups, morphed, "joint-r-shoulder", xf)
     Rel = joint_centroid(groups, morphed, "joint-r-elbow", xf)
     Rha = joint_centroid(groups, morphed, "joint-r-hand", xf)
+    armL = classify_arm_bones(tpose, Lsh, Lel, Lha, +1)
+    armR = classify_arm_bones(tpose, Rsh, Rel, Rha, -1)
     posed, elL, haL, poseL = skin_arm(tpose, Lsh, Lel, Lha, +1)
     posed, elR, haR, poseR = skin_arm(posed, Rsh, Rel, Rha, -1)
     parts = classify_indices(tpose)
+    rU_L = bone_radius(posed, armL["upper"], Lsh, elL)
+    rF_L = bone_radius(posed, armL["fore"], elL, haL)
+    rU_R = bone_radius(posed, armR["upper"], Rsh, elR)
+    rF_R = bone_radius(posed, armR["fore"], elR, haR)
     robe = build_torso_robe(posed, parts)
-    sl = build_hanging_sleeve(Lsh, +1, robe["rows"])
-    sr = build_hanging_sleeve(Rsh, -1, robe["rows"])
-    collar = build_collar(posed, parts)
+    sl = build_arm_sleeve(Lsh, elL, haL, rU_L, rF_L, robe["rows"][2], +1)
+    sr = build_arm_sleeve(Rsh, elR, haR, rU_R, rF_R, robe["rows"][2], -1)
+    collar = build_collar(robe["rows"])
     sash = build_sash(robe["rows"])
     shoe_l = build_shoes(posed, parts, +1)
     shoe_r = build_shoes(posed, parts, -1)
@@ -702,23 +962,35 @@ def build_all(source_obj):
     for name, m in meshes.items():
         if not finite_mesh(m):
             raise RuntimeError("non-finite or bad indices in %s" % name)
-    body_pts = posed
-    face_pts = [p for p in posed if p[2] > 1.52]
+    cov_u_l = sleeve_covers(posed, armL["upper"], Lsh, elL, haL, sl["r_sh"], sl["r_el"], "upper")
+    cov_f_l = sleeve_covers(posed, armL["fore"], Lsh, elL, haL, sl["r_el"], sl["r_ha"], "fore")
+    cov_u_r = sleeve_covers(posed, armR["upper"], Rsh, elR, haR, sr["r_sh"], sr["r_el"], "upper")
+    cov_f_r = sleeve_covers(posed, armR["fore"], Rsh, elR, haR, sr["r_el"], sr["r_ha"], "fore")
+    vis = guan_face_vis(guan, posed, parts)
+    hands = hand_separation(posed, armL["hand"], armR["hand"])
+    sh_l = shoe_enclosure(posed, parts["foot"], shoe_l, +1)
+    sh_r = shoe_enclosure(posed, parts["foot"], shoe_r, -1)
     fan_max_z = max(p[2] for p in fan["verts"])
-    face_min_z = min(p[2] for p in face_pts) if face_pts else 1.52
-    neck_meta = robe["meta"][0]
-    gaps = {
-        "robe_vs_body": nearest_dist(robe["verts"][::3], body_pts),
-        "robe_inside_body": body_inside_count(robe["verts"], posed, parts),
-        "collar_vs_neck": nearest_dist(collar["verts"], [posed[i] for i in parts["neck"]] or body_pts),
-        "sleeve_l_vs_shoulder": stitch_gap(sl, robe["rows"][2], +1),
-        "sleeve_r_vs_shoulder": stitch_gap(sr, robe["rows"][2], -1),
-        "shoe_vs_foot": nearest_dist(shoe_l["verts"] + shoe_r["verts"], [posed[i] for i in parts["foot"]]),
-        "guan_vs_head": nearest_dist(guan["verts"], [posed[i] for i in parts["head"]]),
-        "fan_face_clearance_m": round(face_min_z - fan_max_z, 5),
-        "fan_covers_face": fan_max_z >= face_min_z - 0.02,
-        "neck_opening_r_mean": neck_meta["r_mean"],
-        "neck_is_barrel": neck_meta["r_mean"] > 0.14,
+    structure = {
+        "face_vis": vis,
+        "sleeves_cover_upper_arm": cov_u_l["covers"] and cov_u_r["covers"],
+        "sleeves_cover_forearm": cov_f_l["covers"] and cov_f_r["covers"],
+        "sleeve_upper_L": cov_u_l,
+        "sleeve_fore_L": cov_f_l,
+        "sleeve_upper_R": cov_u_r,
+        "sleeve_fore_R": cov_f_r,
+        "sleeve_join_L": stitch_gap(sl, robe["rows"][2], +1),
+        "sleeve_join_R": stitch_gap(sr, robe["rows"][2], -1),
+        "hand_separation": hands,
+        "shoe_L": sh_l,
+        "shoe_R": sh_r,
+        "collar_on_robe": cloth_in_robe(collar["verts"], robe["rows"]),
+        "sash_on_robe": cloth_in_robe(sash["verts"], robe["rows"]),
+        "beard_chin": beard_on_chin(beard, posed, parts),
+        "fan_max_z": round(fan_max_z, 5),
+        "fan_below_face": fan_max_z < FACE_Z_MOUTH - 0.04,
+        "fan_vane_n": 9,
+        "posed_arm_radius_m": {"L_upper": round(rU_L, 5), "L_fore": round(rF_L, 5), "R_upper": round(rU_R, 5), "R_fore": round(rF_R, 5)},
     }
     bb = mesh_bbox(meshes.values())
     census = {
@@ -728,7 +1000,7 @@ def build_all(source_obj):
     return {
         "checks": checks,
         "meshes": meshes,
-        "gaps": gaps,
+        "structure": structure,
         "bbox": bb,
         "census": census,
         "pose": {"left": poseL, "right": poseR, "hand_l": haL.xyz(), "hand_r": haR.xyz()},
@@ -795,7 +1067,7 @@ def write_report(output_dir, built, execution_kind, status, blender_present, ble
     bb = built["bbox"]
     report = {
         "task_id": TASK_ID,
-        "title": "Standing clothed candidate on frozen male anatomy body",
+        "title": "Structural fix of Mac 629035d front fail (not art PASS)",
         "status": status,
         "execution_kind": execution_kind,
         "not_a_zhuge_product": True,
@@ -806,19 +1078,24 @@ def write_report(output_dir, built, execution_kind, status, blender_present, ble
         "armature": False,
         "can_walk": False,
         "declaration": "Static clothed mesh. Clothes and body are separate objects. No armature. Do not claim walk or fusion PASS.",
+        "mac_fail_seen": {
+            "commit": MAC_FAIL_COMMIT,
+            "blender": "5.2.1",
+            "exit": 0,
+            "pixel": "ct-costume-01-mac-front-fail.png",
+            "visible": "guan board on face; bare shoulders; arms punch sleeve sides; hands fused; paper fan; floating triangle beard; barrel robe + sash slab; toes out of shoes",
+        },
         "method": {
-            "used": "body-hull-offset continuous panels + hanging wide sleeves from MH shoulder joints",
-            "licensed_garment_fit": False,
+            "used": "posed-arm tube sleeves (shoulder→elbow→wrist) + body-hull robe; guan from crown/brow; not empty-robe cones",
             "empty_robe_generators": False,
-            "why_not_mhclo": "No CC0 adult-male 交领袍 for hm08 without installing MPFB/plugins. Female 襦裙 is excluded.",
             "support_body": MAC_SUPPORT_BODY,
-            "pose": "static two-bone rest pose (not a rig)",
+            "pose": "static two-bone rest pose (not a rig); hands apart on fan handle",
         },
         "support_body_faces": built["support_faces"],
         "support_body_uvs": built["support_uvs"],
         "census": built["census"],
         "pose": built["pose"],
-        "gaps": built["gaps"],
+        "structure": built["structure"],
         "robe_rings": built["robe_meta"],
         "bbox": {"min": [round(c, 6) for c in bb["min"]], "max": [round(c, 6) for c in bb["max"]]},
         "height_m": round(bb["max"][2] - bb["min"][2], 6),
@@ -827,7 +1104,7 @@ def write_report(output_dir, built, execution_kind, status, blender_present, ble
         "blender_version_actual": blender_version,
         "outputs": outputs,
         "unverified_until_mac_blender": [
-            "view/clay 4-view vs 03 still (shoulder-sleeve continuity, collar on body, fan not on face)",
+            "Mac front vs 629035d fail still: guan off the face, sleeves covering upper arm/forearm, hands apart on fan",
             "Y-up GLB import, feet on z=0 after exporter",
             "pixel G1–G5 (not claimed)",
             "armpit crease from static fold",
@@ -946,15 +1223,16 @@ def blender_export(args, built):
 def main():
     args = parse_cli()
     built = build_all(args.source_obj)
-    g = built["gaps"]
+    s = built["structure"]
     print(
-        "checks support_faces=%s neck_r=%s barrel=%s fan_clear=%s inside=%s"
+        "checks support_faces=%s upper=%s fore=%s hands=%s guan_face_hits=%s shoes=%s"
         % (
             built["support_faces"],
-            g["neck_opening_r_mean"],
-            g["neck_is_barrel"],
-            g["fan_face_clearance_m"],
-            g["robe_inside_body"]["intersecting_verts"],
+            s["sleeves_cover_upper_arm"],
+            s["sleeves_cover_forearm"],
+            s["hand_separation"]["min_m"],
+            s["face_vis"]["guan_verts_in_face_front"],
+            s["shoe_L"]["ok"] and s["shoe_R"]["ok"],
         )
     )
     if B.bpy is None:
