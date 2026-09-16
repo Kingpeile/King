@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+out/*.glb
+out/*.blend
+out/*.png

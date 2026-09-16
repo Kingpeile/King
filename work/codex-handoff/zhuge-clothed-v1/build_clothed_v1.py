@@ -1,0 +1,977 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+CT-COSTUME-01 — one standing clothed candidate on the frozen male anatomy body.
+
+Imports frozen anatomy helpers (read-only). Does not edit zhuge-anatomy-base/.
+Does not import zhuge-volume-v2 empty-robe generators.
+
+Method: body-hull-offset continuous panels around the real posed body,
+hanging wide sleeves from shoulder joints. Not licensed MHCLO (none available
+for an adult-male 交领袍 without plugins). Not an armature. Cannot walk.
+"""
+from __future__ import annotations
+
+import collections
+import importlib.util
+import math
+import os
+import sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+ANATOMY_DIR = os.path.abspath(os.path.join(HERE, "..", "zhuge-anatomy-base"))
+FROZEN_V2 = os.path.abspath(os.path.join(HERE, "..", "zhuge-volume-v2"))
+
+_spec = importlib.util.spec_from_file_location(
+    "anatomy_male_frozen", os.path.join(ANATOMY_DIR, "apply_male_volume.py")
+)
+M = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(M)
+B = M.B
+V = B.V
+
+TASK_ID = "CT-COSTUME-01"
+ROOT_NAME = "ZhugeClothed_Root"
+SUPPORT_BODY_COMMIT = "624e008349a447859ed58417394c68f382e9b887"
+MAC_SUPPORT_BODY = {
+    "commit": SUPPORT_BODY_COMMIT,
+    "exit": 0,
+    "glb_bytes": 626508,
+    "tris": 26756,
+    "height_m": 1.78,
+    "minY": 0,
+    "note": "Mac accepted as clothing support body. Still too athletic-slender vs 03. Not Zhuge PASS.",
+}
+
+COLS = 28
+TORSO_Z = (
+    (1.505, "neck", 0.012, False),
+    (1.460, "collar", 0.020, False),
+    (1.405, "shoulder", 0.038, True),
+    (1.330, "chest", 0.048, True),
+    (1.230, "chest2", 0.050, True),
+    (1.120, "lower_chest", 0.052, True),
+    (1.020, "waist", 0.050, True),
+    (0.920, "hip", 0.055, True),
+    (0.760, "thigh", 0.105, True),
+    (0.560, "knee", 0.130, True),
+    (0.340, "shin", 0.145, True),
+    (0.160, "hem", 0.155, True),
+    (0.095, "hem_lip", 0.140, True),
+)
+SLEEVE_ROWS = 8
+SLEEVE_COLS = 16
+SLEEVE_LEN = 0.48
+
+
+def refuse_frozen_writes(path):
+    B.refuse_frozen_dir(path)
+    target = os.path.abspath(path)
+    for blocked, label in ((FROZEN_V2, "zhuge-volume-v2"), (ANATOMY_DIR, "zhuge-anatomy-base")):
+        try:
+            if os.path.commonpath([blocked, target]) == blocked:
+                raise RuntimeError("refusing to write into frozen %s" % label)
+        except ValueError:
+            pass
+
+
+def parse_cli():
+    p = B.argparse.ArgumentParser(description="CT-COSTUME-01 standing clothed candidate")
+    p.add_argument("--source-obj", default=None)
+    p.add_argument("--output-dir", default=None)
+    p.add_argument("--skip-render", action="store_true")
+    args, _unknown = p.parse_known_args(B.argv_after_dash())
+    if not args.source_obj:
+        args.source_obj = os.path.join(ANATOMY_DIR, "source", "base.obj")
+    if not args.output_dir:
+        args.output_dir = os.path.join(HERE, "out")
+    args.source_obj = os.path.abspath(args.source_obj)
+    args.output_dir = os.path.abspath(args.output_dir)
+    refuse_frozen_writes(args.output_dir)
+    return args
+
+
+def parse_groups(path):
+    verts = []
+    groups = collections.defaultdict(list)
+    current = "(none)"
+    with open(path, "r", encoding="utf-8") as f:
+        for line in f:
+            parts = line.split()
+            if not parts:
+                continue
+            k = parts[0]
+            if k == "v":
+                verts.append((float(parts[1]), float(parts[2]), float(parts[3])))
+            elif k in ("g", "o"):
+                current = parts[1] if len(parts) > 1 else ""
+            elif k == "f":
+                for tok in parts[1:]:
+                    groups[current].append(int(tok.split("/")[0]))
+    return verts, groups
+
+
+def blender_xf_params(checks):
+    scale = checks["scale"]
+    ymin = checks["y_min"]
+    raw = []
+    for x, y, z in checks["male_body"]["verts"]:
+        raw.append((x * scale, -z * scale, (y - ymin) * scale))
+    cx = 0.5 * (min(p[0] for p in raw) + max(p[0] for p in raw))
+    cy = 0.5 * (min(p[1] for p in raw) + max(p[1] for p in raw))
+    return scale, ymin, cx, cy
+
+
+def to_bl(p, scale, ymin, cx, cy):
+    return V(p[0] * scale - cx, -p[2] * scale - cy, (p[1] - ymin) * scale)
+
+
+def joint_centroid(groups, morphed, name, xf):
+    idxs = sorted(set(groups[name]))
+    if not idxs:
+        raise RuntimeError("missing joint group %s" % name)
+    pts = [to_bl(morphed[i - 1], *xf) for i in idxs]
+    return V(
+        sum(p.x for p in pts) / len(pts),
+        sum(p.y for p in pts) / len(pts),
+        sum(p.z for p in pts) / len(pts),
+    )
+
+
+def dist_seg(p, a, b):
+    ab = b - a
+    t = ab.dot(p - a) / (ab.dot(ab) + 1e-12)
+    t = max(0.0, min(1.0, t))
+    return (p - (a + ab * t)).length(), t
+
+
+def rot(p, origin, axis, ang):
+    axis = axis.nrm()
+    v = p - origin
+    c, s = math.cos(ang), math.sin(ang)
+    return origin + v * c + axis.cross(v) * s + axis * (axis.dot(v)) * (1.0 - c)
+
+
+def skin_arm(pts, sh, el, ha, sign):
+    """Static two-bone rest pose. Not an armature. Hands meet in front of chest."""
+    lu = (el - sh).length()
+    lf = (ha - el).length()
+    tgt_ha = V(0.07 * sign, -0.16, 1.12)
+    pref = V(0.28 * sign, 0.02, 1.20)
+    d = (tgt_ha - sh).length()
+    reach = lu + lf - 1e-4
+    short = abs(lu - lf) + 1e-4
+    if d > reach:
+        tgt_ha = sh + (tgt_ha - sh).nrm() * reach
+        d = (tgt_ha - sh).length()
+    if d < short:
+        tgt_ha = sh + (tgt_ha - sh).nrm() * short
+        d = (tgt_ha - sh).length()
+    a = (lu * lu - lf * lf + d * d) / (2.0 * d)
+    r = math.sqrt(max(0.0, lu * lu - a * a))
+    axis = (tgt_ha - sh).nrm()
+    lat = pref - sh
+    lat = lat - axis * axis.dot(lat)
+    if lat.length() < 1e-8:
+        lat = V(0, 1, 0).cross(axis)
+    lat = lat.nrm()
+    tgt_el = sh + axis * a + lat * r
+    ud = (el - sh).nrm()
+    td = (tgt_el - sh).nrm()
+    ax1 = ud.cross(td)
+    ang1 = math.acos(max(-1.0, min(1.0, ud.dot(td))))
+    if ax1.length() < 1e-8:
+        ax1, ang1 = V(0, 1, 0), 0.0
+    el_m = rot(el, sh, ax1, ang1)
+    ha_m = rot(ha, sh, ax1, ang1)
+    fd = (ha_m - el_m).nrm()
+    tfd = (tgt_ha - tgt_el).nrm()
+    ax2 = fd.cross(tfd)
+    ang2 = math.acos(max(-1.0, min(1.0, fd.dot(tfd))))
+    if ax2.length() < 1e-8:
+        ax2, ang2 = V(0, 0, 1), 0.0
+    out = []
+    for p in pts:
+        lp = V(p)
+        on = (lp.x * sign > 0.18) and (0.88 < lp.z < 1.55)
+        if not on:
+            out.append(p)
+            continue
+        du, tu = dist_seg(lp, sh, el)
+        df, tf = dist_seg(lp, el, ha)
+        dh = (lp - ha).length()
+        w_arm = 1.0
+        if tu < 0.18 and du <= df + 0.03:
+            w_arm = max(0.0, min(1.0, (max(lp.x * sign, 0.18) - 0.18) / 0.08))
+        q = rot(lp, sh, ax1, ang1 * w_arm)
+        on_fore = (tf > 0.05 and df < 0.12) or dh < 0.14 or tu > 0.75
+        if on_fore and w_arm > 0.2:
+            q = rot(q, el_m, ax2, ang2)
+        out.append(q.xyz())
+    return out, tgt_el, tgt_ha, {"upper_deg": round(math.degrees(ang1), 2), "fore_deg": round(math.degrees(ang2), 2)}
+
+
+def convex_hull(pts):
+    uniq = sorted(set((round(p[0], 6), round(p[1], 6)) for p in pts))
+    if len(uniq) < 3:
+        return uniq
+
+    def cross(o, a, b):
+        return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
+
+    lower = []
+    for p in uniq:
+        while len(lower) >= 2 and cross(lower[-2], lower[-1], p) <= 0:
+            lower.pop()
+        lower.append(p)
+    upper = []
+    for p in reversed(uniq):
+        while len(upper) >= 2 and cross(upper[-2], upper[-1], p) <= 0:
+            upper.pop()
+        upper.append(p)
+    return lower[:-1] + upper[:-1]
+
+
+def resample_closed(poly, n):
+    if not poly:
+        return [(0.0, 0.0)] * n
+    if len(poly) == 1:
+        return [poly[0]] * n
+    pts = poly + poly[:1]
+    segs = []
+    total = 0.0
+    for i in range(len(pts) - 1):
+        d = math.hypot(pts[i + 1][0] - pts[i][0], pts[i + 1][1] - pts[i][1])
+        segs.append((pts[i], pts[i + 1], d))
+        total += d
+    if total < 1e-9:
+        return [poly[0]] * n
+    out = []
+    for k in range(n):
+        target = total * k / float(n)
+        acc = 0.0
+        placed = False
+        for a, b, d in segs:
+            if acc + d >= target - 1e-12:
+                t = 0.0 if d < 1e-12 else (target - acc) / d
+                out.append((a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t))
+                placed = True
+                break
+            acc += d
+        if not placed:
+            out.append(poly[0])
+    return out
+
+
+def wrinkle_delta(a, mag, offset):
+    d = mag * offset * (0.40 * math.sin(3.1 * a + 0.35) + 0.16 * math.sin(6.7 * a + 1.1))
+    for ang, width, depth in ((-1.15, 0.38, 0.006), (0.55, 0.32, 0.005), (2.35, 0.34, 0.005)):
+        da = abs(math.atan2(math.sin(a - ang), math.cos(a - ang)))
+        d -= depth * math.exp(-((da / width) ** 2))
+    return d
+
+
+def slice_hull(verts, indices, z, slop, min_pts=8):
+    use = slop
+    pts = []
+    for _ in range(4):
+        pts = [(verts[i][0], verts[i][1]) for i in indices if abs(verts[i][2] - z) <= use]
+        if len(pts) >= min_pts:
+            break
+        use *= 1.6
+    hull = convex_hull(pts)
+    if len(hull) < 3:
+        # fallback: circle from whatever we have
+        if not pts:
+            return [(0.08 * math.cos(2 * math.pi * i / 8), 0.07 * math.sin(2 * math.pi * i / 8)) for i in range(8)]
+        cx = sum(p[0] for p in pts) / len(pts)
+        cy = sum(p[1] for p in pts) / len(pts)
+        r = max(math.hypot(p[0] - cx, p[1] - cy) for p in pts)
+        r = max(r, 0.04)
+        return [(cx + r * math.cos(2 * math.pi * i / 10), cy + r * math.sin(2 * math.pi * i / 10)) for i in range(10)]
+    return hull
+
+
+def ring_from_hull(hull, offset, n, wrinkle_mag, z, zhang_scale):
+    smp = resample_closed(hull, n)
+    cx = sum(p[0] for p in smp) / float(n)
+    cy = sum(p[1] for p in smp) / float(n)
+    row = []
+    for x, y in smp:
+        dx, dy = x - cx, y - cy
+        L = math.hypot(dx, dy)
+        if L < 1e-8:
+            dx, dy, L = 1.0, 0.0, 0.04
+        a = math.atan2(dy, dx)
+        r = L + offset + wrinkle_delta(a, wrinkle_mag, offset)
+        r = max(r, L + offset * 0.65)
+        hang = max(0.0, (L + offset) - r) * 0.4 * zhang_scale
+        nx, ny = dx / L, dy / L
+        row.append(V(cx + nx * r, cy + ny * r, z - hang))
+    return row
+
+
+def grid_faces(nrows, ncols, closed_u=True):
+    faces = []
+    for i in range(nrows - 1):
+        for j in range(ncols if closed_u else ncols - 1):
+            a = i * ncols + j
+            b = i * ncols + ((j + 1) % ncols if closed_u else j + 1)
+            c = (i + 1) * ncols + ((j + 1) % ncols if closed_u else j + 1)
+            d = (i + 1) * ncols + j
+            faces.append((a, b, c, d))
+    return faces
+
+
+def basis_from_dir(d):
+    d = d.nrm()
+    aux = V(0, 0, 1) if abs(d.z) < 0.9 else V(1, 0, 0)
+    x = d.cross(aux)
+    if x.length() < 1e-8:
+        x = V(0, 1, 0)
+    x = x.nrm()
+    y = d.cross(x).nrm()
+    return x, y
+
+
+def quad_box(cx, cy, cz, sx, sy, sz):
+    hx, hy, hz = sx * 0.5, sy * 0.5, sz * 0.5
+    v = [
+        (cx - hx, cy - hy, cz - hz),
+        (cx + hx, cy - hy, cz - hz),
+        (cx + hx, cy + hy, cz - hz),
+        (cx - hx, cy + hy, cz - hz),
+        (cx - hx, cy - hy, cz + hz),
+        (cx + hx, cy - hy, cz + hz),
+        (cx + hx, cy + hy, cz + hz),
+        (cx - hx, cy + hy, cz + hz),
+    ]
+    f = [
+        (0, 1, 2, 3),
+        (4, 7, 6, 5),
+        (0, 4, 5, 1),
+        (1, 5, 6, 2),
+        (2, 6, 7, 3),
+        (3, 7, 4, 0),
+    ]
+    return v, f
+
+
+def shift_faces(faces, off):
+    return [tuple(i + off for i in face) for face in faces]
+
+
+def nearest_dist(src, dst):
+    if not src or not dst:
+        return None
+    inv = 18.0
+    grid = collections.defaultdict(list)
+    for p in dst:
+        grid[(int(p[0] * inv), int(p[1] * inv), int(p[2] * inv))].append(p)
+    best = 1e9
+    hits = 0
+    inside = 0
+    for p in src:
+        key = (int(p[0] * inv), int(p[1] * inv), int(p[2] * inv))
+        cand = []
+        for dx in (-1, 0, 1):
+            for dy in (-1, 0, 1):
+                for dz in (-1, 0, 1):
+                    cand.extend(grid[(key[0] + dx, key[1] + dy, key[2] + dz)])
+        if not cand:
+            cand = dst
+            # subsample if huge
+            if len(cand) > 2500:
+                cand = cand[:: max(1, len(cand) // 2500)]
+        md = 1e9
+        for q in cand:
+            d = (p[0] - q[0]) ** 2 + (p[1] - q[1]) ** 2 + (p[2] - q[2]) ** 2
+            if d < md:
+                md = d
+        md = math.sqrt(md)
+        if md < best:
+            best = md
+        if md < 0.006:
+            hits += 1
+        pr = math.hypot(p[0], p[1])
+        # crude inside: closer to origin than nearest body in-band
+        if md < 0.04 and pr + 0.004 < math.hypot(cand[0][0], cand[0][1]) and pr < 0.12:
+            inside += 1
+    return {"min_m": round(best, 5), "verts_closer_than_6mm": hits, "src_n": len(src)}
+
+
+def point_in_hull(pt, hull):
+    if len(hull) < 3:
+        return False
+    x, y = pt[0], pt[1]
+    inside = False
+    j = len(hull) - 1
+    for i, (xi, yi) in enumerate(hull):
+        xj, yj = hull[j]
+        if ((yi > y) != (yj > y)) and (x < (xj - xi) * (y - yi) / ((yj - yi) + 1e-16) + xi):
+            inside = not inside
+        j = i
+    return inside
+
+
+def body_inside_count(cloth, posed, parts, zslop=0.035):
+    """Cloth verts that fall inside a body slice hull (true intersections)."""
+    idx = parts["torso"] + parts["neck"] + parts["foot"] + parts["head"]
+    n = 0
+    worst = 0.0
+    for p in cloth:
+        if p[2] > 1.47:
+            continue
+        hull = slice_hull(posed, idx, p[2], zslop, min_pts=6)
+        if len(hull) < 3:
+            continue
+        if point_in_hull(p, hull):
+            n += 1
+            md = 1e9
+            for i, a in enumerate(hull):
+                b = hull[(i + 1) % len(hull)]
+                ax, ay = p[0] - a[0], p[1] - a[1]
+                bx, by = b[0] - a[0], b[1] - a[1]
+                t = max(0.0, min(1.0, (ax * bx + ay * by) / (bx * bx + by * by + 1e-12)))
+                d = math.hypot(ax - bx * t, ay - by * t)
+                if d < md:
+                    md = d
+            if md > worst:
+                worst = md
+    return {"intersecting_verts": n, "worst_penetration_m": round(worst, 5)}
+
+
+def classify_indices(tpose):
+    arm, neck, torso, foot, head, chin = [], [], [], [], [], []
+    for i, p in enumerate(tpose):
+        if p[2] < 0.10:
+            foot.append(i)
+        elif p[2] > 1.56:
+            head.append(i)
+        elif p[2] > 1.495 and math.hypot(p[0], p[1]) < 0.13:
+            neck.append(i)
+        elif abs(p[0]) > 0.20 and 0.88 < p[2] < 1.55:
+            arm.append(i)
+        else:
+            torso.append(i)
+        if 1.50 < p[2] < 1.58 and p[1] < 0.02:
+            chin.append(i)
+    return {"arm": arm, "neck": neck, "torso": torso, "foot": foot, "head": head, "chin": chin}
+
+
+def build_torso_robe(posed, parts):
+    rows = []
+    meta = []
+    for z, name, off, wr in TORSO_Z:
+        if name == "neck":
+            idx = parts["neck"] or parts["head"]
+            slop = 0.025
+        elif name in ("collar",):
+            idx = parts["neck"] + parts["torso"]
+            slop = 0.03
+        else:
+            idx = parts["torso"] + parts["foot"]
+            slop = 0.04
+        hull = slice_hull(posed, idx, z, slop)
+        mag = 0.55 if wr else 0.12
+        hang = 0.012 if wr else 0.002
+        row = ring_from_hull(hull, off, COLS, mag, z, hang)
+        rows.append(row)
+        rs = [math.hypot(v.x, v.y) for v in row]
+        meta.append({"z": z, "name": name, "offset": off, "r_mean": round(sum(rs) / len(rs), 4), "r_min": round(min(rs), 4), "r_max": round(max(rs), 4)})
+    verts = [v.xyz() for row in rows for v in row]
+    faces = grid_faces(len(rows), COLS, True)
+    return {"verts": verts, "faces": faces, "rows": rows, "meta": meta}
+
+
+def build_hanging_sleeve(sh, sign, torso_rows):
+    """Wide sleeve hangs from the shoulder — not a T-pose arm tube."""
+    sh_row = torso_rows[2]
+    side = [v for v in sh_row if v.x * sign > 0.02]
+    if len(side) < 4:
+        side = list(sh_row)
+    cx = sum(v.x for v in side) / len(side)
+    cy = sum(v.y for v in side) / len(side)
+    cz = sum(v.z for v in side) / len(side)
+    origin0 = V(cx, cy, cz)
+    r0 = sum(math.hypot(v.x - cx, v.y - cy) for v in side) / len(side)
+    r0 = max(0.048, min(r0, 0.08))
+    d = V(0.32 * sign, -0.22, -0.90).nrm()
+    radii = [r0, 0.078, 0.110, 0.128, 0.132, 0.124, 0.112, 0.100]
+    bx, by = basis_from_dir(d)
+    verts = []
+    for i in range(SLEEVE_ROWS):
+        t = i / float(SLEEVE_ROWS - 1)
+        origin = origin0 + d * (SLEEVE_LEN * t)
+        r = radii[i]
+        for j in range(SLEEVE_COLS):
+            a = 2.0 * math.pi * j / SLEEVE_COLS
+            fold = 1.0 + 0.08 * math.sin(3.0 * a + 0.5 * sign)
+            p = origin + bx * (math.cos(a) * r * fold) + by * (math.sin(a) * r * fold)
+            verts.append(p.xyz())
+    faces = grid_faces(SLEEVE_ROWS, SLEEVE_COLS, True)
+    return {"verts": verts, "faces": faces}
+
+
+def stitch_gap(sleeve, torso_row, sign):
+    sv = sleeve["verts"][:SLEEVE_COLS]
+    tv = [v.xyz() for v in torso_row if v.x * sign > 0.0]
+    return nearest_dist(sv, tv)
+
+
+def build_collar(posed, parts):
+    hull = slice_hull(posed, parts["neck"] or parts["head"], 1.50, 0.03)
+    inner = ring_from_hull(hull, 0.008, 20, 0.05, 1.498, 0.0)
+    outer = ring_from_hull(hull, 0.018, 20, 0.05, 1.455, 0.0)
+    # front V dip on the inner/outer toward chest
+    verts = []
+    for row in (inner, outer):
+        for v in row:
+            z = v.z
+            a = math.atan2(v.y, v.x)
+            # front is -Y ~ -pi/2
+            front = math.exp(-((a + math.pi / 2) / 0.7) ** 2)
+            verts.append((v.x, v.y - 0.006 * front, z - 0.055 * front))
+    faces = grid_faces(2, 20, True)
+    return {"verts": verts, "faces": faces}
+
+
+def build_sash(torso_rows):
+    waist = torso_rows[6]
+    hip = torso_rows[7]
+    top = [V(v.x * 1.03, v.y * 1.03, v.z + 0.025) for v in waist]
+    mid = [V(v.x * 1.04, v.y * 1.04, v.z - 0.005) for v in waist]
+    bot = [V(v.x * 1.03, v.y * 1.03, v.z + 0.02) for v in hip]
+    verts = [p.xyz() for p in top + mid + bot]
+    faces = grid_faces(3, COLS, True)
+    # tassel at front-most waist vert
+    fi = min(range(COLS), key=lambda j: waist[j].y)
+    fx, fy, fz = mid[fi].xyz()
+    tv, tf = quad_box(fx, fy - 0.012, fz - 0.09, 0.018, 0.012, 0.16)
+    verts.extend(tv)
+    faces.extend(shift_faces(tf, COLS * 3))
+    return {"verts": verts, "faces": faces}
+
+
+def build_shoes(posed, parts, sign):
+    idx = [i for i in parts["foot"] if posed[i][0] * sign >= -0.02]
+    if sign < 0:
+        idx = [i for i in parts["foot"] if posed[i][0] < 0.02]
+    lo = slice_hull(posed, idx, 0.012, 0.02, min_pts=5)
+    hi = slice_hull(posed, idx, 0.078, 0.03, min_pts=5)
+    r0 = ring_from_hull(lo, 0.010, 12, 0.0, 0.006, 0.0)
+    r1 = ring_from_hull(hi, 0.012, 12, 0.0, 0.082, 0.0)
+    verts = [v.xyz() for v in r0 + r1]
+    faces = grid_faces(2, 12, True)
+    return {"verts": verts, "faces": faces}
+
+
+def build_guan(posed, parts):
+    hull = slice_hull(posed, parts["head"], 1.66, 0.04)
+    cap0 = ring_from_hull(hull, 0.012, 16, 0.04, 1.655, 0.0)
+    cap1 = ring_from_hull(hull, 0.018, 16, 0.04, 1.735, 0.0)
+    cap2 = [(v.x * 0.35, v.y * 0.35, 1.755) for v in cap1]
+    verts = [v.xyz() for v in cap0 + cap1] + cap2
+    faces = grid_faces(3, 16, True)
+    board_v, board_f = quad_box(0.0, min(v.y for v in cap0) - 0.012, 1.68, 0.13, 0.018, 0.17)
+    verts.extend(board_v)
+    faces.extend(shift_faces(board_f, 16 * 3))
+    return {"verts": verts, "faces": faces}
+
+
+def build_beard(posed, parts):
+    chins = [posed[i] for i in parts["chin"]] or [p for p in posed if 1.51 < p[2] < 1.57 and p[1] < 0.04]
+    if not chins:
+        chins = [(0.0, -0.02, 1.54)]
+    cx = sum(p[0] for p in chins) / len(chins)
+    cy = min(p[1] for p in chins) - 0.004
+    cz = sum(p[2] for p in chins) / len(chins)
+    w0, w1 = 0.034, 0.018
+    rows = []
+    for t, z, y, w in (
+        (0.0, cz - 0.01, cy - 0.006, w0),
+        (0.35, cz - 0.08, cy - 0.018, w0 * 0.9),
+        (0.7, cz - 0.16, cy - 0.028, w1),
+        (1.0, cz - 0.24, cy - 0.022, 0.008),
+    ):
+        row = []
+        for j in range(8):
+            a = math.pi * (j / 7.0)  # front half
+            x = cx + math.cos(a) * w
+            yy = y + math.sin(a) * w * 0.35
+            row.append((x, yy, z))
+        rows.append(row)
+    verts = [p for row in rows for p in row]
+    faces = grid_faces(4, 8, False)
+    return {"verts": verts, "faces": faces}
+
+
+def build_fan(ha_l, ha_r):
+    """Chest-held feather fan. Stays below the face."""
+    c = V(0.02, -0.22, 1.145)
+    handle = V(0.0, -0.18, 1.10)
+    hv, hf = quad_box(handle.x, handle.y, handle.z, 0.012, 0.012, 0.08)
+    verts = list(hv)
+    faces = list(hf)
+    n_vanes = 7
+    for i in range(n_vanes):
+        t = (i / (n_vanes - 1) - 0.5) * 0.85
+        ang = t
+        vx = math.sin(ang) * 0.16
+        vz = math.cos(ang) * 0.11
+        a = c + V(vx * 0.15, 0.0, vz * 0.2)
+        b = c + V(vx, -0.01, vz)
+        # thin vane quad
+        w = V(-math.cos(ang), 0, math.sin(ang)) * 0.012
+        base = len(verts)
+        verts.extend(
+            [
+                (a.x + w.x, a.y, a.z + w.z),
+                (a.x - w.x, a.y, a.z - w.z),
+                (b.x - w.x, b.y - 0.004, b.z - w.z),
+                (b.x + w.x, b.y - 0.004, b.z + w.z),
+            ]
+        )
+        faces.append((base, base + 1, base + 2, base + 3))
+    return {"verts": verts, "faces": faces, "center": c.xyz()}
+
+
+def mesh_bbox(meshes):
+    xs, ys, zs = [], [], []
+    for m in meshes:
+        for p in m["verts"]:
+            xs.append(p[0]); ys.append(p[1]); zs.append(p[2])
+    return {"min": [min(xs), min(ys), min(zs)], "max": [max(xs), max(ys), max(zs)]}
+
+
+def finite_mesh(m):
+    for p in m["verts"]:
+        if not all(map(math.isfinite, p)):
+            return False
+    for f in m["faces"]:
+        if min(f) < 0 or max(f) >= len(m["verts"]):
+            return False
+    return True
+
+
+def tri_count(m):
+    n = 0
+    for f in m["faces"]:
+        n += max(0, len(f) - 2)
+    return n
+
+
+def build_all(source_obj):
+    checks = M.run_checks(source_obj)
+    tpose = list(checks["blender_verts"])
+    xf = blender_xf_params(checks)
+    _src_verts, groups = parse_groups(source_obj)
+    morphed = checks["parsed"]["verts"]
+    Lsh = joint_centroid(groups, morphed, "joint-l-shoulder", xf)
+    Lel = joint_centroid(groups, morphed, "joint-l-elbow", xf)
+    Lha = joint_centroid(groups, morphed, "joint-l-hand", xf)
+    Rsh = joint_centroid(groups, morphed, "joint-r-shoulder", xf)
+    Rel = joint_centroid(groups, morphed, "joint-r-elbow", xf)
+    Rha = joint_centroid(groups, morphed, "joint-r-hand", xf)
+    posed, elL, haL, poseL = skin_arm(tpose, Lsh, Lel, Lha, +1)
+    posed, elR, haR, poseR = skin_arm(posed, Rsh, Rel, Rha, -1)
+    parts = classify_indices(tpose)
+    robe = build_torso_robe(posed, parts)
+    sl = build_hanging_sleeve(Lsh, +1, robe["rows"])
+    sr = build_hanging_sleeve(Rsh, -1, robe["rows"])
+    collar = build_collar(posed, parts)
+    sash = build_sash(robe["rows"])
+    shoe_l = build_shoes(posed, parts, +1)
+    shoe_r = build_shoes(posed, parts, -1)
+    guan = build_guan(posed, parts)
+    beard = build_beard(posed, parts)
+    fan = build_fan(haL, haR)
+    meshes = {
+        "body": {"verts": posed, "faces": checks["male_body"]["faces"], "uvs": checks["male_body"]["uvs"], "uv_loops": checks["male_body"]["uv_loops"]},
+        "robe_outer": robe,
+        "sleeve_l": sl,
+        "sleeve_r": sr,
+        "collar": collar,
+        "sash": sash,
+        "shoe_l": shoe_l,
+        "shoe_r": shoe_r,
+        "guan": guan,
+        "beard": beard,
+        "fan": fan,
+    }
+    for name, m in meshes.items():
+        if not finite_mesh(m):
+            raise RuntimeError("non-finite or bad indices in %s" % name)
+    body_pts = posed
+    face_pts = [p for p in posed if p[2] > 1.52]
+    fan_max_z = max(p[2] for p in fan["verts"])
+    face_min_z = min(p[2] for p in face_pts) if face_pts else 1.52
+    neck_meta = robe["meta"][0]
+    gaps = {
+        "robe_vs_body": nearest_dist(robe["verts"][::3], body_pts),
+        "robe_inside_body": body_inside_count(robe["verts"], posed, parts),
+        "collar_vs_neck": nearest_dist(collar["verts"], [posed[i] for i in parts["neck"]] or body_pts),
+        "sleeve_l_vs_shoulder": stitch_gap(sl, robe["rows"][2], +1),
+        "sleeve_r_vs_shoulder": stitch_gap(sr, robe["rows"][2], -1),
+        "shoe_vs_foot": nearest_dist(shoe_l["verts"] + shoe_r["verts"], [posed[i] for i in parts["foot"]]),
+        "guan_vs_head": nearest_dist(guan["verts"], [posed[i] for i in parts["head"]]),
+        "fan_face_clearance_m": round(face_min_z - fan_max_z, 5),
+        "fan_covers_face": fan_max_z >= face_min_z - 0.02,
+        "neck_opening_r_mean": neck_meta["r_mean"],
+        "neck_is_barrel": neck_meta["r_mean"] > 0.14,
+    }
+    bb = mesh_bbox(meshes.values())
+    census = {
+        name: {"verts": len(m["verts"]), "faces": len(m["faces"]), "tris": tri_count(m)}
+        for name, m in meshes.items()
+    }
+    return {
+        "checks": checks,
+        "meshes": meshes,
+        "gaps": gaps,
+        "bbox": bb,
+        "census": census,
+        "pose": {"left": poseL, "right": poseR, "hand_l": haL.xyz(), "hand_r": haR.xyz()},
+        "parts_n": {k: len(v) for k, v in parts.items()},
+        "support_faces": checks["compat"]["remaining_faces"],
+        "support_uvs": checks["compat"]["remaining_uvs"],
+        "robe_meta": robe["meta"],
+    }
+
+
+def make_mat(name, color, rough=0.62, spec=0.18):
+    mat = B.bpy.data.materials.new(name)
+    mat.use_nodes = True
+    nt = mat.node_tree
+    bsdf = None
+    for n in nt.nodes:
+        if n.type == "BSDF_PRINCIPLED":
+            bsdf = n
+            break
+    if bsdf is None:
+        bsdf = nt.nodes.new("ShaderNodeBsdfPrincipled")
+    col = (color[0], color[1], color[2], 1.0)
+    sock = bsdf.inputs.get("Base Color")
+    if sock is not None:
+        sock.default_value = col
+    for key, val in (("Roughness", rough),):
+        s = bsdf.inputs.get(key)
+        if s is not None:
+            s.default_value = val
+    for key in ("Metallic", "Metalness"):
+        s = bsdf.inputs.get(key)
+        if s is not None:
+            s.default_value = 0.0
+    for key in ("Specular IOR Level", "Specular"):
+        s = bsdf.inputs.get(key)
+        if s is not None:
+            s.default_value = spec
+            break
+    return mat
+
+
+def add_mesh(name, mesh, mat, parent):
+    me = B.bpy.data.meshes.new(name)
+    me.from_pydata(mesh["verts"], [], [tuple(f) for f in mesh["faces"]])
+    me.validate(clean_customdata=False)
+    me.update()
+    for p in me.polygons:
+        p.use_smooth = True
+        n = p.normal
+        if not all(math.isfinite(c) for c in n):
+            raise RuntimeError("non-finite normal on %s" % name)
+    obj = B.bpy.data.objects.new(name, me)
+    B.bpy.context.scene.collection.objects.link(obj)
+    if mat:
+        obj.data.materials.append(mat)
+    if parent:
+        obj.parent = parent
+    return obj
+
+
+def write_report(output_dir, built, execution_kind, status, blender_present, blender_version, outputs, glb_bytes=None):
+    os.makedirs(output_dir, exist_ok=True)
+    refuse_frozen_writes(output_dir)
+    bb = built["bbox"]
+    report = {
+        "task_id": TASK_ID,
+        "title": "Standing clothed candidate on frozen male anatomy body",
+        "status": status,
+        "execution_kind": execution_kind,
+        "not_a_zhuge_product": True,
+        "g1_g5_claimed": False,
+        "art_approval": False,
+        "fusion_pass": False,
+        "palace_mesh": False,
+        "armature": False,
+        "can_walk": False,
+        "declaration": "Static clothed mesh. Clothes and body are separate objects. No armature. Do not claim walk or fusion PASS.",
+        "method": {
+            "used": "body-hull-offset continuous panels + hanging wide sleeves from MH shoulder joints",
+            "licensed_garment_fit": False,
+            "empty_robe_generators": False,
+            "why_not_mhclo": "No CC0 adult-male 交领袍 for hm08 without installing MPFB/plugins. Female 襦裙 is excluded.",
+            "support_body": MAC_SUPPORT_BODY,
+            "pose": "static two-bone rest pose (not a rig)",
+        },
+        "support_body_faces": built["support_faces"],
+        "support_body_uvs": built["support_uvs"],
+        "census": built["census"],
+        "pose": built["pose"],
+        "gaps": built["gaps"],
+        "robe_rings": built["robe_meta"],
+        "bbox": {"min": [round(c, 6) for c in bb["min"]], "max": [round(c, 6) for c in bb["max"]]},
+        "height_m": round(bb["max"][2] - bb["min"][2], 6),
+        "glb_export": {"rootName": ROOT_NAME, "yup": True, "bytes": glb_bytes if glb_bytes is not None else B.UNKNOWN},
+        "blender_present": blender_present,
+        "blender_version_actual": blender_version,
+        "outputs": outputs,
+        "unverified_until_mac_blender": [
+            "view/clay 4-view vs 03 still (shoulder-sleeve continuity, collar on body, fan not on face)",
+            "Y-up GLB import, feet on z=0 after exporter",
+            "pixel G1–G5 (not claimed)",
+            "armpit crease from static fold",
+        ],
+    }
+    B.write_json(B.safe_join(output_dir, "clothed_report.json"), report)
+    return report
+
+
+def blender_export(args, built):
+    B.clear_scene()
+    scene = B.bpy.context.scene
+    scene.unit_settings.system = "METRIC"
+    scene.unit_settings.scale_length = 1.0
+    world = B.bpy.data.worlds.new("ClothedWorld")
+    scene.world = world
+    world.use_nodes = True
+    nt = world.node_tree
+    nt.nodes.clear()
+    bg = nt.nodes.new("ShaderNodeBackground")
+    bg.inputs[0].default_value = (0.22, 0.22, 0.22, 1.0)
+    bg.inputs[1].default_value = 0.4
+    out = nt.nodes.new("ShaderNodeOutputWorld")
+    nt.links.new(bg.outputs[0], out.inputs[0])
+
+    root = B.bpy.data.objects.new(ROOT_NAME, None)
+    B.bpy.context.scene.collection.objects.link(root)
+    mats = {
+        "skin": make_mat("M_Skin", (0.62, 0.48, 0.40), 0.55, 0.22),
+        "robe": make_mat("M_Robe", (0.86, 0.83, 0.74), 0.72, 0.12),
+        "cyan": make_mat("M_Cyan", (0.22, 0.42, 0.44), 0.55, 0.16),
+        "hair": make_mat("M_Hair", (0.12, 0.08, 0.06), 0.78, 0.08),
+        "fan": make_mat("M_Fan", (0.90, 0.88, 0.80), 0.48, 0.20),
+        "grey": B.make_grey(),
+    }
+    ms = built["meshes"]
+    body_pack = {
+        "faces": ms["body"]["faces"],
+        "uvs": ms["body"]["uvs"],
+        "uv_loops": ms["body"]["uv_loops"],
+    }
+    B.build_mesh_object(ms["body"]["verts"], body_pack, root, mats["skin"])
+    add_mesh("Robe_Outer", ms["robe_outer"], mats["robe"], root)
+    add_mesh("Robe_Sleeve_L", ms["sleeve_l"], mats["robe"], root)
+    add_mesh("Robe_Sleeve_R", ms["sleeve_r"], mats["robe"], root)
+    add_mesh("Collar_Inner", ms["collar"], mats["cyan"], root)
+    add_mesh("Sash", ms["sash"], mats["cyan"], root)
+    add_mesh("Shoe_L", ms["shoe_l"], mats["cyan"], root)
+    add_mesh("Shoe_R", ms["shoe_r"], mats["cyan"], root)
+    add_mesh("Guan", ms["guan"], mats["cyan"], root)
+    add_mesh("Beard", ms["beard"], mats["hair"], root)
+    add_mesh("Fan", ms["fan"], mats["fan"], root)
+
+    sun = B.bpy.data.lights.new("Key", "SUN")
+    sun.energy = 4.0
+    sun.color = (1.0, 0.97, 0.92)
+    sun_obj = B.bpy.data.objects.new("Key", sun)
+    sun_obj.location = (2.2, -2.6, 4.0)
+    sun_obj.rotation_euler = (math.radians(50), 0, math.radians(-40))
+    B.bpy.context.scene.collection.objects.link(sun_obj)
+    fill = B.bpy.data.lights.new("Fill", "AREA")
+    fill.energy = 120.0
+    fill.color = (0.7, 0.78, 1.0)
+    fill.size = 2.0
+    fill_obj = B.bpy.data.objects.new("Fill", fill)
+    fill_obj.location = (-2.4, -1.2, 1.6)
+    B.bpy.context.scene.collection.objects.link(fill_obj)
+
+    cams = B.setup_cameras(built["bbox"])
+    os.makedirs(args.output_dir, exist_ok=True)
+    refuse_frozen_writes(args.output_dir)
+    blend_name = "zhuge_clothed_v1.blend"
+    glb_name = "zhuge_clothed_v1.glb"
+    B.bpy.ops.wm.save_as_mainfile(
+        **B.filter_op_kwargs(
+            B.bpy.ops.wm.save_as_mainfile,
+            {"filepath": B.safe_join(args.output_dir, blend_name), "check_existing": False},
+        )
+    )
+    B.export_glb(B.safe_join(args.output_dir, glb_name), root_name=ROOT_NAME)
+    glb_path = B.safe_join(args.output_dir, glb_name)
+    glb_bytes = os.path.getsize(glb_path) if os.path.isfile(glb_path) else None
+    renders = B.render_views(cams, args.output_dir, args.skip_render)
+    clay = []
+    if not args.skip_render:
+        for obj in list(B.bpy.data.objects):
+            if obj.type == "MESH" and obj.data.materials:
+                obj.data.materials[0] = mats["grey"]
+        mapping = (
+            ("Cam_Front", "clay_front.png"),
+            ("Cam_Side", "clay_side.png"),
+            ("Cam_Back", "clay_back.png"),
+            ("Cam_LookDown", "clay_lookdown.png"),
+        )
+        scene = B.bpy.context.scene
+        for cam_name, fname in mapping:
+            scene.camera = cams[cam_name]
+            fp = B.safe_join(args.output_dir, fname)
+            scene.render.filepath = fp
+            B.bpy.ops.render.render(write_still=True)
+            clay.append(fname)
+    outputs = [blend_name, glb_name] + renders + clay
+    write_report(
+        args.output_dir,
+        built,
+        execution_kind="real",
+        status="EXPORTED",
+        blender_present=True,
+        blender_version="%d.%d.%d" % tuple(B.bpy.app.version),
+        outputs=outputs,
+        glb_bytes=glb_bytes,
+    )
+    print("exported clothed candidate to", args.output_dir)
+
+
+def main():
+    args = parse_cli()
+    built = build_all(args.source_obj)
+    g = built["gaps"]
+    print(
+        "checks support_faces=%s neck_r=%s barrel=%s fan_clear=%s inside=%s"
+        % (
+            built["support_faces"],
+            g["neck_opening_r_mean"],
+            g["neck_is_barrel"],
+            g["fan_face_clearance_m"],
+            g["robe_inside_body"]["intersecting_verts"],
+        )
+    )
+    if B.bpy is None:
+        write_report(
+            args.output_dir,
+            built,
+            execution_kind="expected",
+            status="UNRUN",
+            blender_present=False,
+            blender_version=None,
+            outputs=[],
+        )
+        print("clothed UNRUN tris=%s" % sum(c["tris"] for c in built["census"].values()))
+        return 0
+    blender_export(args, built)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main() or 0)

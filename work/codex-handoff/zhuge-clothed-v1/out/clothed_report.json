@@ -1,0 +1,282 @@
+{
+  "task_id": "CT-COSTUME-01",
+  "title": "Standing clothed candidate on frozen male anatomy body",
+  "status": "UNRUN",
+  "execution_kind": "expected",
+  "not_a_zhuge_product": true,
+  "g1_g5_claimed": false,
+  "art_approval": false,
+  "fusion_pass": false,
+  "palace_mesh": false,
+  "armature": false,
+  "can_walk": false,
+  "declaration": "Static clothed mesh. Clothes and body are separate objects. No armature. Do not claim walk or fusion PASS.",
+  "method": {
+    "used": "body-hull-offset continuous panels + hanging wide sleeves from MH shoulder joints",
+    "licensed_garment_fit": false,
+    "empty_robe_generators": false,
+    "why_not_mhclo": "No CC0 adult-male 交领袍 for hm08 without installing MPFB/plugins. Female 襦裙 is excluded.",
+    "support_body": {
+      "commit": "624e008349a447859ed58417394c68f382e9b887",
+      "exit": 0,
+      "glb_bytes": 626508,
+      "tris": 26756,
+      "height_m": 1.78,
+      "minY": 0,
+      "note": "Mac accepted as clothing support body. Still too athletic-slender vs 03. Not Zhuge PASS."
+    },
+    "pose": "static two-bone rest pose (not a rig)"
+  },
+  "support_body_faces": 13378,
+  "support_body_uvs": 14517,
+  "census": {
+    "body": {
+      "verts": 13380,
+      "faces": 13378,
+      "tris": 26756
+    },
+    "robe_outer": {
+      "verts": 364,
+      "faces": 336,
+      "tris": 672
+    },
+    "sleeve_l": {
+      "verts": 128,
+      "faces": 112,
+      "tris": 224
+    },
+    "sleeve_r": {
+      "verts": 128,
+      "faces": 112,
+      "tris": 224
+    },
+    "collar": {
+      "verts": 40,
+      "faces": 20,
+      "tris": 40
+    },
+    "sash": {
+      "verts": 92,
+      "faces": 62,
+      "tris": 124
+    },
+    "shoe_l": {
+      "verts": 24,
+      "faces": 12,
+      "tris": 24
+    },
+    "shoe_r": {
+      "verts": 24,
+      "faces": 12,
+      "tris": 24
+    },
+    "guan": {
+      "verts": 56,
+      "faces": 38,
+      "tris": 76
+    },
+    "beard": {
+      "verts": 32,
+      "faces": 21,
+      "tris": 42
+    },
+    "fan": {
+      "verts": 36,
+      "faces": 13,
+      "tris": 26
+    }
+  },
+  "pose": {
+    "left": {
+      "upper_deg": 34.33,
+      "fore_deg": 54.45
+    },
+    "right": {
+      "upper_deg": 34.33,
+      "fore_deg": 54.45
+    },
+    "hand_l": [
+      0.07,
+      -0.16,
+      1.12
+    ],
+    "hand_r": [
+      -0.07,
+      -0.16,
+      1.12
+    ]
+  },
+  "gaps": {
+    "robe_vs_body": {
+      "min_m": 0.00521,
+      "verts_closer_than_6mm": 1,
+      "src_n": 122
+    },
+    "robe_inside_body": {
+      "intersecting_verts": 0,
+      "worst_penetration_m": 0.0
+    },
+    "collar_vs_neck": {
+      "min_m": 0.00563,
+      "verts_closer_than_6mm": 2,
+      "src_n": 40
+    },
+    "sleeve_l_vs_shoulder": {
+      "min_m": 0.02883,
+      "verts_closer_than_6mm": 0,
+      "src_n": 16
+    },
+    "sleeve_r_vs_shoulder": {
+      "min_m": 0.02639,
+      "verts_closer_than_6mm": 0,
+      "src_n": 16
+    },
+    "shoe_vs_foot": {
+      "min_m": 0.0081,
+      "verts_closer_than_6mm": 0,
+      "src_n": 48
+    },
+    "guan_vs_head": {
+      "min_m": 0.00309,
+      "verts_closer_than_6mm": 2,
+      "src_n": 56
+    },
+    "fan_face_clearance_m": 0.26465,
+    "fan_covers_face": false,
+    "neck_opening_r_mean": 0.1004,
+    "neck_is_barrel": false
+  },
+  "robe_rings": [
+    {
+      "z": 1.505,
+      "name": "neck",
+      "offset": 0.012,
+      "r_mean": 0.1004,
+      "r_min": 0.0316,
+      "r_max": 0.1379
+    },
+    {
+      "z": 1.46,
+      "name": "collar",
+      "offset": 0.02,
+      "r_mean": 0.2013,
+      "r_min": 0.0352,
+      "r_max": 0.2742
+    },
+    {
+      "z": 1.405,
+      "name": "shoulder",
+      "offset": 0.038,
+      "r_mean": 0.2238,
+      "r_min": 0.0389,
+      "r_max": 0.3174
+    },
+    {
+      "z": 1.33,
+      "name": "chest",
+      "offset": 0.048,
+      "r_mean": 0.2318,
+      "r_min": 0.0557,
+      "r_max": 0.327
+    },
+    {
+      "z": 1.23,
+      "name": "chest2",
+      "offset": 0.05,
+      "r_mean": 0.2093,
+      "r_min": 0.0516,
+      "r_max": 0.2935
+    },
+    {
+      "z": 1.12,
+      "name": "lower_chest",
+      "offset": 0.052,
+      "r_mean": 0.1946,
+      "r_min": 0.0471,
+      "r_max": 0.2756
+    },
+    {
+      "z": 1.02,
+      "name": "waist",
+      "offset": 0.05,
+      "r_mean": 0.2026,
+      "r_min": 0.0509,
+      "r_max": 0.2811
+    },
+    {
+      "z": 0.92,
+      "name": "hip",
+      "offset": 0.055,
+      "r_mean": 0.2163,
+      "r_min": 0.0387,
+      "r_max": 0.3006
+    },
+    {
+      "z": 0.76,
+      "name": "thigh",
+      "offset": 0.105,
+      "r_mean": 0.2597,
+      "r_min": 0.1062,
+      "r_max": 0.3509
+    },
+    {
+      "z": 0.56,
+      "name": "knee",
+      "offset": 0.13,
+      "r_mean": 0.2764,
+      "r_min": 0.1043,
+      "r_max": 0.384
+    },
+    {
+      "z": 0.34,
+      "name": "shin",
+      "offset": 0.145,
+      "r_mean": 0.3185,
+      "r_min": 0.089,
+      "r_max": 0.4473
+    },
+    {
+      "z": 0.16,
+      "name": "hem",
+      "offset": 0.155,
+      "r_mean": 0.3116,
+      "r_min": 0.0966,
+      "r_max": 0.4441
+    },
+    {
+      "z": 0.095,
+      "name": "hem_lip",
+      "offset": 0.14,
+      "r_mean": 0.3126,
+      "r_min": 0.1273,
+      "r_max": 0.4386
+    }
+  ],
+  "bbox": {
+    "min": [
+      -0.394818,
+      -0.246538,
+      0.0
+    ],
+    "max": [
+      0.407341,
+      0.355996,
+      1.78
+    ]
+  },
+  "height_m": 1.78,
+  "glb_export": {
+    "rootName": "ZhugeClothed_Root",
+    "yup": true,
+    "bytes": "UNKNOWN"
+  },
+  "blender_present": false,
+  "blender_version_actual": null,
+  "outputs": [],
+  "unverified_until_mac_blender": [
+    "view/clay 4-view vs 03 still (shoulder-sleeve continuity, collar on body, fan not on face)",
+    "Y-up GLB import, feet on z=0 after exporter",
+    "pixel G1–G5 (not claimed)",
+    "armpit crease from static fold"
+  ]
+}
