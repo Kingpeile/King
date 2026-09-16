@@ -1,0 +1,268 @@
+{
+  "task_id": "CT-ACCESSORY-01",
+  "title": "Zhuge accessory sample — guan / beard / fan only (not a clothed PASS)",
+  "status": "UNRUN",
+  "execution_kind": "expected",
+  "not_a_zhuge_product": true,
+  "complete_figure_claimed": false,
+  "robe_claimed": false,
+  "g1_g5_claimed": false,
+  "art_approval": false,
+  "fusion_pass": false,
+  "palace_mesh": false,
+  "armature": false,
+  "can_walk": false,
+  "declaration": "Independent accessory sample. Head/hands are anatomy reference only. Shoulders-down are not a clothing display. Numbers are not an art PASS. No armature. Do not claim walk.",
+  "pins": {
+    "anatomy": "624e008349a447859ed58417394c68f382e9b887",
+    "clothed_v1_read_only": "72f854997468595b7492d709d8235db6cd74cf0c",
+    "topo_fail_not_reused": "3d4a40c5350ec46b9ff54547df9af1818f2dea08"
+  },
+  "method": {
+    "items": [
+      "guan_closed_thick",
+      "beard_chin_volume",
+      "fan_layered_vanes"
+    ],
+    "robe": false,
+    "reused": "anatomy pose + palace-warm key/fill + principled mats; head/hand joints",
+    "not_reused": "clothed robe/sleeves/shoes; 3d4a40c continuous robe"
+  },
+  "support_body_faces": 13378,
+  "census": {
+    "ref_head": {
+      "name": "ref_head",
+      "verts": 4515,
+      "faces": 4486,
+      "tris": 8972,
+      "components": 1,
+      "open_edges": 56,
+      "zero_area_faces": 0,
+      "bbox": {
+        "min": [
+          -0.15853,
+          -0.03392,
+          1.42497
+        ],
+        "max": [
+          0.15853,
+          0.22125,
+          1.78
+        ]
+      },
+      "finite": true
+    },
+    "ref_hand_l": {
+      "name": "ref_hand_l",
+      "verts": 305,
+      "faces": 274,
+      "tris": 548,
+      "components": 1,
+      "open_edges": 62,
+      "zero_area_faces": 0,
+      "bbox": {
+        "min": [
+          0.06046,
+          -0.30755,
+          1.07367
+        ],
+        "max": [
+          0.23155,
+          -0.12761,
+          1.19496
+        ]
+      },
+      "finite": true
+    },
+    "ref_hand_r": {
+      "name": "ref_hand_r",
+      "verts": 305,
+      "faces": 274,
+      "tris": 548,
+      "components": 1,
+      "open_edges": 62,
+      "zero_area_faces": 0,
+      "bbox": {
+        "min": [
+          -0.23155,
+          -0.30755,
+          1.07367
+        ],
+        "max": [
+          -0.06046,
+          -0.12761,
+          1.19496
+        ]
+      },
+      "finite": true
+    },
+    "guan": {
+      "name": "guan",
+      "verts": 326,
+      "faces": 360,
+      "tris": 640,
+      "components": 3,
+      "open_edges": 0,
+      "zero_area_faces": 0,
+      "bbox": {
+        "min": [
+          -0.13272,
+          -0.06237,
+          1.41892
+        ],
+        "max": [
+          0.12966,
+          0.24876,
+          1.81309
+        ]
+      },
+      "finite": true
+    },
+    "beard": {
+      "name": "beard",
+      "verts": 252,
+      "faces": 288,
+      "tris": 488,
+      "components": 4,
+      "open_edges": 0,
+      "zero_area_faces": 0,
+      "bbox": {
+        "min": [
+          -0.06022,
+          -0.06409,
+          1.3237
+        ],
+        "max": [
+          0.06022,
+          0.0222,
+          1.58618
+        ]
+      },
+      "finite": true
+    },
+    "fan": {
+      "name": "fan",
+      "verts": 1824,
+      "faces": 1876,
+      "tris": 3532,
+      "components": 29,
+      "open_edges": 0,
+      "zero_area_faces": 0,
+      "bbox": {
+        "min": [
+          -0.178,
+          -0.27454,
+          1.128
+        ],
+        "max": [
+          0.178,
+          -0.228,
+          1.426
+        ]
+      },
+      "finite": true
+    }
+  },
+  "structure": {
+    "face_vis": {
+      "face_z_clear": [
+        1.5,
+        1.655
+      ],
+      "guan_z_min": 1.41892,
+      "guan_z_max": 1.81309,
+      "front_z_min": 1.669,
+      "guan_min_z_bar": 1.668,
+      "guan_verts_in_face_front": 0,
+      "eyes_brow_forehead_clear": true,
+      "covers_scalp": true,
+      "crown_top_open_edges": 0,
+      "crown_closed": true,
+      "thickness_median_m": 0.00949,
+      "thickness_ok": true,
+      "brow_y": -0.02195
+    },
+    "beard": {
+      "top_to_chin_min_m": 0.00316,
+      "chin_attach_ok": true,
+      "mid_y_thickness_m": 0.07853,
+      "mid_x_width_m": 0.06744,
+      "side_thickness_ok": true,
+      "not_a_plate": true,
+      "components": 4,
+      "volume_verts": 252
+    },
+    "fan": {
+      "vane_n": 13,
+      "span_x_m": 0.356,
+      "span_y_m": 0.04654,
+      "span_z_m": 0.298,
+      "max_z": 1.426,
+      "below_face": true,
+      "wide_ok": true,
+      "layer_volume_ok": true,
+      "handle_thickness_m": 0.03182,
+      "handle_ok": true,
+      "not_a_plane": true
+    },
+    "gates": {
+      "guan_face_clear": true,
+      "guan_crown_closed": true,
+      "guan_thickness": true,
+      "beard_on_chin": true,
+      "beard_side_volume": true,
+      "fan_below_face": true,
+      "fan_wide_volume": true
+    }
+  },
+  "gates_ok": true,
+  "note_numbers_are_not_art_pass": true,
+  "pose": {
+    "left": {
+      "upper_deg": 34.68,
+      "fore_deg": 38.73
+    },
+    "right": {
+      "upper_deg": 34.68,
+      "fore_deg": 38.73
+    },
+    "hand_l": [
+      0.15,
+      -0.23,
+      1.14
+    ],
+    "hand_r": [
+      -0.15,
+      -0.23,
+      1.14
+    ]
+  },
+  "bbox": {
+    "min": [
+      -0.178,
+      -0.274536,
+      1.128
+    ],
+    "max": [
+      0.178,
+      0.248761,
+      1.813089
+    ]
+  },
+  "glb_export": {
+    "rootName": "ZhugeAccessory_Root",
+    "yup": true,
+    "bytes": "UNKNOWN"
+  },
+  "blender_present": false,
+  "blender_version_actual": null,
+  "outputs": [],
+  "physics": "UNRUN",
+  "render": "UNRUN",
+  "unverified_until_mac_blender": [
+    "pixel: 纶巾 closed top / brow clear / no face board",
+    "pixel: beard side thickness reads as hair mass, not a plate",
+    "pixel: fan vanes layered with handle, not a card",
+    "Y-up GLB import of accessory-only scene"
+  ]
+}
