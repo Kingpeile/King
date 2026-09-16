@@ -45,6 +45,12 @@ Outputs per arm: `proof.blend`, `frames.json`, `timing.json`, `frame01/` + `fram
 
 No bpy. `evidence.json` with `physics_status: UNRUN` is construction + pin census, not a drape.
 
-## Mac (one run)
+## Mac close — FAIL
 
-Root: one same-param physics pass. Accept if 4-views show cloth over **front–apex–back**, free verts actually move, no explode. If the shoulder is still bare: **stop this geometry**. No same-scheme retune. No robe.
+One run of `bfef7a7e` on Blender 5.2.1: exit 0, 11.23 s, 60×2 frames, 16 PNGs, cache actual false/false. Frozen proof bytes unchanged.
+
+Visual: sheet crumpled into a clump above the shoulder; front / apex / back still bare. **FAIL. Do not accept.** on/off BVH both 0 (no collision-candidate contrast this run; not a no-penetration proof). mean_disp 0.05556 / 0.06201 m, finite, no explode — sim executed only.
+
+Stop this layout. No pin/param retry. No robe. No new generator.
+
+Verifiable numbers (not a causal proof of the clump): pins still 60 mm above shoulder-apex; Y edge 9.375 mm; `self_distance_min` 8 mm.
