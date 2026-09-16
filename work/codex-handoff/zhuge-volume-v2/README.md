@@ -122,6 +122,18 @@ This revision is **one bounded sculpt** (native meshes only — the reference PN
 
 **No art approval.** Structure inventory is not art PASS. Cloud did not re-export (UNRUN).
 
+## Mac five-view (commit 2f8abf7) — overall FAIL + regressions
+
+Mac Blender 5.2.1 exit 0 on `2f8abf7ef430c01af4dd0cae76ccc7baf9de1915`. GLB 976024B / 42940 tris / 80 mesh / 7 mats, minY 0, issues=[]. Panels + waist cinch appeared. **KEEP:** inner shoulder-sleeve closure, cameras, wrists/grip, output interface.
+
+Regressions this revision packages **only**:
+
+1. Lookdown outer robe was a huge open barrel at the shoulder (`_panel_keyframes` ring 0 `rx=0.305`) and two back panels with a through-gap. Now one wrap grown from `Robe_Body` shoulder, back seam width 0, front opening kept. Sash lofted from the wrap waist ring (hem-on-skirt method), not an independent ellipse.
+2. Fan long vane 0.385 → ~0.26, width scaled; rachis tilted at the hinge so it sits at chest side. Wrist/grip/handle pose unchanged.
+3. Beard: 3 flat-spindle bundles, taper, no extra tail tubes. `M_Hair` specular 0.08, roughness 0.82.
+
+Recommend **stop further enlargement** of this class (independent silhouette rings vs camera-read). Structure inventory is not art PASS.
+
 ## Cloud / no Blender
 
 ```bash

@@ -68,7 +68,7 @@ MATERIALS = (
 
 MAT_COLORS = {
     "M_Skin": ((0.78, 0.60, 0.48, 1.0), 0.0, 0.48),
-    "M_Hair": ((0.03, 0.025, 0.02, 1.0), 0.02, 0.38),
+    "M_Hair": ((0.03, 0.025, 0.02, 1.0), 0.0, 0.82),
     "M_RobeIvory": ((0.90, 0.84, 0.72, 1.0), 0.0, 0.52),
     "M_CyanGreen": ((0.18, 0.42, 0.38, 1.0), 0.08, 0.34),
     "M_Gold": ((0.72, 0.52, 0.18, 1.0), 0.85, 0.22),
@@ -559,6 +559,29 @@ def annulus_between(ring_a, ring_b, name, material, flip=False, outward=None):
         j2 = (j + 1) % n
         a, b, c, d = j, j2, n + j2, n + j
         m.faces.append((a, d, c, b) if flip else (a, b, c, d))
+    if outward is not None and m.faces:
+        acc = V(0, 0, 0)
+        for fa in m.faces:
+            acc = acc + (m.verts[fa[1]] - m.verts[fa[0]]).cross(m.verts[fa[2]] - m.verts[fa[0]])
+        if acc.dot(outward) < 0:
+            m.faces = [tuple(reversed(f)) for f in m.faces]
+    return m
+
+
+def strip_between(ring_a, ring_b, name, material, outward=None):
+    """Open stitch (does not wrap last→first). Shoulder-top seal without closing the front opening."""
+    if len(ring_a) != len(ring_b) or len(ring_a) < 2:
+        raise ValueError("strip needs matching open rings")
+    m = Mesh(name, material)
+    n = len(ring_a)
+    for p in ring_a:
+        m.add(p)
+    for p in ring_b:
+        m.add(p)
+    for j in range(n - 1):
+        j2 = j + 1
+        a, b, c, d = j, j2, n + j2, n + j
+        m.faces.append((a, b, c, d))
     if outward is not None and m.faces:
         acc = V(0, 0, 0)
         for fa in m.faces:
@@ -1137,41 +1160,41 @@ def build_standing_collar():
     return parts
 
 
-PANEL_FOLDS_R = (
+WRAP_FOLDS = (
     (-0.55, 0.30, 0.052),
     (0.15, 0.22, 0.030),
     (0.85, 0.34, 0.056),
     (1.40, 0.20, 0.024),
-)
-PANEL_RIDGES_R = (
-    (-0.90, 0.14, 0.024),
-    (0.48, 0.13, 0.020),
-    (1.12, 0.15, 0.026),
-)
-PANEL_FOLDS_L = (
     (-2.20, 0.30, 0.050),
     (-2.85, 0.22, 0.028),
     (-3.55, 0.34, 0.054),
-    (-4.10, 0.20, 0.022),
+    (2.18, 0.20, 0.022),
 )
-PANEL_RIDGES_L = (
+WRAP_RIDGES = (
+    (-0.90, 0.14, 0.024),
+    (0.48, 0.13, 0.020),
+    (1.12, 0.15, 0.026),
     (-1.85, 0.14, 0.022),
     (-2.50, 0.13, 0.018),
-    (-3.20, 0.15, 0.024),
+    (2.90, 0.15, 0.024),
 )
 
+# Front opening of the outer robe (keep). Wrap goes the long way around the back.
+# Back seam width is 0 because there is no back split.
+PANEL_A_FRONT_R = -1.18
+PANEL_A_FRONT_L = -1.92  # wrap end = this + 2π
 
-def _panel_keyframes():
-    """Wide shoulders, waist cinch, flared hem. Radii are outside Robe_Body."""
+
+def _panel_hang_keyframes():
+    """Hanging silhouette BELOW the body-sampled shoulder. Do not float a 0.305 ring at the neck."""
     return [
-        (0.305, 0.228, SHOULDER_Z + 0.006, 0.16, 0.010),
-        (0.292, 0.218, SHOULDER_Z - 0.070, 0.28, 0.012),
-        (0.268, 0.202, CHEST_Z + 0.020, 0.42, 0.014),
-        (0.232, 0.178, WAIST_Z + 0.030, 0.58, 0.012),
-        (0.248, 0.190, WAIST_Z - 0.035, 0.72, 0.014),
-        (0.295, 0.228, HIP_Z - 0.070, 0.88, 0.016),
-        (0.338, 0.255, 0.38, 1.00, 0.018),
-        (0.362, 0.272, HEM_Z + 0.038, 1.00, 0.016),
+        (0.228, 0.172, SHOULDER_Z - 0.085, 0.22, 0.006),
+        (0.248, 0.188, CHEST_Z + 0.020, 0.38, 0.008),
+        (0.226, 0.172, WAIST_Z + 0.030, 0.55, 0.010),
+        (0.242, 0.186, WAIST_Z - 0.035, 0.70, 0.012),
+        (0.290, 0.222, HIP_Z - 0.070, 0.86, 0.014),
+        (0.332, 0.250, 0.38, 1.00, 0.016),
+        (0.355, 0.268, HEM_Z + 0.038, 1.00, 0.014),
     ]
 
 
@@ -1183,83 +1206,137 @@ def _interp_panel_spec(keys, t):
     return tuple(lerp(a[i], b[i], f) for i in range(5))
 
 
-def build_outer_panels():
-    """Left/right open outer-robe panels. Volumetric long/short folds + waist cinch.
-    Not a closed cone. Front opening shows the inner robe / cyan facing.
+def _wrap_angles(nu):
+    a0 = PANEL_A_FRONT_R
+    a1 = PANEL_A_FRONT_L + 2.0 * math.pi
+    return [lerp(a0, a1, j / max(1, nu - 1)) for j in range(nu)]
+
+
+def _body_arc(body_rings, z, angles, offset):
+    row = []
+    for a in angles:
+        p, n = sample_body_surface(body_rings, z, a)
+        row.append(p + n * offset)
+    return row
+
+
+def build_outer_panels(body_rings):
+    """One wrap-around outer robe, front opening only. Shoulder top grown from Robe_Body.
+    Back center is continuous (seam width 0). Not two floating barrels.
     """
-    keys = _panel_keyframes()
-    nv, nu = 16, 18
+    keys = _panel_hang_keyframes()
+    nv, nu = 16, 28
     cy = 0.012
-    parts = []
-    hem_arcs = []
-    for tag, a0, a1, folds, ridges in (
-        ("R", -1.18, 1.72, PANEL_FOLDS_R, PANEL_RIDGES_R),
-        ("L", -1.92, -4.48, PANEL_FOLDS_L, PANEL_RIDGES_L),
-    ):
-        grid = []
-        for i in range(nv):
-            t = i / (nv - 1)
-            rx, ry, z, fs, outw = _interp_panel_spec(keys, t)
-            grid.append(panel_arc_ring(0.0, cy, z, rx, ry, a0, a1, nu, folds, ridges, fs, outw))
-        parts.append(thicken_sheet(grid, lambda tt, uu: 0.0075, "Robe_Panel_%s" % tag, "M_RobeIvory"))
-        hem_arcs.append(grid[-1])
-        # Cyan facing along the front opening edge (column 0)
-        edge = [row[0] for row in grid]
+    angles = _wrap_angles(nu)
+    grid = []
+    # Ring 0: actual neck/shoulder surface + 4 mm. Seals the lookdown barrel.
+    grid.append(_body_arc(body_rings, SHOULDER_Z + 0.008, angles, 0.004))
+    # Ring 1: transition still on the body, slightly further out.
+    body_t = _body_arc(body_rings, SHOULDER_Z - 0.055, angles, 0.006)
+    hang0 = panel_arc_ring(
+        0.0, cy, keys[0][2], keys[0][0], keys[0][1], angles[0], angles[-1], nu, WRAP_FOLDS, WRAP_RIDGES, keys[0][3], keys[0][4]
+    )
+    grid.append(lerp_ring(body_t, hang0, 0.35))
+    for i in range(2, nv):
+        t = (i - 2) / max(1, nv - 3)
+        rx, ry, z, fs, outw = _interp_panel_spec(keys, t)
+        grid.append(panel_arc_ring(0.0, cy, z, rx, ry, angles[0], angles[-1], nu, WRAP_FOLDS, WRAP_RIDGES, fs, outw))
+
+    parts = [thicken_sheet(grid, lambda tt, uu: 0.0070, "Robe_Panel_Outer", "M_RobeIvory")]
+    # Stitch the open top onto the inner shoulder so lookdown cannot see into a hollow barrel.
+    body_rim = _body_arc(body_rings, SHOULDER_Z + 0.008, angles, 0.0008)
+    parts.append(strip_between(grid[0], body_rim, "Robe_Panel_ShoulderSeal", "M_RobeIvory", outward=V(0, 0, 1)))
+
+    for col, tag in ((0, "R"), (-1, "L")):
+        edge = [row[col] for row in grid]
         parts.append(
             sweep_profile(
                 edge,
-                _rounded_rect(0.018, 0.006, 3),
+                _rounded_rect(0.016, 0.005, 3),
                 "Robe_PanelFacing_%s" % tag,
                 "M_CyanGreen",
                 True,
             )
         )
-        hem = grid[-1][:]
-        parts.append(
-            sweep_profile(
-                hem,
-                _rounded_rect(0.028, 0.010, 3),
-                "Robe_PanelHem_%s" % tag,
-                "M_CyanGreen",
-                True,
-            )
+    parts.append(
+        sweep_profile(
+            grid[-1][:],
+            _rounded_rect(0.028, 0.010, 3),
+            "Robe_PanelHem",
+            "M_CyanGreen",
+            True,
         )
-    return parts, hem_arcs
+    )
+    # Waist cross-section of THIS wrap — sash must follow these verts, not a new ellipse.
+    zs = [ring_centroid(r).z for r in grid]
+    wi = min(range(len(zs)), key=lambda i: abs(zs[i] - (WAIST_Z + 0.012)))
+    wi = max(1, min(wi, len(grid) - 1))
+    return parts, grid[wi], grid[wi - 1], angles
 
 
-def build_sash():
-    """Cyan waist sash + front knot + hanging tassel. Makes the cinch readable."""
-    n = 28
-    z = WAIST_Z + 0.012
-    path = ellipse_ring(0.0, 0.012, z, 0.236, 0.182, n)
-    path = path + [path[0]]
-    parts = [
-        sweep_profile(path, _rounded_rect(0.046, 0.016, 4), "Sash_Band", "M_CyanGreen", True)
-    ]
+def _close_front_bridge(open_ring, body_rings, z, angles, offset, n_bridge=6):
+    """Open wrap + short front bridge on the body, so a sash can be a closed band."""
+    a_r, a_l = PANEL_A_FRONT_R, PANEL_A_FRONT_L
+    bridge = []
+    for i in range(1, n_bridge):
+        a = lerp(a_l, a_r, i / n_bridge)
+        p, n = sample_body_surface(body_rings, z, a)
+        bridge.append(p + n * offset)
+    # wrap ends at L-opening; bridge L → front → R, then closed_u meets wrap start.
+    return list(open_ring) + bridge
+
+
+def build_sash(waist_ring, waist_prev, body_rings):
+    """Cyan sash lofted from the outer-robe waist verts (same method as hem-on-skirt-ring).
+    Independent ellipse was punching through the panels as broken chunks.
+    """
+    z = ring_centroid(waist_ring).z
+    closed = _close_front_bridge(waist_ring, body_rings, z, None, 0.008)
+    closed_prev = _close_front_bridge(waist_prev, body_rings, ring_centroid(waist_prev).z, None, 0.006)
+    n = len(closed)
+    if len(closed_prev) != n:
+        closed_prev = closed_prev[:n] if len(closed_prev) > n else closed_prev + [closed_prev[-1]] * (n - len(closed_prev))
+    c = ring_centroid(closed)
+    inner, mid, outer = [], [], []
+    for j in range(n):
+        p = closed[j]
+        prev = closed_prev[j]
+        tng = closed[(j + 1) % n] - closed[(j - 1) % n]
+        up = prev - p
+        nrm = tng.cross(up)
+        radial = V(p.x - c.x, p.y - c.y, 0.0)
+        if nrm.dot(radial) < 0:
+            nrm = -nrm
+        nrm = nrm.nrm()
+        upn = up.nrm() if up.length() > 1e-8 else V(0, 0, 1)
+        inner.append(p + nrm * 0.0015 + upn * 0.008)
+        mid.append(p + nrm * 0.012 - upn * 0.002)
+        outer.append(p + nrm * 0.018 - upn * 0.012)
+    parts = [loft_closed([inner, mid, outer], "Sash_Band", "M_CyanGreen")]
+    fy = min(closed, key=lambda v: v.y)
     knot = Mesh("Sash_Knot", "M_CyanGreen")
-    # Small wrapped volume at the front waist
     krings = [
-        ellipse_ring(0.02, -0.175, z + 0.018, 0.028, 0.016, 12),
-        ellipse_ring(0.02, -0.188, z + 0.002, 0.034, 0.018, 12),
-        ellipse_ring(0.02, -0.182, z - 0.016, 0.026, 0.014, 12),
+        ellipse_ring(fy.x, fy.y + 0.006, fy.z + 0.014, 0.024, 0.014, 12),
+        ellipse_ring(fy.x, fy.y - 0.004, fy.z + 0.000, 0.030, 0.016, 12),
+        ellipse_ring(fy.x, fy.y + 0.002, fy.z - 0.014, 0.022, 0.012, 12),
     ]
     knot.add_grid(krings, closed_u=True, closed_v=False)
-    knot.cap_ring(0, 12, V(0.02, -0.170, z + 0.024), flip=True)
-    knot.cap_ring(24, 12, V(0.02, -0.178, z - 0.022), flip=False)
+    knot.cap_ring(0, 12, V(fy.x, fy.y + 0.008, fy.z + 0.020), flip=True)
+    knot.cap_ring(24, 12, V(fy.x, fy.y, fy.z - 0.020), flip=False)
     parts.append(knot)
     tassel_path = poly_bezier(
         [
-            V(0.02, -0.190, z - 0.012),
-            V(0.028, -0.200, z - 0.070),
-            V(0.022, -0.195, z - 0.130),
-            V(0.018, -0.188, z - 0.175),
+            V(fy.x, fy.y - 0.006, fy.z - 0.010),
+            V(fy.x + 0.008, fy.y - 0.016, fy.z - 0.068),
+            V(fy.x + 0.002, fy.y - 0.012, fy.z - 0.125),
+            V(fy.x - 0.002, fy.y - 0.008, fy.z - 0.168),
         ],
         6,
     )
     parts.append(
         sweep_profile(
             tassel_path,
-            _rounded_rect(0.016, 0.008, 3),
+            _rounded_rect(0.014, 0.007, 3),
             "Sash_Tassel",
             "M_CyanGreen",
             True,
@@ -1464,71 +1541,68 @@ def build_guan():
     return parts
 
 
-def _beard_strand(origin, mid, tip, w0, th0, name, n_path=14, n_u=10):
-    path = bezier([origin, origin.lerp(mid, 0.35) + V(0, 0.01, 0), mid, tip], n_path - 1)
+def _beard_strand(origin, mid, tip, w0, th0, name, n_path=14, n_u=12):
+    """Flat spindle (not a closed circular tube). Tapers; no 12 mm radius floor."""
+    path = bezier([origin, origin.lerp(mid, 0.35) + V(0, 0.008, 0), mid, tip], n_path - 1)
 
     def rad(t):
-        # volumetric bundle: full belly, blunt uneven tail — not a wire
-        if t < 0.55:
-            return w0 * (1.0 + 0.18 * math.sin(t / 0.55 * math.pi))
-        u = (t - 0.55) / 0.45
-        return max(0.012, w0 * (1.12 - 0.45 * (u ** 1.1)))
+        if t < 0.12:
+            return w0 * lerp(0.40, 1.0, t / 0.12)
+        if t < 0.52:
+            return w0 * (1.0 + 0.06 * math.sin((t - 0.12) / 0.40 * math.pi))
+        u = (t - 0.52) / 0.48
+        return max(0.0022, w0 * ((1.0 - u) ** 1.35))
 
     profile = []
     for j in range(n_u):
-        a = 2 * math.pi * j / n_u
-        profile.append((math.cos(a) * 1.0, math.sin(a) * (th0 / max(w0, 1e-6))))
+        a = 2.0 * math.pi * j / n_u
+        cu, sv = math.cos(a), math.sin(a)
+        # spindle: flatter than an ellipse so it does not read as a shiny pipe
+        profile.append(
+            (
+                math.copysign(abs(cu) ** 1.25, cu),
+                math.copysign(abs(sv) ** 1.55, sv) * (th0 / max(w0, 1e-6)),
+            )
+        )
     return sweep_profile(path, profile, name, "M_Hair", closed_profile=True, scale_fn=rad)
 
 
 def build_beard():
-    """Three volumetric bundles hanging in front of the chest, uneven blunt tails.
-    Not dozens of parallel wires and not a back ponytail.
-    """
+    """Three flat-spindle bundles, tapered uneven ends. No extra tail tubes."""
     parts = []
-    # Mustache as two small masses, not four wires
     for side, tag in ((1.0, "R"), (-1.0, "L")):
         origin = V(side * 0.016, -0.078, MOUTH_Z - 0.002)
-        mid = V(side * 0.038, -0.095, MOUTH_Z - 0.048)
-        tip = V(side * 0.042, -0.088, MOUTH_Z - 0.082)
-        parts.append(_beard_strand(origin, mid, tip, 0.018, 0.008, "Beard_Mustache_%s" % tag, n_path=12, n_u=12))
+        mid = V(side * 0.034, -0.092, MOUTH_Z - 0.042)
+        tip = V(side * 0.038, -0.084, MOUTH_Z - 0.072)
+        parts.append(_beard_strand(origin, mid, tip, 0.016, 0.0055, "Beard_Mustache_%s" % tag, n_path=12, n_u=12))
     bundles = (
-        # center, longest, hangs in front of the chest
         (
             "C",
             V(0.000, -0.074, CHIN_Z + 0.010),
-            V(0.010, -0.155, CHEST_Z + 0.10),
-            V(0.016, -0.172, CHEST_Z - 0.04),
-            0.042,
-            0.020,
+            V(0.008, -0.142, CHEST_Z + 0.12),
+            V(0.014, -0.155, CHEST_Z + 0.02),
+            0.034,
+            0.009,
         ),
-        # wearer's left, shorter
         (
             "L",
-            V(-0.036, -0.066, CHIN_Z + 0.006),
-            V(-0.058, -0.138, CHEST_Z + 0.14),
-            V(-0.050, -0.148, CHEST_Z + 0.02),
-            0.036,
-            0.017,
+            V(-0.034, -0.066, CHIN_Z + 0.006),
+            V(-0.050, -0.128, CHEST_Z + 0.16),
+            V(-0.044, -0.132, CHEST_Z + 0.06),
+            0.028,
+            0.0075,
         ),
-        # wearer's right, medium, uneven vs left
         (
             "R",
-            V(0.036, -0.066, CHIN_Z + 0.006),
-            V(0.060, -0.142, CHEST_Z + 0.12),
-            V(0.054, -0.158, CHEST_Z - 0.01),
-            0.038,
-            0.018,
+            V(0.034, -0.066, CHIN_Z + 0.006),
+            V(0.052, -0.132, CHEST_Z + 0.14),
+            V(0.046, -0.140, CHEST_Z + 0.04),
+            0.030,
+            0.008,
         ),
     )
     for tag, origin, mid, tip, w0, th0 in bundles:
-        parts.append(_beard_strand(origin, mid, tip, w0, th0, "Beard_Long_%s" % tag, n_path=16, n_u=14))
-        # one fat split at the tail so the end is uneven, not a second wire
-        split = origin.lerp(tip, 0.62) + V(0.0, -0.008, 0.0)
-        tip2 = tip + V(0.012 if tag != "L" else -0.010, -0.010, -0.018)
-        parts.append(
-            _beard_strand(split, split.lerp(tip2, 0.45), tip2, w0 * 0.55, th0 * 0.70, "Beard_Long_%s_tail" % tag, n_path=10, n_u=10)
-        )
+        parts.append(_beard_strand(origin, mid, tip, w0, th0, "Beard_Long_%s" % tag, n_path=16, n_u=12))
     return [
         merge_meshes("Beard_Mustache", [m for m in parts if m.name.startswith("Beard_Mustache")]),
         merge_meshes("Beard_Long", [m for m in parts if m.name.startswith("Beard_Long")]),
@@ -1892,10 +1966,12 @@ def build_fan():
 
     # Feathers: thin quill, full upper belly, blunt ROUND tips. Short layer over long.
     # Facing kept toward front (-Y) + a bit +X/+Z. Do not taper 0.05→0 (that was the needle spike).
-    rachis_zero = yax * 0.20 + zax * 0.12 + V(0, 0, 1) * 0.78
+    rachis_zero = yax * 0.62 + zax * 0.32 + V(0, 0, 1) * 0.14
     rachis_zero = (rachis_zero - fan_normal * rachis_zero.dot(fan_normal)).nrm()
     hinge = p1 - zax * 0.01
     vanes = []
+    # 2f8abf7 long vanes were 0.385 / ~84 mm belly and covered the face like lotus petals.
+    VANE_SCALE = 0.26 / 0.385
 
     def _one_vane(fi, t, length, stack, spread, tag):
         ang = (t - 0.5) * spread
@@ -1915,15 +1991,15 @@ def build_fan():
         nu, nv = 11, len(rachis)
 
         def width_at(tt):
-            # quill → full belly → blunt round (never 0)
+            # quill → full belly → blunt round, scaled with the shorter vane
+            s = VANE_SCALE
             if tt < 0.16:
-                return lerp(0.0055, 0.074, (tt / 0.16) ** 0.72)
+                return lerp(0.0055, 0.074, (tt / 0.16) ** 0.72) * s
             if tt < 0.68:
                 u = (tt - 0.16) / 0.52
-                return 0.074 + 0.014 * math.sin(u * math.pi)
+                return (0.074 + 0.014 * math.sin(u * math.pi)) * s
             u = (tt - 0.68) / 0.32
-            # cosine down to 22 mm, not a needle
-            return lerp(0.084, 0.022, 0.5 - 0.5 * math.cos(min(1.0, u) * math.pi))
+            return lerp(0.084, 0.022, 0.5 - 0.5 * math.cos(min(1.0, u) * math.pi)) * s
 
         grid = []
         prev_side = None
@@ -1985,14 +2061,14 @@ def build_fan():
     n_long = 7
     for fi in range(n_long):
         t = fi / (n_long - 1)
-        length = 0.385 - 0.022 * abs(t - 0.5)
+        length = 0.26 - 0.015 * abs(t - 0.5)
         stack = fan_normal * (-0.0036)
         vanes.append(_one_vane(fi, t, length, stack, spread_long, "L"))
     # short over long (complete fan)
     n_short = 6
     for fi in range(n_short):
         t = fi / (n_short - 1)
-        length = 0.295 - 0.028 * abs(t - 0.48)
+        length = 0.20 - 0.019 * abs(t - 0.48)
         stack = fan_normal * (0.0032 + 0.0012 * (fi % 2))
         vanes.append(_one_vane(fi, t, length, stack, spread_short, "S"))
     parts.append(merge_meshes("Fan_Vanes", vanes, "M_Feather"))
@@ -2182,9 +2258,9 @@ def assemble_all():
     char.extend(build_standing_collar())
     skirt_parts, hem_ring, hem_prev = build_skirt(body_rings[-1])
     char.extend(skirt_parts)
-    panel_parts, _hem_arcs = build_outer_panels()
+    panel_parts, sash_ring, sash_prev, _angs = build_outer_panels(body_rings)
     char.extend(panel_parts)
-    char.extend(build_sash())
+    char.extend(build_sash(sash_ring, sash_prev, body_rings))
     char.extend(build_sleeves())
     char.extend(build_trims(hem_ring, hem_prev, collar_edge))
     char.extend(build_shoes())
@@ -2361,7 +2437,10 @@ def make_principled(name, color, metallic, roughness):
     set_sock(("Base Color", "Base Color"), color)
     set_sock(("Metallic",), metallic)
     set_sock(("Roughness",), roughness)
-    set_sock(("Specular IOR Level", "Specular"), 0.45 if metallic < 0.5 else 0.8)
+    spec = 0.45 if metallic < 0.5 else 0.8
+    if name == "M_Hair":
+        spec = 0.08
+    set_sock(("Specular IOR Level", "Specular"), spec)
     if "M_Robe" in name or name == "M_CyanGreen":
         set_sock(("Sheen Weight", "Sheen"), 0.25)
         set_sock(("Sheen Roughness",), 0.4)
@@ -2834,7 +2913,7 @@ def blender_build(args, char, env, stats):
             "Screenshot count is not art approval; Codex reviews on Mac Blender 5.2.1.",
             "GLB is character-only (ZhugeLiang_Root). Stage/ground/cameras/lights/roof remain in the .blend.",
             "Review views hide Palace_Root and use Review_Ground. view_lookdown_palace.png is the 宫苑 fusion.",
-            "Mac 176c7f3 five-view: collar-on-chest, cyan hem, front fan confirmed better. Overall art FAIL. This revision is the bounded silhouette/fan/head sculpt. Not a publish.",
+            "Mac 2f8abf7 five-view: panels+cinch appeared. Overall FAIL — shoulder barrel, back gap, huge lotus fan, tube beard. This revision seals wrap+sash, scales vanes, flattens beard. Not a publish.",
         ],
         glb_measured=glb_measured,
     )
@@ -2888,7 +2967,9 @@ def construction_audit(char_stats):
         "collar_chest_bands": has("Collar_L") and has("Collar_R") and "Collar" not in s,
         "collar_projected_on_robe_body": has("Collar_L") and has("Collar_R"),
         "standing_collar_covers_neck": has("CollarStand_R") and has("CollarStand_L"),
-        "outer_robe_panels": has("Robe_Panel_L") and has("Robe_Panel_R"),
+        "outer_robe_wrap": has("Robe_Panel_Outer"),
+        "outer_shoulder_seal": has("Robe_Panel_ShoulderSeal"),
+        "no_split_back_panels": not has("Robe_Panel_L") and not has("Robe_Panel_R"),
         "waist_sash": has("Sash_Band"),
         "hem_trim_from_skirt_outer": has("Trim_Hem") and has("Skirt_Outer"),
         "board_guan": has("Guan_Board_Center") and has("Guan_Board_Front"),
@@ -3046,11 +3127,10 @@ def build_report_payload(
         unfinished.append("GLB / .blend / view PNGs are absent until Blender 5.2.1 is re-run on this revision.")
         unfinished.append("GLB interface measured_* fields are UNKNOWN until a real export exists.")
         unfinished.append(
-            "Mac 176c7f3 exported (780188B, 33760 tris, 66 mesh, minY 0, issues=[]). "
-            "KEEP: shoulder-sleeve closure, review cameras, wrists, output interface. "
-            "Confirmed better: collar-on-chest, continuous cyan hem, front-readable fan. "
-            "Overall art FAIL: narrow cone robe, barrel guan, bare neck, wire beard, spike fan. "
-            "This handoff is the bounded sculpt ① outer panels+cinch ② fan belly/blunt tips ③ neck/guan/beard. "
+            "Mac 2f8abf7 exported (976024B, 42940 tris, 80 mesh, minY 0, issues=[]). "
+            "KEEP: shoulder-sleeve inner closure, cameras, wrists/grip, output interface. "
+            "Panels+cinch appeared. FAIL: lookdown outer barrel + back through-gap; fan covers face as lotus petals; "
+            "beard is 3 shiny tubes with extra tail sticks. This handoff is those three items only. "
             "Cloud UNRUN. Structure inventory is not art PASS."
         )
     if tris_note and "Over 45k" in tris_note:
@@ -3075,8 +3155,22 @@ def build_report_payload(
             "art_fail_then_framing_commit": "e5282c0bd63246ee616a19c49e8848d4496ab95c",
             "aae56dcd_commit": "aae56dcdf517eeedee60329d77d889589c0cbce4",
             "sculpt_base_commit": "176c7f39224d7d8aee203a66c7b79eb05ec1984b",
+            "fail_2f8abf7_commit": "2f8abf7ef430c01af4dd0cae76ccc7baf9de1915",
             "blender": "5.2.1",
             "environment": "Mac factory-startup, background, independent output-dir",
+            "mac_2f8abf7": {
+                "exit": 0,
+                "glb_bytes": 976024,
+                "tris": 42940,
+                "mesh": 80,
+                "materials": 7,
+                "minY": 0,
+                "validator_issues": [],
+                "keep": "shoulder-sleeve inner closure; cameras; wrists/grip; output interface",
+                "appeared": "outer panels + waist cinch",
+                "art_review": "FAIL",
+                "published": False,
+            },
             "mac_176c7f3": {
                 "exit": 0,
                 "glb_bytes": 780188,
@@ -3143,10 +3237,16 @@ def build_report_payload(
                 "Front fan is a knife-edge (face yawed sideways); square stacked plates",
                 "Beard still parallel hard rods",
             ],
-            "this_commit_scope": "Bounded sculpt only: (1) left/right outer-robe panels with volumetric long/short folds + waist cinch/sash; (2) fan thin-root / full-belly / blunt round tips, short-over-long; (3) standing collar covering neck, partitioned board guan, 3-bundle volumetric beard. KEEP shoulder-sleeve roots, review cameras, wrists, interface. Did not paste the reference PNG. Not art approval.",
+            "art_rejection_2f8abf7": [
+                "Lookdown outer robe: huge open barrel at shoulder top; two back panels with a through-gap",
+                "Sash ellipse punched through panels as broken chunks",
+                "Fan 0.385 m vanes cover mouth/nose, read as lotus petals",
+                "Beard is 3 shiny thick tubes with extra long straight tail sticks",
+            ],
+            "this_commit_scope": "Three items only: (1) outer wrap grown from Robe_Body shoulder + back seam width 0 + sash on wrap waist ring; (2) long vane 0.385→0.26, width scaled, rachis tilted at hinge, wrist/grip untouched; (3) 3 flat-spindle beard bundles, delete tail tubes, M_Hair lower specular/higher roughness. KEEP inner shoulder-sleeve, cameras, wrists, interface. Not art approval. Recommend stop further enlargement of this class.",
             "this_cloud_status": "UNRUN",
             "valid_glb_on_cloud": False,
-            "note": "176c7f3 Mac export was real and overall art FAIL. This cloud did not re-export. Do not treat UNRUN JSON as art approval or as a new measured GLB.",
+            "note": "2f8abf7 Mac export was real and overall art FAIL (barrel/gap/lotus fan/tube beard). This cloud did not re-export. Do not treat UNRUN JSON as art approval or as a new measured GLB.",
         },
         "units": iface["units"],
         "rootName": iface["rootName"],
@@ -3203,6 +3303,7 @@ def build_report_payload(
             "mac_e5282c0_art_review": "CHANGES_REQUESTED",
             "mac_aae56dcd_art_review": "CHANGES_REQUESTED",
             "mac_176c7f3_art_review": "FAIL",
+            "mac_2f8abf7_art_review": "FAIL",
             "this_revision_art_approval": False,
             "structure_pass_is_not_art_pass": True,
         },
@@ -3271,7 +3372,7 @@ def mesh_stats_main(args):
         notes=[
             "Generator census only. No GLB/blend/png written because this was --mesh-stats or bpy is missing.",
             "Static posed meshes. No armature. Cannot walk.",
-            "Mac 176c7f3 overall art FAIL. This revision: bounded sculpt ① panels+cinch ② fan belly ③ neck/guan/beard. Cloud UNRUN.",
+            "Mac 2f8abf7 overall art FAIL. This revision: wrap-seal + sash-on-ring, vane 0.26, flat-spindle beard. Cloud UNRUN.",
         ],
         static_checks={
             "mesh_stats": "written",
