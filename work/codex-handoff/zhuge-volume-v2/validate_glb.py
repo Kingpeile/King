@@ -286,6 +286,36 @@ def position_aabb(gltf, blob):
     return {"min": mins, "max": maxs}
 
 
+STAGE_NAME_MARKERS = (
+    "Palace_Root",
+    "Courtyard",
+    "Roof_Tiles",
+    "Roof_Ridge",
+    "Roof_Wadang",
+    "Column_",
+    "Plinth_",
+    "Beam_",
+    "Rail_",
+    "Cam_",
+    "Key_Warm",
+    "Fill_Cool",
+    "Rim_Warm",
+    "Wadang_",
+)
+
+
+def stage_nodes(names):
+    hits = []
+    for n in names:
+        if not n:
+            continue
+        for m in STAGE_NAME_MARKERS:
+            if n == m or n.startswith(m):
+                hits.append(n)
+                break
+    return hits
+
+
 def check(gltf, blob, header, path):
     issues = []
     mats = gltf.get("materials") or []
@@ -306,6 +336,9 @@ def check(gltf, blob, header, path):
     has_root = any(n == "ZhugeLiang_Root" for n in names)
     if not has_root:
         issues.append("missing node ZhugeLiang_Root")
+    leaked = stage_nodes(names)
+    if leaked:
+        issues.append("stage/camera/light/roof nodes in character GLB: %s" % ",".join(leaked[:12]))
     if len(mats) > 8:
         issues.append("material count %d > 8" % len(mats))
     aabb = None
@@ -315,10 +348,10 @@ def check(gltf, blob, header, path):
         issues.append("aabb failed: %s" % exc)
         aabb = None
     yup_note = (
-        "glTF is Y-up. After Blender export_yup, character feet should sit near min.y ≈ 0 "
-        "(courtyard slabs may go slightly negative)."
+        "glTF is Y-up by spec. Character-only GLB: no courtyard, so min.y is the figure, not slabs."
     )
     feet_y = None if not aabb else aabb["min"][1]
+    height_m = None if not aabb else (aabb["max"][1] - aabb["min"][1])
     result = {
         "ok": not issues,
         "path": os.path.abspath(path),
@@ -339,6 +372,19 @@ def check(gltf, blob, header, path):
         "aabb_world_yup": aabb,
         "feet_min_y": feet_y,
         "yup_note": yup_note,
+        "stage_nodes": leaked,
+        "excludes_stage": not leaked,
+        "interface": {
+            "units": "meters",
+            "rootName": "ZhugeLiang_Root" if has_root else "UNKNOWN",
+            "upAxis": "Y",
+            "forwardAxis": "UNKNOWN",
+            "bbox": aabb if aabb else "UNKNOWN",
+            "height": None if height_m is None else round(height_m, 4),
+            "footOffset": None if feet_y is None else round(feet_y, 4),
+            "skin": bool(skins),
+            "animations": bool(anims),
+        },
         "issues": issues,
         "art_approval": False,
         "note": "Structure only. Screenshot/primitive count is not art approval.",
@@ -356,6 +402,17 @@ def main():
             "path": os.path.abspath(path),
             "error": "GLB not found. Cloud did not run Blender; Codex must export locally.",
             "art_approval": False,
+            "interface": {
+                "units": "meters",
+                "rootName": "ZhugeLiang_Root",
+                "upAxis": "UNKNOWN",
+                "forwardAxis": "UNKNOWN",
+                "bbox": "UNKNOWN",
+                "height": "UNKNOWN",
+                "footOffset": "UNKNOWN",
+                "skin": "UNKNOWN",
+                "animations": "UNKNOWN",
+            },
         }
         print(json.dumps(payload, ensure_ascii=False, indent=2))
         if args.json_out:

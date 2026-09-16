@@ -8,13 +8,72 @@
   "blender_version_expected": "5.2.1",
   "blender_version_actual": null,
   "render_engine": null,
-  "timestamp_utc": "2026-09-16T08:26:57Z",
+  "timestamp_utc": "2026-09-16T08:42:36Z",
   "units": "meters",
-  "height_m": 1.8,
+  "rootName": "ZhugeLiang_Root",
+  "root": "ZhugeLiang_Root",
+  "upAxis": {
+    "expected_blender": "Z",
+    "expected_glb": "Y",
+    "measured_glb": "UNKNOWN",
+    "measured_glb_source": "UNKNOWN"
+  },
+  "forwardAxis": {
+    "expected_blender": "-Y",
+    "expected_glb": "+Z",
+    "expected_note": "Face is built on Blender -Y. Blender glTF export_yup maps (X,Y,Z)_blender -> (X,Z,-Y)_gltf, so expected glTF forward is +Z. Not read from a GLB extra.",
+    "measured_glb": "UNKNOWN"
+  },
+  "bbox": {
+    "expected_blender_zup": {
+      "min": [
+        -0.5658,
+        -0.6367,
+        0.0
+      ],
+      "max": [
+        0.3991,
+        0.2752,
+        1.8553
+      ]
+    },
+    "expected_note": "Generator vertex AABB in Blender Z-up meters. Not a GLB measurement.",
+    "measured_glb_yup": "UNKNOWN"
+  },
+  "height": {
+    "expected_blender_m": 1.8553,
+    "expected_note": "generator max.z - min.z (includes guan). Design crown height is 1.8 m.",
+    "measured_glb_m": "UNKNOWN"
+  },
+  "footOffset": {
+    "expected_blender_z_min": 0.0,
+    "expected_note": "Interface snapshot of generator min Z. Foot-zero policy is owned by another Codex developer; this builder does not change that path.",
+    "measured_glb_y_min": "UNKNOWN"
+  },
+  "skin": {
+    "expected": false,
+    "measured_glb": "UNKNOWN"
+  },
+  "animations": {
+    "expected": false,
+    "measured_glb": "UNKNOWN"
+  },
+  "glb_export": {
+    "contents": "character_only",
+    "rootName": "ZhugeLiang_Root",
+    "includes_stage": false,
+    "includes_ground": false,
+    "includes_cameras": false,
+    "includes_lights": false,
+    "includes_roof_tiles": false,
+    "stage_remains_in_blend": true,
+    "excludes_stage_expected": true,
+    "excludes_stage_measured": "UNKNOWN"
+  },
   "heads": 7.35,
+  "height_m": 1.8,
   "feet_z_blender": 0.0,
   "glb_yup_expected": true,
-  "root": "ZhugeLiang_Root",
   "armature": {
     "present": false,
     "skins": false,
@@ -38,7 +97,7 @@
     45000
   ],
   "tris_policy": "If look would clearly degrade to hit the band, keep quality and report honestly.",
-  "tris_note": "Inside 20k–45k target band.",
+  "tris_note": "Inside 20k–45k target band (character GLB census; stage is .blend-only).",
   "stats_character": {
     "part_count": 58,
     "verts": 20402,
@@ -103,7 +162,8 @@
       "has_dash_dash_argv": true,
       "banned_api_hits": [],
       "root_name": true,
-      "declares_no_walk": true
+      "declares_no_walk": true,
+      "character_only_glb": true
     }
   },
   "notes": [
@@ -113,8 +173,9 @@
   "unfinished": [
     "No armature / no walk cycle (intentional for this static first version).",
     "Object origins are world-layout, not joint-centered — recenter before rigging.",
-    "Roof glaze shares M_CyanGreen with robe trim/guan to stay at 8 materials.",
+    "Roof glaze shares M_CyanGreen with robe trim/guan to stay at 8 materials (blend stage only).",
     "Cloud VM has no Blender; visual sign-off is Codex on Mac.",
-    "GLB / .blend / view PNGs are absent until Blender 5.2.1 is run."
+    "GLB / .blend / view PNGs are absent until Blender 5.2.1 is run.",
+    "GLB interface measured_* fields are UNKNOWN until a real export exists."
   ]
 }

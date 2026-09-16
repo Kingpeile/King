@@ -1859,26 +1859,52 @@ def choose_eevee(scene):
     return scene.render.engine
 
 
-def export_glb(path):
-    kwargs = filter_op_kwargs(
-        "EXPORT_SCENE_OT_gltf",
-        {
-            "filepath": path,
-            "export_format": "GLB",
-            "export_yup": True,
-            "export_apply": True,
-            "export_materials": "EXPORT",
-            "export_cameras": False,
-            "export_lights": False,
-            "export_skins": False,
-            "export_animations": False,
-            "export_extras": False,
-            "export_texcoords": True,
-            "export_normals": True,
-            "use_selection": False,
-        },
-    )
-    bpy.ops.export_scene.gltf(**kwargs)
+def _under_root(obj, root):
+    p = obj
+    while p is not None:
+        if p == root:
+            return True
+        p = p.parent
+    return False
+
+
+def export_glb_character_only(path, root_name="ZhugeLiang_Root"):
+    """GLB is the independent character. Stage/cameras/lights stay in the .blend only."""
+    root = bpy.data.objects.get(root_name)
+    if root is None:
+        raise RuntimeError("missing %s; cannot export a character-only GLB" % root_name)
+    scene_col = bpy.context.scene.collection
+    parked = []
+    for obj in list(scene_col.objects):
+        if not _under_root(obj, root):
+            scene_col.objects.unlink(obj)
+            parked.append(obj)
+    try:
+        kwargs = filter_op_kwargs(
+            "EXPORT_SCENE_OT_gltf",
+            {
+                "filepath": path,
+                "export_format": "GLB",
+                "export_yup": True,
+                "export_apply": True,
+                "export_materials": "EXPORT",
+                "export_cameras": False,
+                "export_lights": False,
+                "export_skins": False,
+                "export_animations": False,
+                "export_extras": False,
+                "export_texcoords": True,
+                "export_normals": True,
+                "use_selection": False,
+            },
+        )
+        bpy.ops.export_scene.gltf(**kwargs)
+    finally:
+        for obj in parked:
+            try:
+                scene_col.objects.link(obj)
+            except RuntimeError:
+                pass
 
 
 def render_views(cams, output_dir, skip):
@@ -1943,7 +1969,9 @@ def blender_build(args, char, env, stats):
     glb_path = safe_join(args.output_dir, glb_name)
 
     bpy.ops.wm.save_as_mainfile(**filter_op_kwargs("WM_OT_save_as_mainfile", {"filepath": blend_path, "check_existing": False}))
-    export_glb(glb_path)
+    # Blend already has palace + cameras + lights. GLB unlinks those for the write only.
+    export_glb_character_only(glb_path, "ZhugeLiang_Root")
+    glb_measured = try_measure_glb(glb_path)
     renders = render_views(cams, args.output_dir, args.skip_render)
 
     report = build_report_payload(
@@ -1958,10 +1986,137 @@ def blender_build(args, char, env, stats):
             "Static posed meshes parented to ZhugeLiang_Root. No armature, no skin, no animation.",
             "Do not claim this character can walk.",
             "Screenshot count is not art approval; Codex reviews on Mac Blender 5.2.1.",
+            "GLB is character-only (ZhugeLiang_Root). Stage/ground/cameras/lights/roof remain in the .blend.",
         ],
+        glb_measured=glb_measured,
     )
     write_report(safe_join(args.output_dir, "report.json"), report)
     return report
+
+
+UNKNOWN = "UNKNOWN"
+
+
+def union_bbox_from_census(cs):
+    parts = cs.get("parts") or []
+    mins = [None, None, None]
+    maxs = [None, None, None]
+    for p in parts:
+        b = p.get("bbox")
+        if not b or len(b) != 6:
+            continue
+        for i in range(3):
+            mins[i] = b[i] if mins[i] is None else min(mins[i], b[i])
+            maxs[i] = b[i + 3] if maxs[i] is None else max(maxs[i], b[i + 3])
+    if mins[0] is None:
+        return None
+    return {"min": [round(v, 4) for v in mins], "max": [round(v, 4) for v in maxs]}
+
+
+def try_measure_glb(path):
+    """Parse an exported GLB if present. Never invent numbers when the file is missing."""
+    if not path or not os.path.isfile(path):
+        return None
+    here = os.path.dirname(os.path.abspath(__file__))
+    if here not in sys.path:
+        sys.path.insert(0, here)
+    try:
+        import validate_glb as vg
+
+        gltf, blob, header = vg.read_glb(path)
+        result = vg.check(gltf, blob, header, path)
+        return {
+            "upAxis": "Y",
+            "upAxis_source": "gltf2_spec_convention",
+            "forwardAxis": UNKNOWN,
+            "bbox": result.get("aabb_world_yup") or UNKNOWN,
+            "height": (
+                round(result["aabb_world_yup"]["max"][1] - result["aabb_world_yup"]["min"][1], 4)
+                if result.get("aabb_world_yup")
+                else UNKNOWN
+            ),
+            "footOffset": (
+                round(result["aabb_world_yup"]["min"][1], 4)
+                if result.get("aabb_world_yup")
+                else UNKNOWN
+            ),
+            "skin": bool(result.get("skins")),
+            "animations": bool(result.get("animations")),
+            "stage_nodes": result.get("stage_nodes") or [],
+            "excludes_stage": not result.get("stage_nodes"),
+            "rootName": "ZhugeLiang_Root" if result.get("has_ZhugeLiang_Root") else UNKNOWN,
+        }
+    except Exception:
+        return None
+
+
+def build_interface(char_stats, glb_measured=None):
+    """Report contract: expected = generator/spec; measured_glb = UNKNOWN without a real GLB."""
+    bb = union_bbox_from_census(char_stats)
+    height_expected = None
+    foot_expected = None
+    if bb:
+        height_expected = round(bb["max"][2] - bb["min"][2], 4)
+        foot_expected = round(bb["min"][2], 4)
+    m = glb_measured or {}
+
+    def mget(key):
+        if not m or key not in m:
+            return UNKNOWN
+        val = m[key]
+        return UNKNOWN if val is None else val
+
+    return {
+        "units": "meters",
+        "rootName": "ZhugeLiang_Root",
+        "upAxis": {
+            "expected_blender": "Z",
+            "expected_glb": "Y",
+            "measured_glb": mget("upAxis"),
+            "measured_glb_source": m.get("upAxis_source", UNKNOWN) if m else UNKNOWN,
+        },
+        "forwardAxis": {
+            "expected_blender": "-Y",
+            "expected_glb": "+Z",
+            "expected_note": "Face is built on Blender -Y. Blender glTF export_yup maps (X,Y,Z)_blender -> (X,Z,-Y)_gltf, so expected glTF forward is +Z. Not read from a GLB extra.",
+            "measured_glb": mget("forwardAxis"),
+        },
+        "bbox": {
+            "expected_blender_zup": bb if bb else UNKNOWN,
+            "expected_note": "Generator vertex AABB in Blender Z-up meters. Not a GLB measurement.",
+            "measured_glb_yup": mget("bbox"),
+        },
+        "height": {
+            "expected_blender_m": height_expected if height_expected is not None else UNKNOWN,
+            "expected_note": "generator max.z - min.z (includes guan). Design crown height is 1.8 m.",
+            "measured_glb_m": mget("height"),
+        },
+        "footOffset": {
+            "expected_blender_z_min": foot_expected if foot_expected is not None else UNKNOWN,
+            "expected_note": "Interface snapshot of generator min Z. Foot-zero policy is owned by another Codex developer; this builder does not change that path.",
+            "measured_glb_y_min": mget("footOffset"),
+        },
+        "skin": {
+            "expected": False,
+            "measured_glb": mget("skin") if m else UNKNOWN,
+        },
+        "animations": {
+            "expected": False,
+            "measured_glb": mget("animations") if m else UNKNOWN,
+        },
+        "glb_export": {
+            "contents": "character_only",
+            "rootName": "ZhugeLiang_Root",
+            "includes_stage": False,
+            "includes_ground": False,
+            "includes_cameras": False,
+            "includes_lights": False,
+            "includes_roof_tiles": False,
+            "stage_remains_in_blend": True,
+            "excludes_stage_expected": True,
+            "excludes_stage_measured": mget("excludes_stage") if m else UNKNOWN,
+        },
+    }
 
 
 def build_report_payload(
@@ -1974,10 +2129,13 @@ def build_report_payload(
     outputs,
     notes,
     static_checks=None,
+    glb_measured=None,
 ):
     char_stats = stats.get("character", {})
     all_stats = stats.get("all", {})
-    tris = all_stats.get("tris")
+    iface = build_interface(char_stats, glb_measured)
+    # GLB is character-only; band applies to the character census, not the blend stage.
+    tris = char_stats.get("tris")
     band = [20000, 45000]
     tris_note = None
     if isinstance(tris, int):
@@ -1989,15 +2147,16 @@ def build_report_payload(
                 % tris
             )
         else:
-            tris_note = "Inside 20k–45k target band."
+            tris_note = "Inside 20k–45k target band (character GLB census; stage is .blend-only)."
     unfinished = [
         "No armature / no walk cycle (intentional for this static first version).",
         "Object origins are world-layout, not joint-centered — recenter before rigging.",
-        "Roof glaze shares M_CyanGreen with robe trim/guan to stay at 8 materials.",
+        "Roof glaze shares M_CyanGreen with robe trim/guan to stay at 8 materials (blend stage only).",
     ]
     if execution_kind != "real":
         unfinished.append("Cloud VM has no Blender; visual sign-off is Codex on Mac.")
         unfinished.append("GLB / .blend / view PNGs are absent until Blender 5.2.1 is run.")
+        unfinished.append("GLB interface measured_* fields are UNKNOWN until a real export exists.")
     if tris_note and "Over 45k" in tris_note:
         unfinished.append(tris_note)
     return {
@@ -2014,12 +2173,21 @@ def build_report_payload(
         "blender_version_actual": blender_version,
         "render_engine": engine,
         "timestamp_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "units": "meters",
-        "height_m": HEIGHT,
+        "units": iface["units"],
+        "rootName": iface["rootName"],
+        "root": iface["rootName"],
+        "upAxis": iface["upAxis"],
+        "forwardAxis": iface["forwardAxis"],
+        "bbox": iface["bbox"],
+        "height": iface["height"],
+        "footOffset": iface["footOffset"],
+        "skin": iface["skin"],
+        "animations": iface["animations"],
+        "glb_export": iface["glb_export"],
         "heads": HEADS,
+        "height_m": HEIGHT,
         "feet_z_blender": FOOT_Z,
         "glb_yup_expected": True,
-        "root": "ZhugeLiang_Root",
         "armature": {
             "present": False,
             "skins": False,
@@ -2081,6 +2249,7 @@ def source_guards(script_path):
         "banned_api_hits": hits,
         "root_name": "ZhugeLiang_Root" in src,
         "declares_no_walk": "can_walk" in src,
+        "character_only_glb": "export_glb_character_only" in src,
     }
 
 

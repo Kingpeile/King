@@ -26,7 +26,8 @@ Static posed meshes only. No skin weights, no animation, no walk cycle.
 - Meters.
 - Target ≤ 8 materials (shared: roof glaze = guan/trim cyan; shoes use hair black; iris uses hair black).
 - Prefer ~20k–45k tris. If the look would clearly degrade, the generator **does not decimate** — `report.json` says so honestly.
-- After export, run `validate_glb.py` and confirm glTF **Y-up** (feet near `min.y ≈ 0`; courtyard slabs may go slightly negative).
+- After export, run `validate_glb.py`. glTF is Y-up by spec. The GLB is the **character only** (no courtyard), so `min.y` is the figure, not slabs.
+- `report.json` interface: `units`, `rootName`, `upAxis`, `forwardAxis`, `bbox`, `height`, `footOffset`, `skin`, `animations`. Cloud UNRUN marks GLB measurements `UNKNOWN` — do not treat generator AABB as a measured GLB.
 
 ## Run on Mac Blender 5.2.1
 
@@ -56,8 +57,8 @@ Expected writes **only** into `--output-dir` (overwrite of known names, never a 
 
 | File | What |
 |---|---|
-| `zhuge_liang_v2.glb` | Y-up glTF binary |
-| `zhuge_liang_v2.blend` | Native scene |
+| `zhuge_liang_v2.glb` | Character-only Y-up glTF (`ZhugeLiang_Root`). No stage, ground, cameras, lights, or roof tiles. |
+| `zhuge_liang_v2.blend` | Full scene for rendering (palace + lights + cameras stay here) |
 | `view_front.png` `view_side.png` `view_back.png` | Review cameras |
 | `view_lookdown.png` | ~40° 宫苑 miniature |
 | `report.json` | Overwritten with `execution_kind: "real"` |
