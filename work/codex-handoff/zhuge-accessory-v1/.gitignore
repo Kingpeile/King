@@ -1,0 +1,4 @@
+out/*
+!out/accessory_report.json
+__pycache__/
+*.pyc
