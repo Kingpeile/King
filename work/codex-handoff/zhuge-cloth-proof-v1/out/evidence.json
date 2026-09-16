@@ -1,0 +1,203 @@
+{
+  "task_id": "CT-CLOTH-PROOF-01",
+  "title": "Native Blender cloth collision / drape proof (not costume 03)",
+  "status": "UNRUN",
+  "execution_kind": "expected",
+  "physics_status": "UNRUN",
+  "not_a_zhuge_product": true,
+  "g1_g5_claimed": false,
+  "art_approval": false,
+  "costume_03_claimed": false,
+  "full_character": false,
+  "armature": false,
+  "can_walk": false,
+  "declaration": "Sample cloth sheet on frozen posed male body. Decides whether the CLOTH+COLLISION route is usable. Not a Zhuge quality or 03 pass.",
+  "input": {
+    "pr17_head": "3d4a40c5350ec46b9ff54547df9af1818f2dea08",
+    "support_body_commit": "624e008349a447859ed58417394c68f382e9b887",
+    "pose": "static two-bone rest pose from clothed-v1 helpers (read-only)",
+    "source_read_only": true,
+    "mpfb_install": false
+  },
+  "method": {
+    "new_sheet": true,
+    "not_loft_retune": true,
+    "body_hidden": false,
+    "whole_sheet_pinned": false,
+    "pin_n": 4,
+    "pair": [
+      "collision_on",
+      "collision_off"
+    ],
+    "cache": "isolated per-arm blend + disk cache; sequential frame_set 1..60",
+    "param_search": false
+  },
+  "params": {
+    "frames": [
+      1,
+      60
+    ],
+    "fps": 24,
+    "time_budget_s": 120.0,
+    "ClothSettings": {
+      "quality": 8,
+      "mass": 0.3,
+      "vertex_group_mass": "Pin",
+      "pin_stiffness": 20.0,
+      "bending_stiffness": 0.5,
+      "effector_weights.gravity": 1.0
+    },
+    "ClothCollisionSettings": {
+      "distance_min": 0.012,
+      "collision_quality": 3,
+      "use_self_collision": true,
+      "self_distance_min": 0.008
+    },
+    "body_COLLISION": {
+      "thickness_outer": 0.01
+    },
+    "note": "One set. collision_on vs collision_off only flips cloth use_collision."
+  },
+  "support_body_faces": 13378,
+  "support_body_verts": 13380,
+  "support_body_uvs": 14517,
+  "pose": {
+    "left": {
+      "upper_deg": 34.68,
+      "fore_deg": 38.73
+    },
+    "right": {
+      "upper_deg": 34.68,
+      "fore_deg": 38.73
+    }
+  },
+  "joints": {
+    "Lsh": [
+      0.19245163667628815,
+      0.12373803967327887,
+      1.40488055026715
+    ],
+    "Lel": [
+      0.29237636455432225,
+      -0.011575811623117063,
+      1.2065388918492497
+    ],
+    "Lha": [
+      0.15,
+      -0.23,
+      1.14
+    ],
+    "Rsh": [
+      -0.19245163667628815,
+      0.12373803967327887,
+      1.40488055026715
+    ],
+    "Rel": [
+      -0.29237636455432225,
+      -0.011575811623117063,
+      1.2065388918492497
+    ],
+    "Rha": [
+      -0.15,
+      -0.23,
+      1.14
+    ]
+  },
+  "cloth_placement": {
+    "side": "left",
+    "plane": "world XY, gravity -Z",
+    "x0": 0.15087,
+    "x1": 0.34612,
+    "y0": -0.0575,
+    "y1": 0.24835,
+    "z": 1.53379,
+    "clearance_above_region_m": 0.06,
+    "segs_u": 12,
+    "segs_v": 16,
+    "vert_n": 221,
+    "quad_n": 192,
+    "region_n": 267,
+    "region_bbox": {
+      "min": [
+        0.11086875882822575,
+        -0.01749682710998067,
+        1.2328527112804601
+      ],
+      "max": [
+        0.3011169180995612,
+        0.20834625069090462,
+        1.4737936498188298
+      ]
+    },
+    "pin_rule": "Exactly 4 verts on the medial column (u=0, neck side), posterior end (largest Y). vertex_group_mass Pin weight 1.0. Not the full sheet.",
+    "pin_indices": [
+      169,
+      182,
+      195,
+      208
+    ],
+    "pin_xyz": [
+      [
+        0.15087,
+        0.191,
+        1.53379
+      ],
+      [
+        0.15087,
+        0.21012,
+        1.53379
+      ],
+      [
+        0.15087,
+        0.22923,
+        1.53379
+      ],
+      [
+        0.15087,
+        0.24835,
+        1.53379
+      ]
+    ]
+  },
+  "construction_selfcheck": {
+    "ok": true,
+    "blockers": [],
+    "min_dist_to_body": {
+      "min_m": 0.05517,
+      "verts_closer_than_clearance": 0,
+      "clearance_m": 0.025,
+      "src_n": 221
+    },
+    "hull_at_cloth_z": {
+      "intersecting_verts": 0,
+      "worst_in_hull_m": 0.0
+    },
+    "note": "Slice-hull + vert distance. Not an exact triangle penetration proof."
+  },
+  "local_camera_bbox": {
+    "min": [
+      0.05086875882822575,
+      -0.11749682710998066,
+      1.1
+    ],
+    "max": [
+      0.4061169180995612,
+      0.30834625069090466,
+      1.62
+    ]
+  },
+  "pair_verdict": {
+    "ready": false,
+    "verdict": "UNRUN",
+    "can_claim_pass": false,
+    "reason": "physics not executed"
+  },
+  "physics": null,
+  "blender_present": false,
+  "blender_version_actual": null,
+  "unverified_until_mac_blender": [
+    "CLOTH + COLLISION drape on posed shoulder (images + BVH candidates)",
+    "collision_off actually falls through vs on resting on shoulder",
+    "120s wall clock on Mac Blender 5.2.1"
+  ]
+}

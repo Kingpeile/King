@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+out/**/*.glb
+out/**/*.blend
+out/**/*.blend1
+out/**/*.png
+out/**/blendcache_*/
+out/cache/
