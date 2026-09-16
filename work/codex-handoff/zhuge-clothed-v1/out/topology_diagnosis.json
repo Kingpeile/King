@@ -1,0 +1,289 @@
+{
+  "task_id": "CT-COSTUME-DIAG-02",
+  "generator": "build_clothed_v1.py (read-only)",
+  "gear_commit": "72f854997468595b7492d709d8235db6cd74cf0c",
+  "status": "UNRUN",
+  "blender_present": false,
+  "separate_shells": {
+    "export_objects": [
+      "Anatomy_Body",
+      "Robe_Outer",
+      "Robe_Sleeve_L",
+      "Robe_Sleeve_R",
+      "Collar_Inner",
+      "Sash",
+      "Shoe_L",
+      "Shoe_R",
+      "Guan",
+      "Beard",
+      "Fan"
+    ],
+    "robe_sleeve_shared_indices": 0,
+    "robe_sleeve_L_coincident_sample": 0,
+    "note": "Three cloth meshes. No weld. blender_export add_mesh x3."
+  },
+  "topology": {
+    "robe_outer": {
+      "verts": 392,
+      "faces": 364,
+      "boundary": {
+        "boundary_edge_count": 56,
+        "loop_count": 2,
+        "loop_lengths": [
+          28,
+          28
+        ]
+      }
+    },
+    "sleeve_l": {
+      "verts": 176,
+      "faces": 160,
+      "boundary": {
+        "boundary_edge_count": 32,
+        "loop_count": 2,
+        "loop_lengths": [
+          16,
+          16
+        ]
+      }
+    },
+    "sleeve_r": {
+      "verts": 176,
+      "faces": 160,
+      "boundary": {
+        "boundary_edge_count": 32,
+        "loop_count": 2,
+        "loop_lengths": [
+          16,
+          16
+        ]
+      }
+    },
+    "collar": {
+      "verts": 56,
+      "faces": 28,
+      "boundary": {
+        "boundary_edge_count": 56,
+        "loop_count": 2,
+        "loop_lengths": [
+          28,
+          28
+        ]
+      }
+    },
+    "sash": {
+      "verts": 92,
+      "faces": 62,
+      "boundary": {
+        "boundary_edge_count": 56,
+        "loop_count": 2,
+        "loop_lengths": [
+          28,
+          28
+        ]
+      }
+    },
+    "shoe_l": {
+      "verts": 36,
+      "faces": 24,
+      "boundary": {
+        "boundary_edge_count": 24,
+        "loop_count": 2,
+        "loop_lengths": [
+          12,
+          12
+        ]
+      }
+    },
+    "shoe_r": {
+      "verts": 36,
+      "faces": 24,
+      "boundary": {
+        "boundary_edge_count": 24,
+        "loop_count": 2,
+        "loop_lengths": [
+          12,
+          12
+        ]
+      }
+    },
+    "guan": {
+      "verts": 56,
+      "faces": 38,
+      "boundary": {
+        "boundary_edge_count": 32,
+        "loop_count": 2,
+        "loop_lengths": [
+          16,
+          16
+        ]
+      }
+    },
+    "beard": {
+      "verts": 80,
+      "faces": 64,
+      "boundary": {
+        "boundary_edge_count": 32,
+        "loop_count": 2,
+        "loop_lengths": [
+          16,
+          16
+        ]
+      }
+    },
+    "fan": {
+      "verts": 80,
+      "faces": 42,
+      "boundary": {
+        "boundary_edge_count": 72,
+        "loop_count": 18,
+        "loop_lengths": [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4
+        ]
+      }
+    },
+    "body": {
+      "verts": 13380,
+      "faces": 13378,
+      "boundary": {
+        "boundary_edge_count": 0,
+        "loop_count": 0,
+        "loop_lengths": []
+      }
+    }
+  },
+  "guan_crown": {
+    "cap_rings": 3,
+    "last_ring_n": 16,
+    "last_ring_r_min": 0.01256,
+    "last_ring_r_max": 0.08537,
+    "top_filled_fan": false,
+    "covers_scalp_check_is_maxZ_only": true
+  },
+  "elbow": {
+    "ring_frame_twist_deg": 70.9,
+    "bone_kink_deg": 66.71,
+    "elbow_station_kink_deg": 66.71
+  },
+  "false_pass_from_generator": {
+    "face_vis": {
+      "face_z_clear": [
+        1.5,
+        1.655
+      ],
+      "guan_z_min": 1.668,
+      "guan_z_max": 1.798,
+      "guan_min_z_bar": 1.668,
+      "guan_verts_in_face_front": 0,
+      "eyes_nose_mouth_clear": true,
+      "covers_scalp": true,
+      "board_z_min": 1.668,
+      "crown_z": 1.78
+    },
+    "sleeves_cover_upper_arm": true,
+    "sleeves_cover_forearm": true,
+    "sleeve_upper_L": {
+      "n": 262,
+      "uncovered": 0,
+      "covered_frac": 1.0,
+      "covers": true,
+      "worst_outside_m": 0.0
+    },
+    "sleeve_fore_L": {
+      "n": 155,
+      "uncovered": 0,
+      "covered_frac": 1.0,
+      "covers": true,
+      "worst_outside_m": 0.0
+    },
+    "sleeve_upper_R": {
+      "n": 262,
+      "uncovered": 0,
+      "covered_frac": 1.0,
+      "covers": true,
+      "worst_outside_m": 0.0
+    },
+    "sleeve_fore_R": {
+      "n": 155,
+      "uncovered": 0,
+      "covered_frac": 1.0,
+      "covers": true,
+      "worst_outside_m": 0.0
+    },
+    "sleeve_join_L": {
+      "min_m": 0.04287,
+      "verts_closer_than_6mm": 0,
+      "src_n": 16
+    },
+    "sleeve_join_R": {
+      "min_m": 0.04251,
+      "verts_closer_than_6mm": 0,
+      "src_n": 16
+    },
+    "hand_separation": {
+      "min_m": 0.14023,
+      "ok": true
+    },
+    "shoe_L": {
+      "toe_n": 100,
+      "toe_y_min": -0.07096,
+      "shoe_y_min": -0.10189,
+      "toes_in_front_of_shoe": 0,
+      "toes_outside_xy_hull": 0,
+      "ok": true
+    },
+    "shoe_R": {
+      "toe_n": 100,
+      "toe_y_min": -0.07096,
+      "shoe_y_min": -0.09926,
+      "toes_in_front_of_shoe": 0,
+      "toes_outside_xy_hull": 0,
+      "ok": true
+    },
+    "collar_on_robe": {
+      "punch_through_verts": 0,
+      "worst_m": 0.0,
+      "ok": true
+    },
+    "sash_on_robe": {
+      "punch_through_verts": 0,
+      "worst_m": 0.0,
+      "ok": true
+    },
+    "beard_chin": {
+      "top_to_chin_min_m": 0.00295,
+      "ok": true,
+      "volume_verts": 80
+    },
+    "fan_max_z": 1.3307,
+    "fan_below_face": true,
+    "fan_vane_n": 9,
+    "posed_arm_radius_m": {
+      "L_upper": 0.08771,
+      "L_fore": 0.05264,
+      "R_upper": 0.08771,
+      "R_fore": 0.05264
+    }
+  },
+  "notes": [
+    "Boundary loops on a z-loft cylinder are the two open ends (neck+hem or cuff+root or sole+ankle).",
+    "A filled crown would have loop_count 0 on the cap or a single head-opening loop, not an open 16-gon on top."
+  ]
+}
