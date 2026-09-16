@@ -1,0 +1,120 @@
+{
+  "task_id": "CT-3D-02",
+  "title": "诸葛亮真实三维人物 v2",
+  "status": "UNRUN",
+  "execution_kind": "expected",
+  "execution_kind_meaning": "Cloud/static path. Codex must run Blender locally; numbers below are generator census or placeholders.",
+  "blender_present": false,
+  "blender_version_expected": "5.2.1",
+  "blender_version_actual": null,
+  "render_engine": null,
+  "timestamp_utc": "2026-09-16T08:26:57Z",
+  "units": "meters",
+  "height_m": 1.8,
+  "heads": 7.35,
+  "feet_z_blender": 0.0,
+  "glb_yup_expected": true,
+  "root": "ZhugeLiang_Root",
+  "armature": {
+    "present": false,
+    "skins": false,
+    "animations": false,
+    "can_walk": false,
+    "declaration": "Static first version. No armature. Do not claim it can walk."
+  },
+  "materials_max": 8,
+  "materials": [
+    "M_Skin",
+    "M_Hair",
+    "M_RobeIvory",
+    "M_CyanGreen",
+    "M_Gold",
+    "M_Feather",
+    "M_Stone",
+    "M_Wood"
+  ],
+  "tris_target_band": [
+    20000,
+    45000
+  ],
+  "tris_policy": "If look would clearly degrade to hit the band, keep quality and report honestly.",
+  "tris_note": "Inside 20k–45k target band.",
+  "stats_character": {
+    "part_count": 58,
+    "verts": 20402,
+    "tris": 38616,
+    "material_count": 7,
+    "materials_used": [
+      "M_CyanGreen",
+      "M_Feather",
+      "M_Gold",
+      "M_Hair",
+      "M_RobeIvory",
+      "M_Skin",
+      "M_Wood"
+    ]
+  },
+  "stats_all": {
+    "part_count": 77,
+    "verts": 24288,
+    "tris": 43240,
+    "material_count": 8,
+    "materials_used": [
+      "M_CyanGreen",
+      "M_Feather",
+      "M_Gold",
+      "M_Hair",
+      "M_RobeIvory",
+      "M_Skin",
+      "M_Stone",
+      "M_Wood"
+    ]
+  },
+  "v1_baseline_planning_only": {
+    "glb_bytes": 1722920,
+    "primitives": 102,
+    "materials": 8,
+    "verts": 50313,
+    "tris": 85068,
+    "skin_animation": false,
+    "blender_z_min": 0.14,
+    "note": "v1 floated (Z min 0.14). v2 snaps character min Z to 0."
+  },
+  "v1_rejection_addressed_in_construction": [
+    "Head is dual-profile lathe + sockets/brow/nose/zygoma/jaw bumps — not an egg with geometric dots.",
+    "Beard is layered tapering strand sweeps — not a cylinder.",
+    "Guan has brim, crown folds, trail, hairpin — not a bucket.",
+    "Robe is lofted with gravity folds + inner/outer skirt — not a smooth cone.",
+    "Cuffs are a single swept band + gold piping — not jagged overlapping shells.",
+    "Feathers are thin sheets with thickness and a vein ridge — not white sausages."
+  ],
+  "art_approval": {
+    "screenshot_count_is_not_approval": true,
+    "this_handoff_claims_approval": false,
+    "approval_authority": "Codex local review on Mac Blender 5.2.1"
+  },
+  "outputs": [],
+  "static_checks": {
+    "mesh_stats": "written",
+    "py_compile": "pass",
+    "py_compile_error": null,
+    "source_guards": {
+      "has_output_dir_flag": true,
+      "has_dash_dash_argv": true,
+      "banned_api_hits": [],
+      "root_name": true,
+      "declares_no_walk": true
+    }
+  },
+  "notes": [
+    "Generator census only. No GLB/blend/png written because this was --mesh-stats or bpy is missing.",
+    "Static posed meshes. No armature. Cannot walk."
+  ],
+  "unfinished": [
+    "No armature / no walk cycle (intentional for this static first version).",
+    "Object origins are world-layout, not joint-centered — recenter before rigging.",
+    "Roof glaze shares M_CyanGreen with robe trim/guan to stay at 8 materials.",
+    "Cloud VM has no Blender; visual sign-off is Codex on Mac.",
+    "GLB / .blend / view PNGs are absent until Blender 5.2.1 is run."
+  ]
+}
