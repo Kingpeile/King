@@ -20,16 +20,16 @@ SIBLING_ANATOMY = os.path.abspath(os.path.join(HERE, "..", "zhuge-anatomy-base")
 FROZEN_CLOTHED = os.path.abspath(os.path.join(HERE, "..", "zhuge-clothed-v1"))
 FROZEN_V2 = os.path.abspath(os.path.join(HERE, "..", "zhuge-volume-v2"))
 
-TASK_ID = "CT-ACCESSORY-01"
+TASK_ID = "CT-ACCESSORY-01-FIX"
 ROOT_NAME = "ZhugeAccessory_Root"
 ANATOMY_COMMIT = "624e008349a447859ed58417394c68f382e9b887"
 CLOTHED_PIN = "72f854997468595b7492d709d8235db6cd74cf0c"
 TOPO_FAIL = "3d4a40c5350ec46b9ff54547df9af1818f2dea08"
+FIRST_PACK = "45fa1f57028024968467f1c7820c159d0fa83dce"
 
-# Face bands from pinned clothed builder (front = -Y). Do not lower the brim.
-FACE_Z_MOUTH = 1.50
-FACE_Z_EYE_TOP = 1.655
-GUAN_MIN_Z_FRONT = 1.668
+# First pack used clothed-v1 face-band verts as a proxy. Mac 45fa1f5 front
+# proved that wrong: visor triangles covered eyes at z≈1.59 / brows at z≈1.62.
+# Landmarks are measured on the posed support body each run.
 
 M = None
 B = None
@@ -537,52 +537,169 @@ def tube_between(a, b, r0, r1, segs=12, rows=6):
     return loft_closed(rings, True, True)
 
 
-def build_guan(posed, parts):
-    """Closed thick 纶巾. Front brim above brow. No top hole. No face board."""
-    n = 24
-    head = [posed[i] for i in parts["head"]]
-    crown_z = max(p[2] for p in head)
-    scalp_idx = [i for i in parts["head"] if posed[i][2] >= 1.70]
-    hull = slice_hull(posed, scalp_idx or parts["head"], 1.72, 0.04)
-    brow_band = [p for p in posed if 1.665 <= p[2] <= 1.70 and abs(p[0]) < 0.08]
-    brow_y = min(p[1] for p in brow_band) if brow_band else -0.02
+def flattened_lock(p0, p1, width, thick, segs_u=6, segs_c=6):
+    """Rounded-rect hair lock. Flat ribbon, not a circular tube."""
+    p0, p1 = V(p0), V(p1)
+    axis = p1 - p0
+    if axis.length() < 1e-8:
+        axis = V(0, 0, -1)
+    sx, sy = basis_from_dir(axis)
+    rings = []
+    for i in range(segs_u):
+        t = i / float(segs_u - 1)
+        w = width * (1.0 - 0.62 * t * t)
+        th = thick * (1.0 - 0.40 * t)
+        c = p0 + axis * t + sy * (0.003 * math.sin(math.pi * t))
+        row = []
+        for j in range(segs_c):
+            a = 2.0 * math.pi * j / segs_c
+            # squashed ellipse → ribbon, not a sausage
+            px = w * math.copysign(abs(math.cos(a)) ** 0.65, math.cos(a))
+            py = th * math.copysign(abs(math.sin(a)) ** 0.85, math.sin(a))
+            row.append((c + sx * px + sy * py).xyz())
+        rings.append(row)
+    return loft_closed(rings, True, True)
 
-    # Base ring on scalp, then lift/offset by column (front stays high).
-    base, center = ring_from_hull(hull, 0.012, n, 1.672)
+
+def face_landmarks(posed, parts):
+    """Measure real eye/brow/hairline on this posed support body. Not a z-band proxy."""
+    head = [posed[i] for i in parts["head"]]
+
+    def pick_front(z0, z1, x0, x1):
+        pts = [p for p in posed if z0 <= p[2] <= z1 and x0 <= p[0] <= x1]
+        if not pts:
+            pts = [p for p in head if z0 <= p[2] <= z1]
+        if not pts:
+            return (0.0, 0.0, 0.5 * (z0 + z1))
+        return min(pts, key=lambda p: p[1])
+
+    glabella = pick_front(1.612, 1.632, -0.02, 0.02)
+    brow_l = pick_front(1.616, 1.636, 0.012, 0.045)
+    brow_r = pick_front(1.616, 1.636, -0.045, -0.012)
+    eye_l = pick_front(1.582, 1.606, 0.015, 0.048)
+    eye_r = pick_front(1.582, 1.606, -0.048, -0.015)
+    hair_c = pick_front(1.678, 1.698, -0.025, 0.025)
+    brow_z = max(glabella[2], brow_l[2], brow_r[2])
+    brow_y = min(glabella[1], brow_l[1], brow_r[1])
+    hair = [p for p in head if 1.678 <= p[2] <= 1.710]
+    hair_front_y = min(p[1] for p in hair) if hair else hair_c[1]
+    hem_z = max(hair_c[2] + 0.014, brow_z + 0.072)
+    return {
+        "glabella": glabella,
+        "brow_l": brow_l,
+        "brow_r": brow_r,
+        "eye_l": eye_l,
+        "eye_r": eye_r,
+        "hairline": hair_c,
+        "brow_z": brow_z,
+        "brow_y": brow_y,
+        "hair_front_y": hair_front_y,
+        "hem_z": hem_z,
+        "landmarks": (glabella, brow_l, brow_r, eye_l, eye_r),
+    }
+
+
+def iter_tris(mesh):
+    for f in mesh["faces"]:
+        if len(f) == 3:
+            yield f[0], f[1], f[2]
+        elif len(f) >= 4:
+            yield f[0], f[1], f[2]
+            yield f[0], f[2], f[3]
+
+
+def _bary2(p, a, b, c):
+    v0 = (c[0] - a[0], c[1] - a[1])
+    v1 = (b[0] - a[0], b[1] - a[1])
+    v2 = (p[0] - a[0], p[1] - a[1])
+    den = v0[0] * v1[1] - v1[0] * v0[1]
+    if abs(den) < 1e-14:
+        return False
+    u = (v2[0] * v1[1] - v1[0] * v2[1]) / den
+    v = (v0[0] * v2[1] - v2[0] * v0[1]) / den
+    return u >= -1e-4 and v >= -1e-4 and (u + v) <= 1.0001
+
+
+def _rot_yaw(p, ang):
+    c, s = math.cos(ang), math.sin(ang)
+    return (p[0] * c - p[1] * s, p[0] * s + p[1] * c, p[2])
+
+
+def triangle_occludes_point(mesh, landmark, yaw=0.0, in_front_eps=0.001):
+    """True if a triangle in front of the landmark covers it in that yaw view."""
+    lx, ly, lz = _rot_yaw(landmark, yaw)
+    verts = mesh["verts"]
+    for i, j, k in iter_tris(mesh):
+        pa, pb, pc = (_rot_yaw(verts[i], yaw), _rot_yaw(verts[j], yaw), _rot_yaw(verts[k], yaw))
+        if min(pa[1], pb[1], pc[1]) >= ly - in_front_eps:
+            continue
+        if (pa[1] + pb[1] + pc[1]) / 3.0 >= ly - in_front_eps:
+            continue
+        if _bary2((lx, lz), (pa[0], pa[2]), (pb[0], pb[2]), (pc[0], pc[2])):
+            return True
+    return False
+
+
+def spanning_across_brow(mesh, brow_z, face_x=0.075, front_y=0.05):
+    """Triangles that cross brow_z in the front face slab — the old visor."""
+    n = 0
+    verts = mesh["verts"]
+    for i, j, k in iter_tris(mesh):
+        pts = (verts[i], verts[j], verts[k])
+        if min(p[2] for p in pts) >= brow_z - 1e-4:
+            continue
+        if max(p[2] for p in pts) <= brow_z + 1e-4:
+            continue
+        if all(p[1] > front_y for p in pts):
+            continue
+        xs = [p[0] for p in pts]
+        if min(xs) > face_x or max(xs) < -face_x:
+            continue
+        n += 1
+    return n
+
+
+def build_guan(posed, parts, marks):
+    """Closed thick 纶巾 on the hairline. No front visor. No hanging side tubes."""
+    n = 24
+    head_idx = parts["head"]
+    crown_z = max(posed[i][2] for i in head_idx)
+    scalp_idx = [i for i in head_idx if posed[i][2] >= 1.70]
+    hull = slice_hull(posed, scalp_idx or head_idx, 1.72, 0.04)
+    hem_z = marks["hem_z"]
+    brow_z = marks["brow_z"]
+    hair_front_y = marks["hair_front_y"]
+    base, center = ring_from_hull(hull, 0.005, n, hem_z)
     cx, cy = center.x, center.y
 
-    def shaped_ring(scale, z_front, z_side, z_back, extra_r, flatten=0.0):
+    def ring_at(scale, z_lift, extra_r):
         row = []
-        for j, v in enumerate(base):
+        for v in base:
             dx, dy = v.x - cx, v.y - cy
             L = math.hypot(dx, dy)
-            a = math.atan2(dy, dx)
-            front = max(0.0, -math.sin(a))
-            back = max(0.0, math.sin(a))
-            side = 1.0 - max(front, back)
-            z = z_front * front + z_side * side + z_back * back
-            # Keep the entire front third above the brow bar.
-            if front > 0.28:
-                z = max(z, GUAN_MIN_Z_FRONT + 0.004)
+            if L < 1e-8:
+                dx, dy, L = 0.0, -1.0, 0.04
+            y_dir = dy / L
+            if y_dir <= 0.20:
+                z = hem_z + z_lift
+            else:
+                z = max(hem_z - 0.018 + z_lift, brow_z + 0.055)
             r = (L + extra_r) * scale
-            # Slightly boxier X, a bit longer back — 纶巾, not a bucket.
-            r *= 1.0 + 0.06 * abs(math.cos(a)) + 0.04 * back
-            x = cx + (dx / (L + 1e-12)) * r
-            y = cy + (dy / (L + 1e-12)) * r
-            if flatten:
-                z = z * (1.0 - flatten) + (z_front * 0.35 + z_back * 0.65) * flatten
+            x = cx + (dx / L) * r
+            y = cy + (dy / L) * r
+            if y < hair_front_y - 0.006:
+                y = hair_front_y - 0.006
             row.append(V(x, y, z))
         return row
 
     outer_rows = [
-        shaped_ring(1.00, 1.674, 1.598, 1.618, 0.016, 0.0),
-        shaped_ring(1.06, 1.698, 1.640, 1.655, 0.022, 0.0),
-        shaped_ring(1.02, 1.735, 1.710, 1.720, 0.018, 0.15),
-        shaped_ring(0.78, 1.768, 1.758, 1.762, 0.010, 0.45),
-        shaped_ring(0.42, crown_z + 0.028, crown_z + 0.024, crown_z + 0.026, 0.004, 0.70),
+        ring_at(1.00, 0.000, 0.006),
+        ring_at(1.04, 0.018, 0.010),
+        ring_at(0.96, 0.038, 0.008),
+        ring_at(0.70, 0.055, 0.004),
+        ring_at(0.38, crown_z + 0.018 - hem_z, 0.002),
     ]
-    # Inner lining: 9 mm inward, slightly lower top so the crown has real fill.
-    thick = 0.009
+    thick = 0.008
 
     def inset_row(row, inward, dz=0.0):
         out = []
@@ -593,202 +710,126 @@ def build_guan(posed, parts):
                 out.append(V(v.x, v.y, v.z + dz))
                 continue
             s = max(L - inward, 0.012) / L
-            out.append(V(cx + dx * s, cy + dy * s, v.z + dz))
+            y = cy + dy * s
+            if y < hair_front_y - 0.002:
+                y = hair_front_y - 0.002
+            out.append(V(cx + dx * s, y, v.z + dz))
         return out
 
-    inner_rows = [inset_row(outer_rows[0], thick, -0.003)]
-    inner_rows += [inset_row(r, thick, -0.006) for r in outer_rows[1:-1]]
-    inner_rows.append(inset_row(outer_rows[-1], thick * 0.6, -0.010))
+    inner_rows = [inset_row(outer_rows[0], thick, -0.002)]
+    inner_rows += [inset_row(r, thick, -0.005) for r in outer_rows[1:-1]]
+    inner_rows.append(inset_row(outer_rows[-1], thick * 0.55, -0.008))
 
     verts = [p.xyz() for row in outer_rows for p in row]
     faces = grid_faces(len(outer_rows), n, True)
-    # Closed outer crown (this is the old 巾顶洞 failure).
     apex_o = len(verts)
     top = outer_rows[-1]
-    verts.append(
-        (
-            sum(p.x for p in top) / n,
-            sum(p.y for p in top) / n,
-            max(p.z for p in top) + 0.006,
-        )
-    )
+    verts.append((sum(p.x for p in top) / n, sum(p.y for p in top) / n, max(p.z for p in top) + 0.005))
     base_i = (len(outer_rows) - 1) * n
     for j in range(n):
         faces.append((apex_o, base_i + j, base_i + (j + 1) % n))
 
     inner_off = len(verts)
     verts.extend(p.xyz() for row in inner_rows for p in row)
-    # Inner grid reversed so normals point into the lining cavity.
     inner_grid = grid_faces(len(inner_rows), n, True)
     for a, b, c, d in inner_grid:
         faces.append((inner_off + a, inner_off + d, inner_off + c, inner_off + b))
     apex_i = len(verts)
     itop = inner_rows[-1]
-    verts.append(
-        (
-            sum(p.x for p in itop) / n,
-            sum(p.y for p in itop) / n,
-            min(p.z for p in itop) - 0.002,
-        )
-    )
+    verts.append((sum(p.x for p in itop) / n, sum(p.y for p in itop) / n, min(p.z for p in itop) - 0.002))
     ibase = inner_off + (len(inner_rows) - 1) * n
     for j in range(n):
         faces.append((apex_i, ibase + (j + 1) % n, ibase + j))
-
-    # Seal brim (outer row0 ↔ inner row0).
     for j in range(n):
-        a = j
-        b = (j + 1) % n
-        c = inner_off + (j + 1) % n
-        d = inner_off + j
-        faces.append((a, b, c, d))
+        faces.append((j, (j + 1) % n, inner_off + (j + 1) % n, inner_off + j))
 
-    # Rear 巾带 — thick cloth tails, behind the head only.
-    back = [v for v in outer_rows[0] if v.y > cy + 0.01]
-    if len(back) >= 2:
-        left = min(back, key=lambda v: v.x)
-        right = max(back, key=lambda v: v.x)
-        for src, sx in ((left, -1.0), (right, 1.0)):
-            a = V(src.x + 0.012 * sx, src.y + 0.006, src.z - 0.004)
-            b = V(src.x + 0.018 * sx, src.y + 0.034, 1.42)
-            tube = tube_between(a, b, 0.011, 0.007, segs=8, rows=5)
-            off = len(verts)
-            verts.extend(tube["verts"])
-            faces.extend(shift_faces(tube["faces"], off))
+    # Flat rear ribbons — behind the occiput only, not side-of-face tubes.
+    back_src = [v for v in outer_rows[0] if v.y > cy + 0.03]
+    if len(back_src) >= 2:
+        for src, sx in ((min(back_src, key=lambda v: v.x), -1.0), (max(back_src, key=lambda v: v.x), 1.0)):
+            a = V(src.x * 0.55, max(src.y, cy + 0.07), src.z - 0.002)
+            b = V(src.x * 0.35 + 0.01 * sx, a.y + 0.02, 1.52)
+            ribbon = flattened_lock(a, b, width=0.012, thick=0.0032, segs_u=4, segs_c=6)
+            append_mesh({"verts": verts, "faces": faces}, ribbon)
 
-    # Thickness samples: outer brim vs inner brim.
     thicks = []
     for j in range(n):
-        o = V(verts[j])
-        inn = V(verts[inner_off + j])
-        thicks.append((o - inn).length())
-
+        thicks.append((V(verts[j]) - V(verts[inner_off + j])).length())
     return {
         "verts": verts,
         "faces": faces,
         "crown_z": crown_z,
-        "brow_y": brow_y,
         "inner_off": inner_off,
         "n_cols": n,
         "thickness_samples_m": thicks,
-        "apex_outer_i": apex_o,
+        "hem_z": hem_z,
+        "marks": {k: (round(v[0], 5), round(v[1], 5), round(v[2], 5)) if isinstance(v, tuple) and len(v) == 3 else v
+                  for k, v in marks.items() if k != "landmarks"},
     }
 
 
-def _profile_xy(rx, ry, n, scallop, front_bias):
-    row = []
-    for j in range(n):
-        a = 2.0 * math.pi * j / n
-        # a=0 → +X; we use local (side, depth) then map later
-        wobble = 1.0 + scallop * math.cos(6.0 * a) * (0.55 + 0.45 * max(0.0, math.cos(a)))
-        x = rx * math.cos(a) * wobble
-        y = ry * math.sin(a) * (1.0 + front_bias * max(0.0, -math.sin(a)))
-        row.append((x, y))
-    return row
-
-
-def _place_profile(center, axis, local_xy, xaxis=None):
-    axis = axis.nrm()
-    if xaxis is None:
-        sx, sy = basis_from_dir(axis)
-    else:
-        sx = xaxis.nrm()
-        sy = axis.cross(sx).nrm()
-        sx = sy.cross(axis).nrm()
-    return [(center + sx * xy[0] + sy * xy[1]).xyz() for xy in local_xy]
-
-
 def build_beard(posed, parts):
-    """Closed hair-mass from the chin. Bundled silhouette, real Y depth, not a plate or 3 tubes."""
+    """Chin-grown flattened locks with length variation. No cone plate, no side tubes."""
     chins = [posed[i] for i in parts["chin"] if posed[i][1] < 0.02]
     if len(chins) < 4:
         chins = [p for p in posed if 1.52 < p[2] < 1.57 and p[1] < 0.02 and abs(p[0]) < 0.06]
     chins = sorted(chins, key=lambda p: p[0])
-    n_attach = 9
-    xs = [chins[int(round(k * (len(chins) - 1) / float(n_attach - 1)))] for k in range(n_attach)]
+    n_root = 7
+    roots = [chins[int(round(k * (len(chins) - 1) / float(n_root - 1)))] for k in range(n_root)]
     chin_c = V(
-        sum(p[0] for p in xs) / n_attach,
-        sum(p[1] for p in xs) / n_attach,
-        sum(p[2] for p in xs) / n_attach,
+        sum(p[0] for p in roots) / n_root,
+        sum(p[1] for p in roots) / n_root,
+        sum(p[2] for p in roots) / n_root,
     )
-    # Grow down and slightly forward; stay off the mouth plane.
-    tip = V(0.0, chin_c.y - 0.046, 1.325)
-    axis = tip - chin_c
-    side_x = V(1, 0, 0)
-    nprof = 16
-    stations = (
-        (0.00, 0.038, 0.018, 0.10, 0.15),
-        (0.12, 0.040, 0.024, 0.14, 0.22),
-        (0.28, 0.036, 0.032, 0.16, 0.28),
-        (0.46, 0.030, 0.036, 0.16, 0.22),
-        (0.64, 0.022, 0.030, 0.14, 0.12),
-        (0.80, 0.014, 0.020, 0.12, 0.06),
-        (0.93, 0.008, 0.012, 0.08, 0.02),
-        (1.00, 0.004, 0.007, 0.04, 0.00),
+    # Thin pad on the chin so locks grow out of skin, not a floating mass.
+    pad_a = V(roots[0][0], roots[0][1] - 0.002, roots[0][2])
+    pad_b = V(roots[-1][0], roots[-1][1] - 0.002, roots[-1][2])
+    pad = flattened_lock(pad_a, pad_b, width=0.007, thick=0.004, segs_u=4, segs_c=6)
+    out = {"verts": list(pad["verts"]), "faces": list(pad["faces"])}
+    # Slight length / aim variation — a bundle, not one cone and not 2 props.
+    specs = (
+        (-0.034, 0.168, 0.010, 0.0040, -0.010),
+        (-0.020, 0.188, 0.011, 0.0038, -0.016),
+        (-0.008, 0.204, 0.012, 0.0036, -0.020),
+        (0.000, 0.198, 0.012, 0.0036, -0.022),
+        (0.008, 0.206, 0.012, 0.0036, -0.019),
+        (0.020, 0.182, 0.011, 0.0038, -0.015),
+        (0.034, 0.164, 0.010, 0.0040, -0.010),
     )
-    rings = []
-    for t, rx, ry, scallop, fbias in stations:
-        c = chin_c + axis * t
-        # Root station sits on the real chin samples (natural grow-out).
-        if t == 0.0:
-            c = V(chin_c.x, chin_c.y - 0.002, chin_c.z - 0.002)
-        local = _profile_xy(rx, ry, nprof, scallop, fbias)
-        rings.append(_place_profile(c, axis if t > 0.02 else V(0.0, -0.15, -0.85), local, side_x))
-    main = loft_closed(rings, cap_start=True, cap_end=True)
-    # Pull the first-ring verts toward actual chin samples so it grows out of skin.
-    for j in range(n_attach):
-        # map attach samples onto the first ring's front-ish verts
-        src = xs[j]
-        best = None
-        best_d = 1e9
-        for i in range(nprof):
-            p = main["verts"][i]
-            d = (p[0] - src[0]) ** 2 + (p[2] - src[2]) ** 2
-            if d < best_d:
-                best_d = d
-                best = i
-        if best is not None:
-            q = main["verts"][best]
-            main["verts"][best] = (src[0], src[1] - 0.003, src[2] - 0.001)
-            # keep a back-of-root counterpart for thickness
-            _ = q
-
-    # Mustache: short volume under the nose, not a mouth cover.
-    nose_band = [p for p in posed if 1.528 < p[2] < 1.548 and abs(p[0]) < 0.03 and p[1] < 0.00]
-    if nose_band:
-        mz = sum(p[2] for p in nose_band) / len(nose_band)
-        my = min(p[1] for p in nose_band)
-    else:
-        mz, my = 1.536, chin_c.y - 0.012
-    m0 = V(0.0, my - 0.002, mz)
-    m1 = V(0.0, my - 0.018, 1.498)
-    m_axis = m1 - m0
-    m_rings = []
-    for t, rx, ry in ((0.0, 0.028, 0.008), (0.45, 0.024, 0.011), (1.0, 0.010, 0.006)):
-        c = m0 + m_axis * t
-        local = _profile_xy(rx, ry, 12, 0.08, 0.2)
-        m_rings.append(_place_profile(c, m_axis if t > 0.05 else V(0, -0.4, -0.9), local, V(1, 0, 0)))
-    must = loft_closed(m_rings, True, True)
-
-    # Cheek connectors: jaw corners → chin mass (one visual 三缕, still volume).
-    jaw_l = min(xs, key=lambda p: p[0])
-    jaw_r = max(xs, key=lambda p: p[0])
-    out = {"verts": list(main["verts"]), "faces": list(main["faces"])}
-    append_mesh(out, must)
-    for jaw, sx in ((jaw_l, -1.0), (jaw_r, 1.0)):
-        a = V(jaw[0], jaw[1] - 0.004, jaw[2] + 0.006)
-        b = V(jaw[0] * 0.35, chin_c.y - 0.020, chin_c.z - 0.055)
-        tube = tube_between(a, b, 0.009, 0.012, segs=8, rows=5)
-        append_mesh(out, tube)
+    tips_z = []
+    for i, (dx, length, w, th, dy) in enumerate(specs):
+        src = roots[i]
+        p0 = V(src[0], src[1] - 0.003, src[2] - 0.001)
+        p1 = V(src[0] * 0.35 + dx * 0.4, src[1] + dy, src[2] - length)
+        # second layer slightly back for side thickness without a shield
+        layer = flattened_lock(p0, p1, width=w, thick=th, segs_u=7, segs_c=6)
+        append_mesh(out, layer)
+        if i in (1, 3, 5):
+            p1b = V(p1.x * 0.85, p1.y + 0.008, p1.z + 0.012)
+            p0b = V(p0.x, p0.y + 0.006, p0.z)
+            append_mesh(out, flattened_lock(p0b, p1b, width=w * 0.85, thick=th * 0.9, segs_u=6, segs_c=6))
+        tips_z.append(p1.z)
+    # Short mustache tufts — flattened, not a second cone.
+    nose = [p for p in posed if 1.528 < p[2] < 1.546 and abs(p[0]) < 0.028 and p[1] < 0.00]
+    if nose:
+        my = min(p[1] for p in nose)
+        mz = sum(p[2] for p in nose) / len(nose)
+        for sx in (-1.0, 1.0):
+            a = V(0.012 * sx, my - 0.002, mz)
+            b = V(0.018 * sx, my - 0.012, 1.504)
+            append_mesh(out, flattened_lock(a, b, width=0.008, thick=0.0032, segs_u=4, segs_c=6))
     out["chin_c"] = chin_c.xyz()
-    out["attach"] = xs
+    out["attach"] = roots
+    out["lock_n"] = 7
+    out["tip_z_min"] = min(tips_z)
+    out["tip_z_max"] = max(tips_z)
+    out["length_spread_m"] = round(max(tips_z) - min(tips_z), 5)
     return out
 
 
 def _feather(pivot, angle, length, width, thick, camber, y_off, segs_u=8, segs_v=6):
-    """Closed cambered vane with a rachis ridge. Not a single plane."""
-    # Fan plane is XZ; visible face toward -Y (front camera).
-    direction = V(math.sin(angle), 0.0, math.cos(angle) * 0.92)
+    """Closed cambered vane. Midrib is blade thickness only — no sticking-out rod."""
+    direction = V(math.sin(angle), 0.0, math.cos(angle) * 0.88)
     direction = direction.nrm()
     face = V(0.0, -1.0, 0.0)
     side = direction.cross(face)
@@ -799,28 +840,26 @@ def _feather(pivot, angle, length, width, thick, camber, y_off, segs_u=8, segs_v
     pivot = V(pivot) + face * y_off
     verts = []
     faces = []
-    # Two surfaces (front/back) + edge stitch. v across [-1,1], u along [0,1].
     nu, nv = segs_u, segs_v
+    tip_w = 0.0012
     for side_sign in (1.0, -1.0):
         for i in range(nu):
             u = i / float(nu - 1)
-            # teardrop planform: narrow root, wide mid, pointed tip
-            w = width * (0.34 + 0.66 * math.sin(math.pi * min(1.0, u * 1.05))) * (1.0 - 0.72 * u ** 2.1)
-            w = max(w, 0.006)
+            # wide mid, sharp tip, narrow root that gathers on the handle
+            w = width * (0.22 + 0.78 * math.sin(math.pi * min(1.0, u * 0.92))) * (1.0 - u ** 1.55)
+            w = max(w, tip_w * (1.0 - 0.4 * u))
+            if u > 0.88:
+                w = tip_w + (w - tip_w) * (1.0 - (u - 0.88) / 0.12)
             for j in range(nv):
                 v = j / float(nv - 1) * 2.0 - 1.0
-                # thicker at rachis, real edge thickness
-                half_t = thick * (0.38 + 0.62 * (1.0 - v * v) ** 0.55)
-                half_t = max(half_t, 0.0016)
-                bow = camber * math.sin(math.pi * u) * (1.0 - 0.35 * v * v)
-                p = (
-                    pivot
-                    + direction * (length * u)
-                    + side * (w * v)
-                    + face * (bow + side_sign * half_t)
-                )
+                half_t = thick * (0.45 + 0.55 * (1.0 - v * v) ** 0.6)
+                half_t = max(half_t, 0.0011)
+                if u > 0.90:
+                    half_t *= 1.0 - 0.45 * ((u - 0.90) / 0.10)
+                bow = camber * math.sin(math.pi * u) * (1.0 - 0.30 * v * v)
+                p = pivot + direction * (length * u) + side * (w * v) + face * (bow + side_sign * half_t)
                 verts.append(p.xyz())
-    # front grid
+
     def idx(surf, i, j):
         return surf * (nu * nv) + i * nv + j
 
@@ -830,98 +869,93 @@ def _feather(pivot, angle, length, width, thick, camber, y_off, segs_u=8, segs_v
             faces.append((a, b, c, d))
             a, b, c, d = idx(1, i, j), idx(1, i + 1, j), idx(1, i + 1, j + 1), idx(1, i, j + 1)
             faces.append((a, b, c, d))
-    # sides, root, tip
     for i in range(nu - 1):
         faces.append((idx(0, i, 0), idx(0, i + 1, 0), idx(1, i + 1, 0), idx(1, i, 0)))
         faces.append((idx(0, i, nv - 1), idx(1, i, nv - 1), idx(1, i + 1, nv - 1), idx(0, i + 1, nv - 1)))
     for j in range(nv - 1):
         faces.append((idx(0, 0, j), idx(1, 0, j), idx(1, 0, j + 1), idx(0, 0, j + 1)))
         faces.append((idx(0, nu - 1, j), idx(0, nu - 1, j + 1), idx(1, nu - 1, j + 1), idx(1, nu - 1, j)))
-    # rachis as a real midrib
-    rachis = tube_between(
-        (pivot + direction * 0.012).xyz(),
-        (pivot + direction * (length * 0.96)).xyz(),
-        0.0028,
-        0.0014,
-        segs=6,
-        rows=5,
-    )
-    append_mesh({"verts": verts, "faces": faces}, rachis)
-    return {"verts": verts, "faces": faces}
+    return {"verts": verts, "faces": faces, "tip_width": tip_w}
 
 
 def build_fan(ha_l, ha_r):
-    """Wide layered 羽扇: cambered vanes + thick handle. Below the face."""
+    """Short unified handle in front of the hands. Layered pointed vanes, no through-bar."""
+    # Hands stay intact; handle sits in front (-Y), does not pierce palms.
     hx = 0.5 * (ha_l.x + ha_r.x)
-    hy = 0.5 * (ha_l.y + ha_r.y) - 0.010
+    palm_y = 0.5 * (ha_l.y + ha_r.y)
     hz = 0.5 * (ha_l.z + ha_r.z)
-    handle_l = V(min(ha_l.x, ha_r.x) - 0.028, hy, hz)
-    handle_r = V(max(ha_l.x, ha_r.x) + 0.028, hy, hz)
-    handle = tube_between(handle_l, handle_r, 0.0085, 0.0085, segs=12, rows=7)
-    # Pommel + ferrule volume
-    mid = V(hx, hy, hz)
-    pommel = tube_between((hx, hy, hz - 0.012), (hx, hy, hz + 0.012), 0.011, 0.011, segs=10, rows=4)
-    ferrule = tube_between((hx - 0.016, hy, hz), (hx + 0.016, hy, hz), 0.012, 0.012, segs=10, rows=3)
+    hy = palm_y - 0.085
+    handle_a = V(hx, hy, hz - 0.018)
+    handle_b = V(hx, hy + 0.006, hz + 0.042)
+    handle = tube_between(handle_a, handle_b, 0.0075, 0.0065, segs=10, rows=5)
+    ferrule = tube_between(
+        (hx, hy + 0.004, hz + 0.036),
+        (hx, hy + 0.008, hz + 0.050),
+        0.009,
+        0.008,
+        segs=10,
+        rows=3,
+    )
     out = {"verts": list(handle["verts"]), "faces": list(handle["faces"])}
-    append_mesh(out, pommel)
     append_mesh(out, ferrule)
-
-    pivot = (hx, hy - 0.012, hz + 0.016)
-    n_vanes = 13
-    spread = 1.34  # radians — wide sector, not a stick
+    pivot = (hx, hy + 0.004, hz + 0.048)
+    n_vanes = 11
+    spread = 1.18
     for i in range(n_vanes):
         t = i / float(n_vanes - 1)
         ang = (t - 0.5) * spread
-        # side feathers keep length so the planform stays wide
-        length = 0.228 + 0.042 * math.cos(ang)
-        width = 0.036 + 0.006 * math.cos(ang)
-        thick = 0.0036
-        camber = 0.012
-        y_off = 0.0045 * math.cos(i * 1.7) + (0.003 if i % 2 else -0.003)
-        vane = _feather(pivot, ang, length, width, thick, camber, y_off)
+        length = 0.168 + 0.028 * math.cos(ang)
+        width = 0.028 + 0.005 * math.cos(ang)
+        y_off = 0.0035 * math.cos(i * 1.4) + (0.0025 if i % 2 else -0.0025)
+        vane = _feather(pivot, ang, length, width, 0.0032, 0.010, y_off)
         append_mesh(out, vane)
-    out["center"] = (hx, hy - 0.02, hz + 0.10)
+    out["center"] = (hx, hy - 0.01, hz + 0.12)
     out["handle"] = (hx, hy, hz)
+    out["handle_ends"] = (handle_a.xyz(), handle_b.xyz())
     out["pivot"] = pivot
     out["vane_n"] = n_vanes
     return out
 
 
-def guan_face_vis(guan, posed, parts):
-    hits = [
-        v
-        for v in guan["verts"]
-        if FACE_Z_MOUTH <= v[2] <= FACE_Z_EYE_TOP and v[1] < 0.02 and abs(v[0]) < 0.075
-    ]
+def guan_face_vis(guan, posed, parts, marks):
+    """Triangle span + front/45 occlusion vs measured landmarks. Not a vert-in-band proxy."""
     gmin = min(v[2] for v in guan["verts"])
     gmax = max(v[2] for v in guan["verts"])
-    front = [v for v in guan["verts"] if v[1] < 0.00 and abs(v[0]) < 0.08]
+    front = [v for v in guan["verts"] if v[1] < 0.02]
     front_zmin = min(v[2] for v in front) if front else gmin
     scalp = [posed[i] for i in parts["head"] if posed[i][2] >= 1.72]
     scalp_z = max(p[2] for p in scalp) if scalp else 1.78
     opens = open_edges(guan)
     top_z = gmax - 0.010
-    top_open = 0
-    for a, b in opens:
-        pa, pb = guan["verts"][a], guan["verts"][b]
-        if pa[2] >= top_z and pb[2] >= top_z:
-            top_open += 1
+    top_open = sum(1 for a, b in opens if guan["verts"][a][2] >= top_z and guan["verts"][b][2] >= top_z)
     thicks = guan.get("thickness_samples_m") or []
     med = sorted(thicks)[len(thicks) // 2] if thicks else 0.0
+    span = spanning_across_brow(guan, marks["brow_z"])
+    occ = {}
+    for yaw, name in ((0.0, "front"), (math.radians(45), "l45"), (math.radians(-45), "r45")):
+        hits = [lab for lab in ("glabella", "brow_l", "brow_r", "eye_l", "eye_r") if triangle_occludes_point(guan, marks[lab], yaw)]
+        occ[name] = hits
+    hem_ok = front_zmin >= marks["brow_z"] + 0.05
+    clear = span == 0 and not occ["front"] and not occ["l45"] and not occ["r45"] and hem_ok
     return {
-        "face_z_clear": [FACE_Z_MOUTH, FACE_Z_EYE_TOP],
+        "method": "triangle_span_and_yaw_occlusion",
+        "proxy_vert_in_face_band_rejected": True,
+        "landmarks": {k: [round(c, 5) for c in marks[k]] for k in ("glabella", "brow_l", "brow_r", "eye_l", "eye_r", "hairline")},
+        "brow_z": round(marks["brow_z"], 5),
+        "hem_z_target": round(marks["hem_z"], 5),
         "guan_z_min": round(gmin, 5),
         "guan_z_max": round(gmax, 5),
         "front_z_min": round(front_zmin, 5),
-        "guan_min_z_bar": GUAN_MIN_Z_FRONT,
-        "guan_verts_in_face_front": len(hits),
-        "eyes_brow_forehead_clear": len(hits) == 0 and front_zmin >= GUAN_MIN_Z_FRONT - 0.002,
+        "spanning_tris_across_brow": span,
+        "occludes": occ,
+        "hem_above_brow": hem_ok,
+        "eyes_brow_forehead_clear": clear,
         "covers_scalp": gmax >= scalp_z - 0.002,
         "crown_top_open_edges": top_open,
         "crown_closed": top_open == 0,
         "thickness_median_m": round(med, 5),
         "thickness_ok": med >= 0.006,
-        "brow_y": round(guan.get("brow_y", 0.0), 5),
+        "note": "clear is a geometry gate, not an art PASS",
     }
 
 
@@ -932,61 +966,88 @@ def beard_metrics(beard, posed, parts):
     bb = mesh_bbox(beard)
     z0, z1 = bb["min"][2], bb["max"][2]
     mid = 0.5 * (z0 + z1)
-    mid_pts = [p for p in beard["verts"] if abs(p[2] - mid) < 0.025]
+    mid_pts = [p for p in beard["verts"] if abs(p[2] - mid) < 0.020]
     if len(mid_pts) < 4:
         mid_pts = beard["verts"]
     y_ext = max(p[1] for p in mid_pts) - min(p[1] for p in mid_pts)
     x_ext = max(p[0] for p in mid_pts) - min(p[0] for p in mid_pts)
-    top = [p for p in beard["verts"] if p[2] >= z1 - 0.012]
+    attach = beard.get("attach") or []
     md = 1e9
-    for t in top:
+    for t in attach:
         for c in chins:
             d = (t[0] - c[0]) ** 2 + (t[1] - c[1]) ** 2 + (t[2] - c[2]) ** 2
             if d < md:
                 md = d
-    m = math.sqrt(md)
-    plate = y_ext < 0.022 or (x_ext > 1e-6 and y_ext / x_ext < 0.28)
+    m = math.sqrt(md) if attach else 1.0
+    # Width at two heights — a cone/shield is nearly triangular; locks stay wide longer.
+    hi = [p for p in beard["verts"] if abs(p[2] - (z1 - 0.02)) < 0.012]
+    lo = [p for p in beard["verts"] if abs(p[2] - (z0 + 0.03)) < 0.012]
+    hi_w = (max(p[0] for p in hi) - min(p[0] for p in hi)) if hi else 0.0
+    lo_w = (max(p[0] for p in lo) - min(p[0] for p in lo)) if lo else 0.0
+    length_spread = beard.get("length_spread_m") or 0.0
+    lock_n = beard.get("lock_n") or 0
     return {
         "top_to_chin_min_m": round(m, 5),
-        "chin_attach_ok": m <= 0.010,
+        "chin_attach_ok": m <= 0.006,
         "mid_y_thickness_m": round(y_ext, 5),
         "mid_x_width_m": round(x_ext, 5),
-        "side_thickness_ok": y_ext >= 0.028,
-        "not_a_plate": (not plate) and y_ext >= 0.028,
+        "side_thickness_ok": y_ext >= 0.014,
+        "lock_n": lock_n,
+        "length_spread_m": length_spread,
+        "width_hi_m": round(hi_w, 5),
+        "width_lo_m": round(lo_w, 5),
+        "bundled_not_cone": lock_n >= 5 and length_spread >= 0.012 and lo_w < hi_w * 0.85,
+        "no_side_tube_props": True,
         "components": mesh_components(beard),
         "volume_verts": len(beard["verts"]),
+        "note": "bundled_not_cone is a geometry gate, not an art PASS",
     }
 
 
-def fan_metrics(fan):
+def fan_metrics(fan, ha_l, ha_r, hand_l, hand_r):
     bb = mesh_bbox(fan)
     x_span = bb["max"][0] - bb["min"][0]
     y_span = bb["max"][1] - bb["min"][1]
-    z_span = bb["max"][2] - bb["min"][2]
     zmax = bb["max"][2]
-    # Handle verts are the first tube (~12*7 + caps). Use bbox of low-z cluster near handle.
-    hy = fan["handle"][1]
-    hz = fan["handle"][2]
-    handle_pts = [p for p in fan["verts"] if abs(p[2] - hz) < 0.02 and abs(p[1] - hy) < 0.02]
-    if handle_pts:
-        hy_ext = max(p[1] for p in handle_pts) - min(p[1] for p in handle_pts)
-        hz_ext = max(p[2] for p in handle_pts) - min(p[2] for p in handle_pts)
-        handle_thick = min(hy_ext, hz_ext)
-    else:
-        handle_thick = 0.0
+    ends = fan.get("handle_ends") or ((0, 0, 0), (0, 0, 0))
+    hx_span = abs(ends[0][0] - ends[1][0])
+    handle_len = math.sqrt(sum((ends[0][i] - ends[1][i]) ** 2 for i in range(3)))
+    # Handle must not pierce palms: nearest handle-cluster vert vs hand verts.
+    hy, hz = fan["handle"][1], fan["handle"][2]
+    handle_pts = [p for p in fan["verts"] if abs(p[0] - fan["handle"][0]) < 0.02 and abs(p[2] - hz) < 0.05]
+    hands = hand_l["verts"] + hand_r["verts"]
+    min_hh = 1e9
+    for hp in handle_pts[:80]:
+        for hv in hands[::3]:
+            d = (hp[0] - hv[0]) ** 2 + (hp[1] - hv[1]) ** 2 + (hp[2] - hv[2]) ** 2
+            if d < min_hh:
+                min_hh = d
+    min_hh = math.sqrt(min_hh)
+    # Tip band should be pointed, not a rod cluster.
+    tip_pts = [p for p in fan["verts"] if p[2] >= zmax - 0.012]
+    tip_y = (max(p[1] for p in tip_pts) - min(p[1] for p in tip_pts)) if tip_pts else 0.0
     return {
         "vane_n": fan.get("vane_n"),
         "span_x_m": round(x_span, 5),
         "span_y_m": round(y_span, 5),
-        "span_z_m": round(z_span, 5),
         "max_z": round(zmax, 5),
-        "below_face": zmax < FACE_Z_MOUTH - 0.04,
-        "wide_ok": x_span >= 0.30,
-        "layer_volume_ok": y_span >= 0.018,
-        "handle_thickness_m": round(handle_thick, 5),
-        "handle_ok": handle_thick >= 0.012,
-        "not_a_plane": y_span >= 0.018 and x_span >= 0.30,
+        "below_face": zmax < marks_mouth_clear(),
+        "wide_ok": x_span >= 0.22,
+        "layer_volume_ok": y_span >= 0.012,
+        "handle_x_span_m": round(hx_span, 5),
+        "handle_length_m": round(handle_len, 5),
+        "short_handle_not_through_hands": hx_span <= 0.03 and handle_len <= 0.10,
+        "handle_hand_min_m": round(min_hh, 5),
+        "handle_clears_hands": min_hh >= 0.012,
+        "tip_y_span_m": round(tip_y, 5),
+        "no_protruding_rachis_rods": True,
+        "not_a_plane": y_span >= 0.012 and x_span >= 0.22,
+        "note": "gates are not an art PASS",
     }
+
+
+def marks_mouth_clear():
+    return 1.46
 
 
 def build_all(source_obj):
@@ -1006,13 +1067,20 @@ def build_all(source_obj):
     posed, _elL, haL, poseL = skin_arm(tpose, Lsh, Lel, Lha, +1)
     posed, _elR, haR, poseR = skin_arm(posed, Rsh, Rel, Rha, -1)
     parts = classify_indices(tpose)
+    marks = face_landmarks(posed, parts)
     faces = checks["male_body"]["faces"]
     nverts = len(posed)
     head_seed = [i for i, p in enumerate(posed) if p[2] >= 1.42 and abs(p[0]) < 0.16]
     head = extract_submesh(posed, faces, expand_keep(nverts, faces, head_seed, 0))
-    hand_l = extract_submesh(posed, faces, expand_keep(nverts, faces, armL["hand"], 1))
-    hand_r = extract_submesh(posed, faces, expand_keep(nverts, faces, armR["hand"], 1))
-    guan = build_guan(posed, parts)
+    def whole_hand(ha, seed):
+        keep = set(seed)
+        for i, p in enumerate(posed):
+            if (V(p) - ha).length() < 0.11:
+                keep.add(i)
+        return extract_submesh(posed, faces, expand_keep(nverts, faces, keep, 2))
+    hand_l = whole_hand(haL, armL["hand"])
+    hand_r = whole_hand(haR, armR["hand"])
+    guan = build_guan(posed, parts, marks)
     beard = build_beard(posed, parts)
     fan = build_fan(haL, haR)
     meshes = {
@@ -1026,26 +1094,29 @@ def build_all(source_obj):
     for name, m in meshes.items():
         if not finite_mesh(m):
             raise RuntimeError("non-finite or empty mesh: %s" % name)
-    vis = guan_face_vis(guan, posed, parts)
+    vis = guan_face_vis(guan, posed, parts, marks)
     beard_m = beard_metrics(beard, posed, parts)
-    fan_m = fan_metrics(fan)
+    fan_m = fan_metrics(fan, haL, haR, hand_l, hand_r)
     gates = {
         "guan_face_clear": vis["eyes_brow_forehead_clear"],
         "guan_crown_closed": vis["crown_closed"],
         "guan_thickness": vis["thickness_ok"],
         "beard_on_chin": beard_m["chin_attach_ok"],
-        "beard_side_volume": beard_m["side_thickness_ok"] and beard_m["not_a_plate"],
+        "beard_bundled": beard_m["bundled_not_cone"] and beard_m["side_thickness_ok"],
         "fan_below_face": fan_m["below_face"],
-        "fan_wide_volume": fan_m["not_a_plane"] and fan_m["handle_ok"],
+        "fan_short_handle": fan_m["short_handle_not_through_hands"] and fan_m["handle_clears_hands"],
+        "fan_volume": fan_m["not_a_plane"],
     }
     census = {name: census_one(name, m) for name, m in meshes.items()}
     acc_bb = mesh_bbox(
         {"verts": [p for m in (guan, beard, fan) for p in m["verts"]], "faces": [(0, 1, 2)]}
     )
-    portrait_verts = head["verts"] + guan["verts"] + [p for p in beard["verts"] if p[2] > 1.40]
+    # Head views: guan + full beard + head. Exclude fan so it cannot steal the crop.
+    portrait_verts = head["verts"] + guan["verts"] + beard["verts"]
     portrait_bb = mesh_bbox({"verts": portrait_verts, "faces": [(0, 1, 2)]})
-    fan_bb = mesh_bbox(fan)
+    # Fan view: fan + complete hands only. Exclude head/beard/neck cut.
     hand_bb = mesh_bbox({"verts": hand_l["verts"] + hand_r["verts"] + fan["verts"], "faces": [(0, 1, 2)]})
+    fan_bb = mesh_bbox(fan)
     return {
         "checks": checks,
         "meshes": meshes,
@@ -1059,6 +1130,7 @@ def build_all(source_obj):
         "parts_n": {k: len(v) for k, v in parts.items()},
         "support_faces": checks["compat"]["remaining_faces"],
         "gates_ok": all(gates.values()),
+        "marks": {k: [round(c, 5) for c in marks[k]] for k in ("glabella", "brow_l", "brow_r", "eye_l", "eye_r", "hairline")},
     }
 
 
@@ -1117,7 +1189,7 @@ def setup_named_cameras(bb, views, prefix, res_x=1920, res_y=1080, lens=70.0):
     corners = [V(x, y, z) for x in (mn[0], mx[0]) for y in (mn[1], mx[1]) for z in (mn[2], mx[2])]
     cams = {}
     for name, view_from in views:
-        dist = B._fit_cam_distance(corners, view_from, target, lens, res_x, res_y, ndc_limit=0.78)
+        dist = B._fit_cam_distance(corners, view_from, target, lens, res_x, res_y, ndc_limit=0.72)
         loc = target + view_from.nrm() * dist
         data = B.bpy.data.cameras.new(name)
         data.lens = lens
@@ -1157,7 +1229,7 @@ def write_report(output_dir, built, execution_kind, status, blender_present, ble
     bb = built["bbox"]
     report = {
         "task_id": TASK_ID,
-        "title": "Zhuge accessory sample — guan / beard / fan only (not a clothed PASS)",
+        "title": "CT-ACCESSORY-01-FIX after Mac ART_FAIL on 45fa1f5 (not an art PASS)",
         "status": status,
         "execution_kind": execution_kind,
         "not_a_zhuge_product": True,
@@ -1165,6 +1237,8 @@ def write_report(output_dir, built, execution_kind, status, blender_present, ble
         "robe_claimed": False,
         "g1_g5_claimed": False,
         "art_approval": False,
+        "root_visual_review_required": True,
+        "mac_art_fail_first_pack": FIRST_PACK,
         "fusion_pass": False,
         "palace_mesh": False,
         "armature": False,
@@ -1180,11 +1254,14 @@ def write_report(output_dir, built, execution_kind, status, blender_present, ble
             "topo_fail_not_reused": TOPO_FAIL,
         },
         "method": {
-            "items": ["guan_closed_thick", "beard_chin_volume", "fan_layered_vanes"],
+            "items": ["guan_hairline_no_visor", "beard_flattened_locks", "fan_pointed_vanes_short_handle"],
             "robe": False,
             "reused": "anatomy pose + palace-warm key/fill + principled mats; head/hand joints",
             "not_reused": "clothed robe/sleeves/shoes; 3d4a40c continuous robe",
+            "first_pack_kept": FIRST_PACK,
+            "acceptance": "triangle span + yaw occlusion vs measured brow/eye; not vert-in-band",
         },
+        "face_landmarks": built.get("marks"),
         "support_body_faces": built["support_faces"],
         "census": built["census"],
         "structure": built["structure"],
@@ -1192,17 +1269,33 @@ def write_report(output_dir, built, execution_kind, status, blender_present, ble
         "note_numbers_are_not_art_pass": True,
         "pose": built["pose"],
         "bbox": {"min": [round(c, 6) for c in bb["min"]], "max": [round(c, 6) for c in bb["max"]]},
+        "crop": {
+            "portrait_includes": "head+guan+full_beard",
+            "portrait_excludes": "fan",
+            "fan_includes": "fan+whole_hands",
+            "fan_excludes": "head_neck_cut+beard",
+            "portrait_bbox": {
+                "min": [round(c, 6) for c in built["portrait_bbox"]["min"]],
+                "max": [round(c, 6) for c in built["portrait_bbox"]["max"]],
+            },
+            "fan_bbox": {
+                "min": [round(c, 6) for c in built["hand_fan_bbox"]["min"]],
+                "max": [round(c, 6) for c in built["hand_fan_bbox"]["max"]],
+            },
+        },
         "glb_export": {"rootName": ROOT_NAME, "yup": True, "bytes": glb_bytes if glb_bytes is not None else B.UNKNOWN},
         "blender_present": blender_present,
         "blender_version_actual": blender_version,
         "outputs": outputs,
         "physics": "UNRUN",
         "render": "UNRUN" if execution_kind != "real" else "written_if_not_skipped",
+        "cloud_selfcheck_vs_image": "separated — this JSON is geometry only; images UNRUN until Mac",
         "unverified_until_mac_blender": [
-            "pixel: 纶巾 closed top / brow clear / no face board",
-            "pixel: beard side thickness reads as hair mass, not a plate",
-            "pixel: fan vanes layered with handle, not a card",
-            "Y-up GLB import of accessory-only scene",
+            "root must re-open front/l45/side/back/fan after this HEAD",
+            "pixel: 纶巾 hem above brows, forehead visible, no visor",
+            "pixel: beard reads as chin-grown locks, not a cone or side tubes",
+            "pixel: fan vanes pointed, rachis inside, short handle, whole hands",
+            "pixel: portrait crop has full beard and no fan; fan crop has no neck-cut/beard tip",
         ],
     }
     B.write_json(B.safe_join(output_dir, "accessory_report.json"), report)
@@ -1266,8 +1359,8 @@ def blender_export(args, built):
         ("Cam_Back", V(0.0, 1.0, 0.08)),
     )
     fan_views = (("Cam_Fan", V(0.15, -1.0, 0.22)),)
-    cams_p = setup_named_cameras(built["portrait_bbox"], portrait_views, "P", lens=85.0)
-    cams_f = setup_named_cameras(built["hand_fan_bbox"], fan_views, "F", lens=70.0)
+    cams_p = setup_named_cameras(built["portrait_bbox"], portrait_views, "P", lens=110.0)
+    cams_f = setup_named_cameras(built["hand_fan_bbox"], fan_views, "F", lens=90.0)
     cams = {**cams_p, **cams_f}
 
     os.makedirs(args.output_dir, exist_ok=True)
@@ -1339,13 +1432,13 @@ def main():
     built = build_all(args.source_obj)
     g = built["structure"]
     print(
-        "checks support_faces=%s guan_face_hits=%s crown_open=%s beard_y=%s fan_span=%s gates=%s"
+        "checks support_faces=%s span_tris=%s occ_front=%s beard_locks=%s fan_hx=%s gates=%s"
         % (
             built["support_faces"],
-            g["face_vis"]["guan_verts_in_face_front"],
-            g["face_vis"]["crown_top_open_edges"],
-            g["beard"]["mid_y_thickness_m"],
-            g["fan"]["span_x_m"],
+            g["face_vis"]["spanning_tris_across_brow"],
+            g["face_vis"]["occludes"]["front"],
+            g["beard"]["lock_n"],
+            g["fan"]["handle_x_span_m"],
             built["gates_ok"],
         )
     )

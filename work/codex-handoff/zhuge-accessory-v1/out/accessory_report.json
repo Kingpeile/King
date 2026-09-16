@@ -1,6 +1,6 @@
 {
-  "task_id": "CT-ACCESSORY-01",
-  "title": "Zhuge accessory sample — guan / beard / fan only (not a clothed PASS)",
+  "task_id": "CT-ACCESSORY-01-FIX",
+  "title": "CT-ACCESSORY-01-FIX after Mac ART_FAIL on 45fa1f5 (not an art PASS)",
   "status": "UNRUN",
   "execution_kind": "expected",
   "not_a_zhuge_product": true,
@@ -8,6 +8,8 @@
   "robe_claimed": false,
   "g1_g5_claimed": false,
   "art_approval": false,
+  "root_visual_review_required": true,
+  "mac_art_fail_first_pack": "45fa1f57028024968467f1c7820c159d0fa83dce",
   "fusion_pass": false,
   "palace_mesh": false,
   "armature": false,
@@ -20,13 +22,47 @@
   },
   "method": {
     "items": [
-      "guan_closed_thick",
-      "beard_chin_volume",
-      "fan_layered_vanes"
+      "guan_hairline_no_visor",
+      "beard_flattened_locks",
+      "fan_pointed_vanes_short_handle"
     ],
     "robe": false,
     "reused": "anatomy pose + palace-warm key/fill + principled mats; head/hand joints",
-    "not_reused": "clothed robe/sleeves/shoes; 3d4a40c continuous robe"
+    "not_reused": "clothed robe/sleeves/shoes; 3d4a40c continuous robe",
+    "first_pack_kept": "45fa1f57028024968467f1c7820c159d0fa83dce",
+    "acceptance": "triangle span + yaw occlusion vs measured brow/eye; not vert-in-band"
+  },
+  "face_landmarks": {
+    "glabella": [
+      0.0,
+      -0.03392,
+      1.62111
+    ],
+    "brow_l": [
+      0.01383,
+      -0.02731,
+      1.61662
+    ],
+    "brow_r": [
+      -0.01383,
+      -0.02731,
+      1.61662
+    ],
+    "eye_l": [
+      0.01735,
+      -0.02131,
+      1.59085
+    ],
+    "eye_r": [
+      -0.01735,
+      -0.02131,
+      1.59085
+    ],
+    "hairline": [
+      0.0,
+      -0.02195,
+      1.68386
+    ]
   },
   "support_body_faces": 13378,
   "census": {
@@ -54,110 +90,110 @@
     },
     "ref_hand_l": {
       "name": "ref_hand_l",
-      "verts": 305,
-      "faces": 274,
-      "tris": 548,
+      "verts": 552,
+      "faces": 513,
+      "tris": 1026,
       "components": 1,
-      "open_edges": 62,
+      "open_edges": 80,
       "zero_area_faces": 0,
       "bbox": {
         "min": [
-          0.06046,
-          -0.30755,
-          1.07367
+          0.03637,
+          -0.32774,
+          1.06397
         ],
         "max": [
-          0.23155,
-          -0.12761,
-          1.19496
+          0.254,
+          -0.0835,
+          1.2073
         ]
       },
       "finite": true
     },
     "ref_hand_r": {
       "name": "ref_hand_r",
-      "verts": 305,
-      "faces": 274,
-      "tris": 548,
+      "verts": 552,
+      "faces": 513,
+      "tris": 1026,
       "components": 1,
-      "open_edges": 62,
+      "open_edges": 80,
       "zero_area_faces": 0,
       "bbox": {
         "min": [
-          -0.23155,
-          -0.30755,
-          1.07367
+          -0.254,
+          -0.32774,
+          1.06397
         ],
         "max": [
-          -0.06046,
-          -0.12761,
-          1.19496
+          -0.03637,
+          -0.0835,
+          1.2073
         ]
       },
       "finite": true
     },
     "guan": {
       "name": "guan",
-      "verts": 326,
-      "faces": 360,
-      "tris": 640,
+      "verts": 294,
+      "faces": 324,
+      "tris": 576,
       "components": 3,
       "open_edges": 0,
       "zero_area_faces": 0,
       "bbox": {
         "min": [
-          -0.13272,
-          -0.06237,
-          1.41892
+          -0.09583,
+          -0.02795,
+          1.51943
         ],
         "max": [
-          0.12966,
-          0.24876,
-          1.81309
+          0.0943,
+          0.21954,
+          1.803
         ]
       },
       "finite": true
     },
     "beard": {
       "name": "beard",
-      "verts": 252,
-      "faces": 288,
-      "tris": 488,
-      "components": 4,
+      "verts": 500,
+      "faces": 552,
+      "tris": 948,
+      "components": 13,
       "open_edges": 0,
       "zero_area_faces": 0,
       "bbox": {
         "min": [
-          -0.06022,
-          -0.06409,
-          1.3237
+          -0.05559,
+          -0.03271,
+          1.33198
         ],
         "max": [
-          0.06022,
-          0.0222,
-          1.58618
+          0.05559,
+          0.02253,
+          1.57935
         ]
       },
       "finite": true
     },
     "fan": {
       "name": "fan",
-      "verts": 1824,
-      "faces": 1876,
-      "tris": 3532,
-      "components": 29,
+      "verts": 1140,
+      "faces": 1134,
+      "tris": 2228,
+      "components": 13,
       "open_edges": 0,
       "zero_area_faces": 0,
       "bbox": {
         "min": [
-          -0.178,
-          -0.27454,
-          1.128
+          -0.11677,
+          -0.32979,
+          1.12125
         ],
         "max": [
-          0.178,
-          -0.228,
-          1.426
+          0.11677,
+          -0.29931,
+          1.384
         ]
       },
       "finite": true
@@ -165,54 +201,103 @@
   },
   "structure": {
     "face_vis": {
-      "face_z_clear": [
-        1.5,
-        1.655
-      ],
-      "guan_z_min": 1.41892,
-      "guan_z_max": 1.81309,
-      "front_z_min": 1.669,
-      "guan_min_z_bar": 1.668,
-      "guan_verts_in_face_front": 0,
+      "method": "triangle_span_and_yaw_occlusion",
+      "proxy_vert_in_face_band_rejected": true,
+      "landmarks": {
+        "glabella": [
+          0.0,
+          -0.03392,
+          1.62111
+        ],
+        "brow_l": [
+          0.01383,
+          -0.02731,
+          1.61662
+        ],
+        "brow_r": [
+          -0.01383,
+          -0.02731,
+          1.61662
+        ],
+        "eye_l": [
+          0.01735,
+          -0.02131,
+          1.59085
+        ],
+        "eye_r": [
+          -0.01735,
+          -0.02131,
+          1.59085
+        ],
+        "hairline": [
+          0.0,
+          -0.02195,
+          1.68386
+        ]
+      },
+      "brow_z": 1.62111,
+      "hem_z_target": 1.69786,
+      "guan_z_min": 1.51943,
+      "guan_z_max": 1.803,
+      "front_z_min": 1.69586,
+      "spanning_tris_across_brow": 0,
+      "occludes": {
+        "front": [],
+        "l45": [],
+        "r45": []
+      },
+      "hem_above_brow": true,
       "eyes_brow_forehead_clear": true,
       "covers_scalp": true,
       "crown_top_open_edges": 0,
       "crown_closed": true,
-      "thickness_median_m": 0.00949,
+      "thickness_median_m": 0.00825,
       "thickness_ok": true,
-      "brow_y": -0.02195
+      "note": "clear is a geometry gate, not an art PASS"
     },
     "beard": {
-      "top_to_chin_min_m": 0.00316,
+      "top_to_chin_min_m": 0.0,
       "chin_attach_ok": true,
-      "mid_y_thickness_m": 0.07853,
-      "mid_x_width_m": 0.06744,
+      "mid_y_thickness_m": 0.04753,
+      "mid_x_width_m": 0.08231,
       "side_thickness_ok": true,
-      "not_a_plate": true,
-      "components": 4,
-      "volume_verts": 252
+      "lock_n": 7,
+      "length_spread_m": 0.07847,
+      "width_hi_m": 0.09601,
+      "width_lo_m": 0.02293,
+      "bundled_not_cone": true,
+      "no_side_tube_props": true,
+      "components": 13,
+      "volume_verts": 500,
+      "note": "bundled_not_cone is a geometry gate, not an art PASS"
     },
     "fan": {
-      "vane_n": 13,
-      "span_x_m": 0.356,
-      "span_y_m": 0.04654,
-      "span_z_m": 0.298,
-      "max_z": 1.426,
+      "vane_n": 11,
+      "span_x_m": 0.23354,
+      "span_y_m": 0.03048,
+      "max_z": 1.384,
       "below_face": true,
       "wide_ok": true,
       "layer_volume_ok": true,
-      "handle_thickness_m": 0.03182,
-      "handle_ok": true,
-      "not_a_plane": true
+      "handle_x_span_m": 0.0,
+      "handle_length_m": 0.0603,
+      "short_handle_not_through_hands": true,
+      "handle_hand_min_m": 0.04623,
+      "handle_clears_hands": true,
+      "tip_y_span_m": 0.01293,
+      "no_protruding_rachis_rods": true,
+      "not_a_plane": true,
+      "note": "gates are not an art PASS"
     },
     "gates": {
       "guan_face_clear": true,
       "guan_crown_closed": true,
       "guan_thickness": true,
       "beard_on_chin": true,
-      "beard_side_volume": true,
+      "beard_bundled": true,
       "fan_below_face": true,
-      "fan_wide_volume": true
+      "fan_short_handle": true,
+      "fan_volume": true
     }
   },
   "gates_ok": true,
@@ -239,15 +324,45 @@
   },
   "bbox": {
     "min": [
-      -0.178,
-      -0.274536,
-      1.128
+      -0.11677,
+      -0.329788,
+      1.121254
     ],
     "max": [
-      0.178,
-      0.248761,
-      1.813089
+      0.11677,
+      0.219545,
+      1.803
     ]
+  },
+  "crop": {
+    "portrait_includes": "head+guan+full_beard",
+    "portrait_excludes": "fan",
+    "fan_includes": "fan+whole_hands",
+    "fan_excludes": "head_neck_cut+beard",
+    "portrait_bbox": {
+      "min": [
+        -0.158531,
+        -0.033921,
+        1.331979
+      ],
+      "max": [
+        0.158531,
+        0.221246,
+        1.803
+      ]
+    },
+    "fan_bbox": {
+      "min": [
+        -0.253999,
+        -0.329788,
+        1.063969
+      ],
+      "max": [
+        0.253999,
+        -0.083497,
+        1.384
+      ]
+    }
   },
   "glb_export": {
     "rootName": "ZhugeAccessory_Root",
@@ -259,10 +374,12 @@
   "outputs": [],
   "physics": "UNRUN",
   "render": "UNRUN",
+  "cloud_selfcheck_vs_image": "separated — this JSON is geometry only; images UNRUN until Mac",
   "unverified_until_mac_blender": [
-    "pixel: 纶巾 closed top / brow clear / no face board",
-    "pixel: beard side thickness reads as hair mass, not a plate",
-    "pixel: fan vanes layered with handle, not a card",
-    "Y-up GLB import of accessory-only scene"
+    "root must re-open front/l45/side/back/fan after this HEAD",
+    "pixel: 纶巾 hem above brows, forehead visible, no visor",
+    "pixel: beard reads as chin-grown locks, not a cone or side tubes",
+    "pixel: fan vanes pointed, rachis inside, short handle, whole hands",
+    "pixel: portrait crop has full beard and no fan; fan crop has no neck-cut/beard tip"
   ]
 }
