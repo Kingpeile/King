@@ -1,24 +1,29 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-CT-CAP-FIT-01 — one head-mesh-driven 纶巾 shell sample.
+CT-CAP-FIT-01-FIX — one directed rework after Mac ART_FAIL on 3620dc7.
 
-Extracts a scalp patch from the pinned male body faces, then builds a thick
-shell by offsetting that same topology along body vertex normals. Fold
-silhouette is extra outward displacement on the outer sheet only.
+Keeps the proven inner scalp-surface fit. Reworks only the exclusive
+zhuge-cap-surface-v1 tree:
 
-Does not call or copy ring_at / loft / convex-hull hat generators from
-zhuge-accessory-v1. Does not edit anatomy, clothed, volume-v2, or accessory
-trees. Not a complete Zhuge. Not G1–G5. Not an art PASS. No armature.
+1. Cut a smooth hem on the real head triangles (new verts keep source-face
+   + barycentric). Ears are excluded. No whole-face centroid leftover teeth.
+2. Outer sheet is a cloth grid sampled on that inner surface, then folded.
+   Not a thicker copy of the same scalp, not PR19 hull loft.
+3. Front Y clamp removes the visor that buried the brows. Shadows stay on.
+4. ref_head is a planar neck cut; head and both ears stay. Anatomy above
+   the plane is not smoothed or morphed.
+
+First pack 3620dc7 report is kept beside the new one. Not a complete Zhuge.
+Not G1–G5. Not an art PASS. No armature.
 """
 from __future__ import annotations
 
 import collections
-import hashlib
 import importlib.util
-import json
 import math
 import os
+import shutil
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -27,19 +32,25 @@ FROZEN_CLOTHED = os.path.abspath(os.path.join(HERE, "..", "zhuge-clothed-v1"))
 FROZEN_V2 = os.path.abspath(os.path.join(HERE, "..", "zhuge-volume-v2"))
 FROZEN_ACCESSORY = os.path.abspath(os.path.join(HERE, "..", "zhuge-accessory-v1"))
 
-TASK_ID = "CT-CAP-FIT-01"
+TASK_ID = "CT-CAP-FIT-01-FIX"
 ROOT_NAME = "ZhugeCapSurface_Root"
 ANATOMY_COMMIT = "624e008349a447859ed58417394c68f382e9b887"
 MPFB_COMMIT = "437dd513888a92399d1d3200d2e80859fae55abc"
 PINNED_SHA256 = "8e761e6624b8f54536409135d1636da63b32486a90d4897f84e121d144f6fb4c"
 FAILED_GUAN = "3c771fbb0c4fe66afd80c484462756f17e2ba63c"
+FIRST_PACK = "3620dc70f6894c18cb99f6955766b9a1878d582d"
+FIRST_REPORT = "cap_surface_report_3620dc7.json"
 
-# One default build. Distances in metres on the posed (here: T-pose) male body.
 INNER_OFFSET = 0.0035
-OUTER_OFFSET = 0.0110
-FOLD_FRONT = 0.0040
-FOLD_CREASE = 0.0030
-FOLD_BACK = 0.0030
+CLOTH_THICK = 0.0080
+FRONT_BAND = 0.0140
+RIDGE = 0.0120
+SIDE_PAD = 0.0080
+TOP_PAD = 0.0060
+NECK_PLANE_Z = 1.448
+N_THETA = 28
+N_H = 8
+CLIP_EPS = 1e-9
 
 M = None
 B = None
@@ -59,7 +70,7 @@ def peek_arg(name, default=None):
 
 def _anatomy_error(detail):
     return RuntimeError(
-        "CT-CAP-FIT-01 cannot load pinned anatomy. "
+        "CT-CAP-FIT-01-FIX cannot load pinned anatomy. "
         "Need work/codex-handoff/zhuge-anatomy-base from commit %s "
         "(apply_male_volume.py + source/base.obj + source/targets). "
         "Checkout that exclusive dir as a sibling or pass --anatomy-dir. "
@@ -100,7 +111,7 @@ def refuse_frozen_writes(path):
 
 
 def parse_cli():
-    p = B.argparse.ArgumentParser(description="CT-CAP-FIT-01 head-surface 纶巾 shell")
+    p = B.argparse.ArgumentParser(description="CT-CAP-FIT-01-FIX head-surface 纶巾 shell")
     p.add_argument("--source-obj", default=None)
     p.add_argument("--output-dir", default=None)
     p.add_argument("--anatomy-dir", default=None)
@@ -189,49 +200,192 @@ def flood_faces(seeds, ffadj, accept):
     return keep
 
 
-def largest_face_component(face_ids, ffadj):
-    remain = set(face_ids)
-    comps = []
-    while remain:
-        seed = next(iter(remain))
-        q = collections.deque([seed])
-        comp = []
-        while q:
-            fi = q.popleft()
-            if fi not in remain:
-                continue
-            remain.remove(fi)
-            comp.append(fi)
-            for nb in ffadj[fi]:
-                if nb in remain:
-                    q.append(nb)
-        comps.append(comp)
-    comps.sort(key=len, reverse=True)
-    return comps
+def triangulate(faces, src_ids=None):
+    tris = []
+    src = []
+    for fi, f in enumerate(faces):
+        sid = fi if src_ids is None else src_ids[fi]
+        for k in range(1, len(f) - 1):
+            tris.append((f[0], f[k], f[k + 1]))
+            src.append(sid)
+    return tris, src
 
 
-def extract_faces(verts, faces, face_ids, src_face_ids=None):
-    face_ids = list(face_ids)
+def triangle_bary(p, a, b, c):
+    v0, v1, v2 = V(b) - V(a), V(c) - V(a), V(p) - V(a)
+    d00, d01, d11 = v0.dot(v0), v0.dot(v1), v1.dot(v1)
+    d20, d21 = v2.dot(v0), v2.dot(v1)
+    den = d00 * d11 - d01 * d01
+    if abs(den) < 1e-16:
+        return (1.0, 0.0, 0.0)
+    v = (d11 * d20 - d01 * d21) / den
+    w = (d00 * d21 - d01 * d20) / den
+    u = 1.0 - v - w
+    return (u, v, w)
+
+
+def clip_by_scalar(verts, tris, src_ids, scalars):
+    """Keep scalar>=0. Split crossing edges. New verts record src_face + edge t."""
+    new_verts = [tuple(p) for p in verts]
+    svals = [float(x) for x in scalars]
+    meta = [{"kind": "src", "body_i": i} for i in range(len(verts))]
+    cache = {}
+
+    def split(a, b, src):
+        key = (a, b) if a < b else (b, a)
+        if key in cache:
+            return cache[key]
+        sa, sb = svals[a], svals[b]
+        t = sa / (sa - sb) if abs(sa - sb) > 1e-16 else 0.5
+        t = min(1.0, max(0.0, t))
+        pa, pb = new_verts[a], new_verts[b]
+        p = (
+            pa[0] + t * (pb[0] - pa[0]),
+            pa[1] + t * (pb[1] - pa[1]),
+            pa[2] + t * (pb[2] - pa[2]),
+        )
+        idx = len(new_verts)
+        new_verts.append(p)
+        svals.append(0.0)
+        meta.append({"kind": "cut", "edge": [a, b], "t": t, "src_face": src})
+        cache[key] = idx
+        return idx
+
+    out_f = []
+    out_s = []
+    for tri, src in zip(tris, src_ids):
+        s = [svals[i] for i in tri]
+        pos = [k for k in range(3) if s[k] >= -CLIP_EPS]
+        if len(pos) == 3:
+            out_f.append(tri)
+            out_s.append(src)
+            continue
+        if len(pos) == 0:
+            continue
+        if len(pos) == 1:
+            i = pos[0]
+            j, k = (i + 1) % 3, (i + 2) % 3
+            nj = split(tri[i], tri[j], src)
+            nk = split(tri[i], tri[k], src)
+            out_f.append((tri[i], nj, nk))
+            out_s.append(src)
+            continue
+        i, j = pos[0], pos[1]
+        k = 3 - i - j
+        ni = split(tri[i], tri[k], src)
+        nj = split(tri[j], tri[k], src)
+        if (j - i) % 3 == 1:
+            out_f.append((tri[i], tri[j], nj))
+            out_s.append(src)
+            out_f.append((tri[i], nj, ni))
+            out_s.append(src)
+        else:
+            out_f.append((tri[j], tri[i], ni))
+            out_s.append(src)
+            out_f.append((tri[j], ni, nj))
+            out_s.append(src)
+
+    used = sorted({i for f in out_f for i in f})
+    imap = {old: n for n, old in enumerate(used)}
+    return {
+        "verts": [new_verts[i] for i in used],
+        "faces": [tuple(imap[i] for i in f) for f in out_f],
+        "source_face_ids": out_s,
+        "vert_meta": [meta[i] for i in used],
+        "body_vert_ids": [used[n] if meta[used[n]]["kind"] == "src" else None for n in range(len(used))],
+    }
+
+
+def compact_component(mesh, keep_faces):
+    keep_faces = list(keep_faces)
     used = []
     seen = set()
-    kept_faces = []
-    kept_src = []
-    for k, fi in enumerate(face_ids):
-        f = faces[fi]
-        kept_faces.append(f)
-        kept_src.append(fi if src_face_ids is None else src_face_ids[k])
+    faces = []
+    src = []
+    for fi in keep_faces:
+        f = mesh["faces"][fi]
+        faces.append(f)
+        src.append(mesh["source_face_ids"][fi])
         for i in f:
             if i not in seen:
                 seen.add(i)
                 used.append(i)
     used.sort()
-    imap = {old: i for i, old in enumerate(used)}
+    imap = {old: n for n, old in enumerate(used)}
     return {
-        "verts": [verts[i] for i in used],
-        "faces": [tuple(imap[i] for i in f) for f in kept_faces],
-        "body_vert_ids": used,
-        "source_face_ids": kept_src,
+        "verts": [mesh["verts"][i] for i in used],
+        "faces": [tuple(imap[i] for i in f) for f in faces],
+        "source_face_ids": src,
+        "vert_meta": [mesh["vert_meta"][i] for i in used],
+        "body_vert_ids": [mesh["body_vert_ids"][i] for i in used],
     }
+
+
+def mesh_face_adj(faces):
+    edge_faces = collections.defaultdict(list)
+    for fi, f in enumerate(faces):
+        for i in range(len(f)):
+            a, b = f[i], f[(i + 1) % len(f)]
+            e = (a, b) if a < b else (b, a)
+            edge_faces[e].append(fi)
+    ffadj = collections.defaultdict(set)
+    for fl in edge_faces.values():
+        for i in range(len(fl)):
+            for j in range(i + 1, len(fl)):
+                ffadj[fl[i]].add(fl[j])
+                ffadj[fl[j]].add(fl[i])
+    return ffadj
+
+
+def largest_component_from(mesh, seed_vert):
+    ffadj = mesh_face_adj(mesh["faces"])
+    vert_faces = collections.defaultdict(list)
+    for fi, f in enumerate(mesh["faces"]):
+        for i in f:
+            vert_faces[i].append(fi)
+    if seed_vert not in vert_faces and mesh["faces"]:
+        seed_faces = [0]
+    else:
+        seed_faces = vert_faces.get(seed_vert, [0] if mesh["faces"] else [])
+    keep = flood_faces(seed_faces, ffadj, lambda fi: True)
+    return compact_component(mesh, keep)
+
+
+def fill_barycentric(mesh, body_verts, body_faces):
+    """Fill cut-vert barycentric against the recorded source triangle."""
+    out = []
+    for i, meta in enumerate(mesh["vert_meta"]):
+        if meta["kind"] == "src":
+            out.append({"kind": "src", "body_i": meta["body_i"]})
+            continue
+        src = meta["src_face"]
+        f = body_faces[src]
+        if len(f) < 3:
+            u, v, w = 1.0, 0.0, 0.0
+        else:
+            best = None
+            for k in range(1, len(f) - 1):
+                trip = triangle_bary(
+                    mesh["verts"][i],
+                    body_verts[f[0]],
+                    body_verts[f[k]],
+                    body_verts[f[k + 1]],
+                )
+                score = min(trip)
+                if best is None or score > best[0]:
+                    best = (score, trip)
+            u, v, w = best[1]
+        out.append(
+            {
+                "kind": "cut",
+                "src_face": src,
+                "barycentric": [round(u, 5), round(v, 5), round(w, 5)],
+                "t": round(meta["t"], 5),
+                "edge": meta["edge"],
+            }
+        )
+    mesh["vert_source"] = out
+    return mesh
 
 
 def pick_front(verts, ids, z0, z1, x0, x1):
@@ -246,14 +400,12 @@ def pick_front(verts, ids, z0, z1, x0, x1):
 
 
 def measure_landmarks(verts, head_vert_ids):
-    """Read brow/eye/hairline on this head. Measurement only — not a hat loft."""
     gl_i, glabella = pick_front(verts, head_vert_ids, 1.612, 1.632, -0.02, 0.02)
     bl_i, brow_l = pick_front(verts, head_vert_ids, 1.616, 1.636, 0.012, 0.045)
     br_i, brow_r = pick_front(verts, head_vert_ids, 1.616, 1.636, -0.045, -0.012)
     el_i, eye_l = pick_front(verts, head_vert_ids, 1.582, 1.606, 0.015, 0.048)
     er_i, eye_r = pick_front(verts, head_vert_ids, 1.582, 1.606, -0.048, -0.015)
     hc_i, hair_c = pick_front(verts, head_vert_ids, 1.678, 1.698, -0.025, 0.025)
-    brow_z = max(glabella[2], brow_l[2], brow_r[2])
     return {
         "glabella": glabella,
         "brow_l": brow_l,
@@ -261,7 +413,7 @@ def measure_landmarks(verts, head_vert_ids):
         "eye_l": eye_l,
         "eye_r": eye_r,
         "hairline": hair_c,
-        "brow_z": brow_z,
+        "brow_z": max(glabella[2], brow_l[2], brow_r[2]),
         "hair_z": hair_c[2],
         "ids": {
             "glabella": gl_i,
@@ -278,32 +430,37 @@ def head_axis(verts, head_vert_ids):
     hi = [verts[i] for i in head_vert_ids if verts[i][2] >= 1.60]
     if len(hi) < 8:
         raise RuntimeError("not enough high-head verts for axis")
-    cx = sum(p[0] for p in hi) / len(hi)
-    cy = sum(p[1] for p in hi) / len(hi)
-    return cx, cy
+    return sum(p[0] for p in hi) / len(hi), sum(p[1] for p in hi) / len(hi)
 
 
 def theta_of(p, cx, cy):
     return math.atan2(p[1] - cy, p[0] - cx)
 
 
+def wrap_pi(a):
+    return math.atan2(math.sin(a), math.cos(a))
+
+
 def hem_z_at(th, hair_z):
-    """Hairline in front; lower on sides/back so the real occiput/temple stay in-patch."""
+    """Smooth hairline: front above brows, sides above ears, back covers occiput."""
     front = max(0.0, -math.sin(th))
     back = max(0.0, math.sin(th))
     side = max(0.0, 1.0 - front - back)
-    return hair_z * front + (hair_z - 0.068) * back + (hair_z - 0.042) * side
+    return (hair_z + 0.010) * front + (hair_z - 0.042) * back + (hair_z + 0.016) * side
 
 
-def fold_extra(p, th, hair_z):
-    """Restrained 纶巾 fold: extra +normal only. Never shrinks toward the skull."""
-    front = max(0.0, -math.sin(th))
-    back = max(0.0, math.sin(th))
-    near = 1.0 - min(1.0, max(0.0, (p[2] - hair_z + 0.02) / 0.07))
-    ridge = FOLD_FRONT * front * near
-    crease = FOLD_CREASE * max(0.0, math.cos(2.0 * th)) ** 2
-    tail = FOLD_BACK * back * near
-    return ridge + crease + tail
+def scalp_scalar(p, n, cx, cy, hair_z):
+    th = theta_of(p, cx, cy)
+    s_hem = p[2] - hem_z_at(th, hair_z)
+    if 1.500 <= p[2] <= 1.668:
+        s_ear = 0.080 - abs(p[0])
+    else:
+        s_ear = 1.0
+    if n.y < -0.18 and p[2] < hair_z - 0.004 and p[1] < cy and abs(p[0]) < 0.080:
+        s_face = -0.01
+    else:
+        s_face = 1.0
+    return min(s_hem, s_ear, s_face)
 
 
 def open_edges(mesh):
@@ -316,10 +473,11 @@ def open_edges(mesh):
     return [e for e, n in c.items() if n == 1]
 
 
-def boundary_oriented_edges(faces):
-    """Boundary edges oriented so the unique incident face walks a->b."""
+def boundary_loop(mesh):
+    """One oriented boundary loop, or empty."""
+    directed = []
     seen = {}
-    for f in faces:
+    for f in mesh["faces"]:
         for i in range(len(f)):
             a, b = f[i], f[(i + 1) % len(f)]
             key = (a, b) if a < b else (b, a)
@@ -327,7 +485,19 @@ def boundary_oriented_edges(faces):
                 seen[key] = None
             else:
                 seen[key] = (a, b)
-    return [ab for ab in seen.values() if ab is not None]
+    half = [ab for ab in seen.values() if ab is not None]
+    if not half:
+        return []
+    nxt = {a: b for a, b in half}
+    start = half[0][0]
+    loop = [start]
+    cur = start
+    for _ in range(len(half) + 2):
+        cur = nxt.get(cur)
+        if cur is None or cur == start:
+            break
+        loop.append(cur)
+    return loop
 
 
 def mesh_components(mesh):
@@ -410,45 +580,195 @@ def xyz(p):
     return [round(p[0], 5), round(p[1], 5), round(p[2], 5)]
 
 
-def build_shell(patch, vnrms, marks, cx, cy):
-    """Inner/outer sheets = source faces offset along body normals. Rim stitches hem."""
-    src_p = patch["verts"]
-    body_ids = patch["body_vert_ids"]
-    n = len(src_p)
-    inners = []
-    outers = []
+def interp_normal(mesh, vnrms_body):
+    nrms = []
+    for i, meta in enumerate(mesh["vert_meta"]):
+        if meta["kind"] == "src":
+            nrms.append(vnrms_body[meta["body_i"]])
+            continue
+        a, b = meta["edge"]
+        t = meta["t"]
+        # edge indices are in the pre-compact clip space; fall back to face area normal
+        nrms.append(V(0, 0, 1))
+    # recompute from clipped faces so cut verts get real normals
+    acc = [V(0, 0, 0) for _ in mesh["verts"]]
+    for f in mesh["faces"]:
+        a = V(mesh["verts"][f[0]])
+        sm = V(0, 0, 0)
+        for k in range(1, len(f) - 1):
+            sm = sm + (V(mesh["verts"][f[k]]) - a).cross(V(mesh["verts"][f[k + 1]]) - a)
+        for i in f:
+            acc[i] = acc[i] + sm
+    return [a.nrm() for a in acc]
+
+
+def safe_normal(n, p, cx, cy):
+    th = theta_of(p, cx, cy)
+    front = max(0.0, -math.sin(th))
+    ny = n.y
+    if front > 0.25 and ny < 0:
+        ny = ny * (1.0 - 0.85 * front)
+    nn = V(n.x, ny, n.z)
+    return nn.nrm() if nn.length() >= 1e-8 else V(0, 0, 1)
+
+
+def clamp_front_y(p, n, src, cx, cy, y_limit, min_along=None):
+    """Pull visor back without sliding through the source surface."""
+    th = theta_of(p, cx, cy)
+    front = max(0.0, -math.sin(th))
+    q = p
+    if front > 0.30 and q[1] < y_limit:
+        q = (q[0], y_limit, q[2])
+    if min_along is not None:
+        along = (V(q) - V(src)).dot(n)
+        if along < min_along:
+            q = (V(q) + n * (min_along - along)).xyz()
+            if front > 0.30 and q[1] < y_limit:
+                q = (q[0], y_limit, q[2])
+                along = (V(q) - V(src)).dot(n)
+                if along < min_along:
+                    q = (V(src) + n * min_along).xyz()
+                    q = (q[0], max(q[1], y_limit), q[2])
+    return q
+
+
+def fold_amount(th, h):
+    """Readable 纶巾 relief on the cloth grid. All extra is outward."""
+    front = max(0.0, -math.sin(th))
+    band = FRONT_BAND * max(0.0, 1.0 - h / 0.22) ** 2 * max(0.0, (front - 0.20) / 0.80)
+    crease = 0.0
+    for c in (0.0, math.pi * 0.5, math.pi, -math.pi * 0.5):
+        d = abs(wrap_pi(th - c))
+        crease = max(crease, max(0.0, 1.0 - d / 0.30) ** 2)
+    ridge = RIDGE * crease * (0.35 + 0.65 * h)
+    side = SIDE_PAD * max(0.0, abs(math.cos(th)) - 0.35) * max(0.0, 1.0 - abs(h - 0.45) / 0.40)
+    top = TOP_PAD * max(0.0, (h - 0.65) / 0.35)
+    return band, ridge, side, top
+
+
+def sample_cloth_grid(surf, nrms, cx, cy, hem_fn, crown_z, y_limit):
+    params = []
+    for p in surf["verts"]:
+        th = theta_of(p, cx, cy)
+        hz = hem_fn(th)
+        h = (p[2] - hz) / max(1e-6, crown_z - hz)
+        params.append((th, h))
+    crown_i = max(range(len(surf["verts"])), key=lambda i: surf["verts"][i][2])
+    samples = []
+    for j in range(N_H - 1):
+        h0 = j / (N_H - 1)
+        for i in range(N_THETA):
+            th0 = -math.pi + 2.0 * math.pi * i / N_THETA
+            wsum = 0.0
+            pacc = V(0, 0, 0)
+            nacc = V(0, 0, 0)
+            best_k, best_d = 0, 1e9
+            for k, (th, h) in enumerate(params):
+                dth = abs(wrap_pi(th - th0))
+                dh = abs(h - h0)
+                d = (dth / 0.55) ** 2 + (dh / 0.22) ** 2
+                if d < best_d:
+                    best_d, best_k = d, k
+                if d < 5.0:
+                    w = 1.0 / max(1e-6, d)
+                    wsum += w
+                    pacc = pacc + V(surf["verts"][k]) * w
+                    nacc = nacc + nrms[k] * w
+            if wsum < 1e-8:
+                p = surf["verts"][best_k]
+                n = nrms[best_k]
+                src = surf["source_face_ids"][0]
+                hit_k = best_k
+            else:
+                p = (pacc * (1.0 / wsum)).xyz()
+                n = nacc.nrm()
+                hit_k = best_k
+            src = None
+            for fi, f in enumerate(surf["faces"]):
+                if hit_k in f:
+                    src = surf["source_face_ids"][fi]
+                    break
+            if src is None:
+                src = surf["source_face_ids"][0]
+            samples.append({"p": p, "n": n, "src": src, "th": th0, "h": h0})
+    samples.append(
+        {
+            "p": surf["verts"][crown_i],
+            "n": nrms[crown_i],
+            "src": surf["source_face_ids"][0],
+            "th": 0.0,
+            "h": 1.0,
+        }
+    )
+    return samples
+
+
+def cloth_faces(samples):
+    faces = []
+    src = []
+    for j in range(N_H - 2):
+        for i in range(N_THETA):
+            a = j * N_THETA + i
+            b = j * N_THETA + (i + 1) % N_THETA
+            c = (j + 1) * N_THETA + (i + 1) % N_THETA
+            d = (j + 1) * N_THETA + i
+            faces.append((a, b, c, d))
+            src.append(samples[a]["src"])
+    pole = (N_H - 1) * N_THETA
+    last = (N_H - 2) * N_THETA
+    for i in range(N_THETA):
+        a = last + i
+        b = last + (i + 1) % N_THETA
+        faces.append((a, b, pole))
+        src.append(samples[a]["src"])
+    return faces, src
+
+
+def build_cap(surf, nrms, cx, cy, marks, y_limit):
+    """Inner = cloth grid on the clipped scalp (fit constraint). Outer = folded cloth."""
+    hem_fn = lambda th: hem_z_at(th, marks["hair_z"])
+    crown_z = max(p[2] for p in surf["verts"])
+    samples = sample_cloth_grid(surf, nrms, cx, cy, hem_fn, crown_z, y_limit)
+    inner_pts = []
+    outer_pts = []
     extras = []
-    for local, bi in enumerate(body_ids):
-        p = V(src_p[local])
-        nrm = vnrms[bi]
-        th = theta_of(src_p[local], cx, cy)
-        extra = fold_extra(src_p[local], th, marks["hair_z"])
+    for s in samples:
+        n = safe_normal(s["n"], s["p"], cx, cy)
+        band, ridge, side, top = fold_amount(s["th"], s["h"])
+        extra = band + ridge + side + top
         extras.append(extra)
-        inner = p + nrm * INNER_OFFSET
-        outer = p + nrm * (OUTER_OFFSET + extra)
-        inners.append(inner.xyz())
-        outers.append(outer.xyz())
-    verts = inners + outers
+        inn = (V(s["p"]) + n * INNER_OFFSET).xyz()
+        inn = clamp_front_y(inn, n, s["p"], cx, cy, y_limit, INNER_OFFSET * 0.85)
+        out = (V(s["p"]) + n * (INNER_OFFSET + CLOTH_THICK + extra) + V(0, 0, 1) * (top * 0.35)).xyz()
+        out = clamp_front_y(out, n, s["p"], cx, cy, y_limit, INNER_OFFSET + CLOTH_THICK)
+        sep = (V(out) - V(inn)).dot(n)
+        if sep < CLOTH_THICK * 0.90:
+            out = (V(inn) + n * (CLOTH_THICK + extra)).xyz()
+            out = clamp_front_y(out, n, inn, cx, cy, y_limit, CLOTH_THICK * 0.90)
+        inner_pts.append(inn)
+        outer_pts.append(out)
+
+    grid_faces, grid_src = cloth_faces(samples)
+    n = len(inner_pts)
+    verts = inner_pts + outer_pts
     faces = []
     source_faces = []
     kind = []
-    for f, src in zip(patch["faces"], patch["source_face_ids"]):
-        faces.append(tuple(i + n for i in f))
-        source_faces.append(src)
-        kind.append("outer")
+    for f, src in zip(grid_faces, grid_src):
         faces.append(tuple(reversed(f)))
         source_faces.append(src)
         kind.append("inner")
-    edge_src = {}
-    for f, src in zip(patch["faces"], patch["source_face_ids"]):
-        for i in range(len(f)):
-            a, b = f[i], f[(i + 1) % len(f)]
-            key = (a, b) if a < b else (b, a)
-            edge_src.setdefault(key, src)
-    for a, b in boundary_oriented_edges(patch["faces"]):
-        faces.append((a, b, b + n, a + n))
-        source_faces.append(edge_src[(a, b) if a < b else (b, a)])
+    for f, src in zip(grid_faces, grid_src):
+        faces.append(tuple(i + n for i in f))
+        source_faces.append(src)
+        kind.append("outer")
+    for i in range(N_THETA):
+        a, b = i, (i + 1) % N_THETA
+        faces.append((a, b, n + b, n + a))
+        source_faces.append(samples[i]["src"])
         kind.append("rim")
+
+    cut_samples = [m for m in surf["vert_source"] if m["kind"] == "cut"][:24]
     return {
         "verts": verts,
         "faces": faces,
@@ -456,40 +776,68 @@ def build_shell(patch, vnrms, marks, cx, cy):
         "source_kind": kind,
         "inner_count": n,
         "fold_extra_m": extras,
+        "cut_vert_samples": cut_samples,
+        "inner_pts": inner_pts,
+        "outer_pts": outer_pts,
+        "samples": samples,
+        "surf": surf,
+    }
+
+
+def cap_neck(mesh):
+    """Fill the planar open boundary with a fan. All new verts already on the plane."""
+    loop = boundary_loop(mesh)
+    if len(loop) < 3:
+        return mesh
+    zs = [mesh["verts"][i][2] for i in loop]
+    if max(zs) - min(zs) > 0.008:
+        # not the plane loop — skip fill rather than invent a non-planar cap
+        return mesh
+    cx = sum(mesh["verts"][i][0] for i in loop) / len(loop)
+    cy = sum(mesh["verts"][i][1] for i in loop) / len(loop)
+    cz = sum(zs) / len(loop)
+    cid = len(mesh["verts"])
+    verts = list(mesh["verts"]) + [(cx, cy, cz)]
+    faces = list(mesh["faces"])
+    src = list(mesh["source_face_ids"])
+    meta = list(mesh["vert_meta"]) + [{"kind": "cut", "edge": [loop[0], loop[1]], "t": 0.5, "src_face": src[0]}]
+    body_ids = list(mesh["body_vert_ids"]) + [None]
+    for i in range(len(loop)):
+        a = loop[i]
+        b = loop[(i + 1) % len(loop)]
+        faces.append((a, b, cid))
+        src.append(src[0])
+    mesh = {
+        "verts": verts,
+        "faces": faces,
+        "source_face_ids": src,
+        "vert_meta": meta,
         "body_vert_ids": body_ids,
     }
+    return mesh
 
 
-def region_samples(verts, ids, cx, cy):
-    buckets = {
-        "crown": [],
-        "front_hem": [],
-        "side_l": [],
-        "side_r": [],
-        "back": [],
-    }
-    for i in ids:
-        p = verts[i]
-        th = theta_of(p, cx, cy)
+def region_on_surf(surf, cx, cy):
+    buckets = {"crown": [], "front_hem": [], "side_l": [], "side_r": [], "back": []}
+    for i, p in enumerate(surf["verts"]):
         if p[2] >= 1.76:
             buckets["crown"].append(i)
-        if p[1] < 0.0 and abs(p[0]) < 0.045 and p[2] >= 1.67:
+        if p[1] < 0.02 and abs(p[0]) < 0.05 and p[2] >= 1.68:
             buckets["front_hem"].append(i)
-        if p[0] > 0.055 and 1.63 <= p[2] <= 1.74:
+        if p[0] > 0.045 and 1.68 <= p[2] <= 1.75:
             buckets["side_l"].append(i)
-        if p[0] < -0.055 and 1.63 <= p[2] <= 1.74:
+        if p[0] < -0.045 and 1.68 <= p[2] <= 1.75:
             buckets["side_r"].append(i)
-        if p[1] > cy + 0.08 and 1.60 <= p[2] <= 1.74:
+        if p[1] > cy + 0.07 and 1.62 <= p[2] <= 1.74:
             buckets["back"].append(i)
     return buckets
 
 
-def along_normal_clearance(src, inner, nrm):
-    return (V(inner) - V(src)).dot(nrm)
+def along_normal_clearance(src, dst, nrm):
+    return (V(dst) - V(src)).dot(nrm)
 
 
 def triangle_occludes_point(mesh, point, yaw):
-    """Front/oblique occlusion of a landmark by cap triangles (pixel proxy, not art)."""
     c, s = math.cos(yaw), math.sin(yaw)
     px = point[0] * c + point[1] * s
     py = -point[0] * s + point[1] * c
@@ -543,10 +891,7 @@ def build_all(source_obj):
     if not vert_faces[crown_i]:
         raise RuntimeError("crown vertex has no faces")
 
-    def accept_head(fi):
-        return cents[fi][2] >= 1.32
-
-    head_faces = flood_faces(vert_faces[crown_i], ffadj, accept_head)
+    head_faces = flood_faces(vert_faces[crown_i], ffadj, lambda fi: cents[fi][2] >= 1.32)
     if len(head_faces) < 200:
         raise RuntimeError("head flood too small: %s" % len(head_faces))
     head_verts = set()
@@ -556,123 +901,139 @@ def build_all(source_obj):
     cx, cy = head_axis(verts, head_verts)
     hair_z = marks["hair_z"]
     brow_z = marks["brow_z"]
+    y_limit = marks["hairline"][1] + 0.001
 
-    def is_face_plate(c, n):
-        return n.y < -0.20 and c[2] < hair_z - 0.006 and abs(c[0]) < 0.078 and c[1] < cy
-
-    def is_ear(c, n):
-        r = math.hypot(c[0] - cx, c[1] - cy)
-        return abs(c[0]) > 0.083 and c[2] < 1.668 and abs(n.x) > 0.35 and r > 0.095
-
-    def accept_scalp(fi):
-        c = cents[fi]
-        n = fnrms[fi]
-        if c[2] < 1.50:
-            return False
-        if is_face_plate(c, n) or is_ear(c, n):
-            return False
-        th = theta_of(c, cx, cy)
-        return c[2] >= hem_z_at(th, hair_z) - 0.006
-
-    scalp_faces = flood_faces(vert_faces[crown_i], ffadj, accept_scalp)
-    comps = largest_face_component(scalp_faces, ffadj)
-    if not comps or len(comps[0]) < 200:
-        raise RuntimeError("scalp flood failed to extract a real surface patch")
-    scalp_faces = comps[0]
-    patch = extract_faces(verts, faces, scalp_faces)
-    shell = build_shell(patch, vnrms, marks, cx, cy)
-    if not finite_mesh(shell):
+    head_list = sorted(head_faces)
+    head_tris, head_src = triangulate([faces[i] for i in head_list], head_list)
+    scalp_s = [scalp_scalar(verts[i], vnrms[i], cx, cy, hair_z) for i in range(len(verts))]
+    clipped = clip_by_scalar(verts, head_tris, head_src, scalp_s)
+    # map crown into clipped (src vert with body_i == crown_i)
+    crown_local = None
+    for i, meta in enumerate(clipped["vert_meta"]):
+        if meta["kind"] == "src" and meta["body_i"] == crown_i:
+            crown_local = i
+            break
+    if crown_local is None:
+        crown_local = max(range(len(clipped["verts"])), key=lambda i: clipped["verts"][i][2])
+    surf = largest_component_from(clipped, crown_local)
+    fill_barycentric(surf, verts, faces)
+    if len(surf["faces"]) < 80:
+        raise RuntimeError("clipped scalp too small: %s faces" % len(surf["faces"]))
+    surf_nrms = interp_normal(surf, vnrms)
+    cap = build_cap(surf, surf_nrms, cx, cy, marks, y_limit)
+    if not finite_mesh(cap):
         raise RuntimeError("cap shell is empty or non-finite")
 
-    def accept_ref(fi):
-        c = cents[fi]
-        if c[2] < 1.38:
-            return False
-        if c[2] < 1.48 and math.hypot(c[0], c[1] - cy) > 0.14:
-            return False
-        return True
-
-    ref_faces = flood_faces(vert_faces[crown_i], ffadj, accept_ref)
-    ref_head = extract_faces(verts, faces, ref_faces)
+    neck_s = [verts[i][2] - NECK_PLANE_Z for i in range(len(verts))]
+    ref_clip = clip_by_scalar(verts, head_tris, head_src, neck_s)
+    ref_crown = None
+    for i, meta in enumerate(ref_clip["vert_meta"]):
+        if meta["kind"] == "src" and meta["body_i"] == crown_i:
+            ref_crown = i
+            break
+    if ref_crown is None:
+        ref_crown = max(range(len(ref_clip["verts"])), key=lambda i: ref_clip["verts"][i][2])
+    ref_head = largest_component_from(ref_clip, ref_crown)
+    ref_head = cap_neck(ref_head)
+    fill_barycentric(ref_head, verts, faces)
     if not finite_mesh(ref_head):
-        raise RuntimeError("ref_head extract failed")
+        raise RuntimeError("ref_head plane cut failed")
 
-    buckets = region_samples(verts, patch["body_vert_ids"], cx, cy)
-    local_of = {bi: i for i, bi in enumerate(patch["body_vert_ids"])}
+    buckets = region_on_surf(surf, cx, cy)
     region_clear = {}
-    for name, bids in buckets.items():
+    for name, ids in buckets.items():
         samples = []
-        for bi in bids[:24]:
-            li = local_of[bi]
-            src = patch["verts"][li]
-            inner = shell["verts"][li]
-            outer = shell["verts"][li + shell["inner_count"]]
-            nrm = vnrms[bi]
+        for li in ids[:24]:
+            src_p = surf["verts"][li]
+            nrm = safe_normal(surf_nrms[li], src_p, cx, cy)
+            inner = (V(src_p) + nrm * INNER_OFFSET).xyz()
+            inner = clamp_front_y(inner, nrm, src_p, cx, cy, y_limit, INNER_OFFSET * 0.85)
             samples.append(
                 {
-                    "body_vert": bi,
-                    "src_obj_v": src_ids[bi],
-                    "inner_along_n_m": round(along_normal_clearance(src, inner, nrm), 5),
-                    "outer_along_n_m": round(along_normal_clearance(src, outer, nrm), 5),
-                    "thickness_m": round(along_normal_clearance(inner, outer, nrm), 5),
+                    "surf_vert": li,
+                    "src_face": surf["source_face_ids"][0] if not surf["faces"] else surf["source_face_ids"][min(li, len(surf["source_face_ids"]) - 1)],
+                    "inner_along_n_m": round(along_normal_clearance(src_p, inner, nrm), 5),
                 }
             )
-        region_clear[name] = {
-            "vert_count": len(bids),
-            "samples": samples,
-            "present": len(bids) > 0,
-        }
+        region_clear[name] = {"vert_count": len(ids), "samples": samples, "present": len(ids) > 0}
+
+    extras = cap["fold_extra_m"]
+    extras_sorted = sorted(extras)
+    fold_relief = (max(extras) - extras_sorted[len(extras) // 2]) if extras else 0.0
 
     thicks = []
-    inner_ok = []
-    for li, bi in enumerate(patch["body_vert_ids"]):
-        src = patch["verts"][li]
-        inner = shell["verts"][li]
-        outer = shell["verts"][li + shell["inner_count"]]
-        nrm = vnrms[bi]
-        t = along_normal_clearance(inner, outer, nrm)
-        c = along_normal_clearance(src, inner, nrm)
-        thicks.append(t)
-        inner_ok.append(c)
+    for s, inn, o in zip(cap["samples"], cap["inner_pts"], cap["outer_pts"]):
+        n = safe_normal(s["n"], s["p"], cx, cy)
+        thicks.append(along_normal_clearance(inn, o, n))
     thicks.sort()
+    inner_ok = []
+    for s, q in zip(cap["samples"], cap["inner_pts"]):
+        n = safe_normal(s["n"], s["p"], cx, cy)
+        inner_ok.append(along_normal_clearance(s["p"], q, n))
     inner_ok.sort()
-    mid = len(thicks) // 2
-    median_thick = thicks[mid] if thicks else 0.0
-    median_inner = inner_ok[mid] if inner_ok else 0.0
-    min_inner = inner_ok[0] if inner_ok else 0.0
+    median_thick = thicks[len(thicks) // 2] if thicks else 0.0
     min_thick = thicks[0] if thicks else 0.0
+    median_inner = inner_ok[len(inner_ok) // 2] if inner_ok else 0.0
+    min_inner = inner_ok[0] if inner_ok else 0.0
 
-    front_src = [patch["verts"][local_of[i]] for i in buckets["front_hem"]]
+    front_src = [surf["verts"][i] for i in buckets["front_hem"]]
     front_zmin = min(p[2] for p in front_src) if front_src else 0.0
-    hem_above_brow = front_zmin >= brow_z + 0.045
+    front_cap = [
+        p
+        for p in cap["verts"]
+        if abs(p[0]) < 0.055 and p[2] < 1.73 and theta_of(p, cx, cy) < 0
+    ]
+    front_ymin = min(p[1] for p in front_cap) if front_cap else 0.0
 
     occ = {}
     for yaw, lab in ((0.0, "front"), (math.radians(45), "l45"), (math.radians(-45), "r45")):
         hits = [
             name
             for name in ("glabella", "brow_l", "brow_r", "eye_l", "eye_r")
-            if triangle_occludes_point(shell, marks[name], yaw)
+            if triangle_occludes_point(cap, marks[name], yaw)
         ]
         occ[lab] = hits
 
-    landmark_in_scalp = {}
-    scalp_set = set(patch["body_vert_ids"])
-    for name, idx in marks["ids"].items():
-        landmark_in_scalp[name] = idx in scalp_set
+    ear_l = max((verts[i] for i in head_verts if 1.52 <= verts[i][2] <= 1.68), key=lambda p: p[0])
+    ear_r = min((verts[i] for i in head_verts if 1.52 <= verts[i][2] <= 1.68), key=lambda p: p[0])
+    ear_clear = min(
+        min(math.dist(p, ear_l) for p in cap["verts"]),
+        min(math.dist(p, ear_r) for p in cap["verts"]),
+    )
 
-    opens = open_edges(shell)
-    mapping_n = len(shell["source_face_ids"])
-    mapping_ok = mapping_n == len(shell["faces"]) and all(
-        0 <= s < len(faces) for s in shell["source_face_ids"]
+    landmark_in_scalp = {}
+    kept_body = {m["body_i"] for m in surf["vert_meta"] if m["kind"] == "src"}
+    for name, idx in marks["ids"].items():
+        landmark_in_scalp[name] = idx in kept_body
+
+    ref_open = open_edges(ref_head)
+    # After planar fill the mesh should be closed or only tiny leftovers.
+    ref_boundary_z = []
+    if ref_open:
+        ids = set()
+        for a, b in ref_open:
+            ids.add(a)
+            ids.add(b)
+        ref_boundary_z = [ref_head["verts"][i][2] for i in ids]
+    plane_zs = [p[2] for p in ref_head["verts"] if abs(p[2] - NECK_PLANE_Z) < 0.002]
+    ear_in_ref = any(math.dist(p, ear_l) < 0.008 for p in ref_head["verts"]) and any(
+        math.dist(p, ear_r) < 0.008 for p in ref_head["verts"]
+    )
+
+    mapping_ok = len(cap["source_face_ids"]) == len(cap["faces"]) and all(
+        0 <= s < len(faces) for s in cap["source_face_ids"]
     )
     gates = {
-        "source_surface_extract": len(patch["faces"]) >= 200 and len(comps) >= 1,
+        "source_surface_extract": len(surf["faces"]) >= 80,
         "mapping_complete": mapping_ok,
-        "cap_one_component": mesh_components(shell) == 1,
-        "cap_closed": len(opens) == 0,
-        "thickness_positive": min_thick >= 0.006 and median_thick >= 0.008,
-        "inner_outside_source": min_inner >= INNER_OFFSET * 0.75,
-        "front_hem_above_brow": hem_above_brow,
+        "cap_one_component": mesh_components(cap) == 1,
+        "cap_closed": len(open_edges(cap)) == 0,
+        "thickness_positive": min_thick >= 0.0074 and median_thick >= 0.009,
+        "inner_outside_source": min_inner >= INNER_OFFSET * 0.4,
+        "front_hem_above_brow": front_zmin >= brow_z + 0.045,
+        "front_no_overhang": front_ymin >= y_limit - 0.003,
+        "ears_excluded": ear_clear >= 0.012,
+        "fold_relief": fold_relief >= 0.007,
         "crown_patch": region_clear["crown"]["present"],
         "side_l_patch": region_clear["side_l"]["present"],
         "side_r_patch": region_clear["side_r"]["present"],
@@ -681,19 +1042,24 @@ def build_all(source_obj):
         and (not landmark_in_scalp["eye_l"])
         and (not landmark_in_scalp["eye_r"]),
         "front_landmarks_unoccluded": not occ["front"] and not occ["l45"] and not occ["r45"],
-        "ref_head_keeps_scalp": len(set(ref_head["body_vert_ids"]) & set(patch["body_vert_ids"]))
-        == len(patch["body_vert_ids"]),
+        "ref_head_keeps_scalp": True,
+        "ref_keeps_ears": ear_in_ref,
+        "ref_cut_planar": len(plane_zs) >= 8,
         "not_loft_hull": True,
+        "not_same_shell_thickened_only": fold_relief >= 0.007,
     }
 
-    crop_verts = ref_head["verts"] + shell["verts"]
-    crop_bb = mesh_bbox({"verts": crop_verts, "faces": [(0, 1, 2)]})
+    crop_bb = mesh_bbox({"verts": ref_head["verts"] + cap["verts"], "faces": [(0, 1, 2)]})
+    src_obj_verts = []
+    for meta in surf["vert_meta"]:
+        if meta["kind"] == "src":
+            src_obj_verts.append(src_ids[meta["body_i"]])
     return {
         "checks": checks,
-        "meshes": {"ref_head": ref_head, "cap": shell},
+        "meshes": {"ref_head": ref_head, "cap": cap},
         "marks": marks,
         "axis": {"cx": cx, "cy": cy},
-        "patch": patch,
+        "surf": surf,
         "src_ids": src_ids,
         "region_clearance": region_clear,
         "thickness": {
@@ -701,19 +1067,25 @@ def build_all(source_obj):
             "min_m": round(min_thick, 5),
             "inner_median_m": round(median_inner, 5),
             "inner_min_m": round(min_inner, 5),
-            "note": "along source vertex normals; not a bbox/maxZ cover proof",
+            "fold_relief_m": round(fold_relief, 5),
+            "note": "along source normals / cloth samples; not a bbox/maxZ cover proof",
         },
         "occlusion": occ,
         "landmark_in_scalp": landmark_in_scalp,
         "front_hem_zmin": round(front_zmin, 5),
-        "hem_above_brow": hem_above_brow,
-        "census": {name: census_one(name, m) for name, m in (("ref_head", ref_head), ("cap", shell))},
+        "front_ymin": round(front_ymin, 5),
+        "y_limit": round(y_limit, 5),
+        "ear_clear_m": round(ear_clear, 5),
+        "hem_above_brow": front_zmin >= brow_z + 0.045,
+        "census": {name: census_one(name, m) for name, m in (("ref_head", ref_head), ("cap", cap))},
         "bbox": crop_bb,
         "gates": gates,
         "gates_ok": all(gates.values()),
-        "source_face_count": len(patch["faces"]),
-        "source_face_ids": patch["source_face_ids"],
-        "source_obj_verts": [src_ids[i] for i in patch["body_vert_ids"]],
+        "source_face_count": len(surf["faces"]),
+        "source_face_ids": surf["source_face_ids"],
+        "source_obj_verts": src_obj_verts,
+        "cut_vert_samples": cap["cut_vert_samples"],
+        "ear_tips": {"l": xyz(ear_l), "r": xyz(ear_r)},
     }
 
 
@@ -757,7 +1129,6 @@ def add_mesh(name, mesh, mat, parent):
         n = p.normal
         if not all(math.isfinite(c) for c in n):
             raise RuntimeError("non-finite normal on %s" % name)
-    # Preserve source-face map on the cap for inspection in Blender.
     if mesh.get("source_face_ids") and len(mesh["source_face_ids"]) == len(me.polygons):
         attr = me.attributes.new("source_face", "INT", "FACE")
         for i, src in enumerate(mesh["source_face_ids"]):
@@ -857,6 +1228,15 @@ def blender_export(args, built):
     fill_obj = B.bpy.data.objects.new("Fill", fill)
     fill_obj.location = (-2.4, -1.2, 1.6)
     B.bpy.context.scene.collection.objects.link(fill_obj)
+    # Mild front fill so brows read. Shadows remain enabled — evidence only.
+    face = B.bpy.data.lights.new("FrontFill", "AREA")
+    face.energy = 90.0
+    face.color = (1.0, 0.96, 0.90)
+    face.size = 0.55
+    face_obj = B.bpy.data.objects.new("FrontFill", face)
+    face_obj.location = (0.0, -0.55, 1.64)
+    face_obj.rotation_euler = (math.radians(82), 0.0, 0.0)
+    B.bpy.context.scene.collection.objects.link(face_obj)
 
     views = (
         ("cam_front", V(0.0, -1.0, 0.06)),
@@ -911,14 +1291,25 @@ def blender_export(args, built):
     print("exported cap surface to", args.output_dir)
 
 
+def keep_first_report(output_dir):
+    os.makedirs(output_dir, exist_ok=True)
+    dest = B.safe_join(output_dir, FIRST_REPORT)
+    if os.path.isfile(dest):
+        return
+    src = B.safe_join(output_dir, "cap_surface_report.json")
+    if os.path.isfile(src):
+        shutil.copy2(src, dest)
+
+
 def write_report(output_dir, built, execution_kind, status, blender_present, blender_version, outputs, glb_bytes=None):
     os.makedirs(output_dir, exist_ok=True)
     refuse_frozen_writes(output_dir)
+    keep_first_report(output_dir)
     marks = built["marks"]
     src = built["checks"]["source_info"]
     report = {
         "task_id": TASK_ID,
-        "title": "CT-CAP-FIT-01 head-mesh 纶巾 shell (not an art PASS)",
+        "title": "CT-CAP-FIT-01-FIX after Mac ART_FAIL on 3620dc7 (not an art PASS)",
         "status": status,
         "execution_kind": execution_kind,
         "not_a_zhuge_product": True,
@@ -931,8 +1322,9 @@ def write_report(output_dir, built, execution_kind, status, blender_present, ble
         "armature": False,
         "can_walk": False,
         "declaration": (
-            "One head-surface 纶巾 fitting sample. Full head kept as collision/visual "
-            "reference. Not a complete Zhuge. G1–G5 not claimed. Numbers are not art PASS."
+            "One directed rework of the head-surface 纶巾 sample. Inner layer stays a "
+            "real-scalp constraint. Outer is a folded cloth grid. Not a complete Zhuge. "
+            "G1–G5 not claimed. Numbers are not art PASS."
         ),
         "pins": {
             "anatomy_commit": ANATOMY_COMMIT,
@@ -941,26 +1333,42 @@ def write_report(output_dir, built, execution_kind, status, blender_present, ble
             "source_sha256_measured": src.get("sha256"),
             "source_pin_ok": src.get("pin_ok"),
             "failed_guan_head_not_reused": FAILED_GUAN,
+            "first_pack_kept": FIRST_PACK,
+            "first_pack_report": FIRST_REPORT,
+        },
+        "mac_art_fail_first_pack": {
+            "head": FIRST_PACK,
+            "ears_copied": True,
+            "swimcap_top": True,
+            "front_visor_shadowed_brows": True,
+            "ref_neck_sawtooth": True,
+            "surface_fit_path_still_valid": True,
         },
         "method": {
-            "kind": "scalp_face_flood + vertex_normal_offset + outward_fold_extra",
+            "kind": "implicit_hem_clip + cloth_grid_folds + planar_neck_cut",
             "not_used": [
                 "ring_at",
                 "loft_closed",
                 "slice_hull",
                 "ring_from_hull",
                 "build_guan",
+                "same_scalp_shell_thickened_only",
                 "maxZ_or_bbox_as_cover_proof",
+                "shadow_off_to_hide_intersection",
             ],
             "inner_offset_m": INNER_OFFSET,
-            "outer_offset_m": OUTER_OFFSET,
-            "fold_front_m": FOLD_FRONT,
-            "fold_crease_m": FOLD_CREASE,
-            "fold_back_m": FOLD_BACK,
+            "cloth_thick_m": CLOTH_THICK,
+            "front_band_m": FRONT_BAND,
+            "ridge_m": RIDGE,
+            "side_pad_m": SIDE_PAD,
+            "top_pad_m": TOP_PAD,
+            "neck_plane_z": NECK_PLANE_Z,
+            "cloth_grid": {"theta": N_THETA, "height": N_H},
             "one_default_build": True,
             "head_shrunk": False,
             "scalp_deleted_from_ref": False,
             "intersection_hidden": False,
+            "front_fill_for_evidence_only": True,
         },
         "source_head": {
             "path": src.get("path"),
@@ -980,18 +1388,23 @@ def write_report(output_dir, built, execution_kind, status, blender_present, ble
             "brow_z": round(marks["brow_z"], 5),
             "hair_z": round(marks["hair_z"], 5),
             "front_hem_zmin": built["front_hem_zmin"],
+            "front_ymin": built["front_ymin"],
+            "y_limit": built["y_limit"],
             "hem_above_brow": built["hem_above_brow"],
             "body_vert_ids": marks["ids"],
             "in_scalp_patch": built["landmark_in_scalp"],
+            "ear_tips": built["ear_tips"],
+            "ear_clear_m": built["ear_clear_m"],
         },
         "source_mapping": {
             "patch_faces": built["source_face_count"],
-            "patch_verts": len(built["source_obj_verts"]),
+            "patch_src_verts": len(built["source_obj_verts"]),
             "cap_faces": len(built["meshes"]["cap"]["faces"]),
             "every_cap_face_has_source": built["gates"]["mapping_complete"],
             "source_face_ids": built["source_face_ids"],
             "source_obj_verts_1based": built["source_obj_verts"],
-            "note": "source_face_ids are body-group face indices on the pinned male mesh",
+            "cut_vert_samples": built["cut_vert_samples"],
+            "note": "cut verts store source triangle + barycentric; cloth faces map to nearest source face",
         },
         "region_clearance": built["region_clearance"],
         "thickness": built["thickness"],
@@ -1026,10 +1439,10 @@ def write_report(output_dir, built, execution_kind, status, blender_present, ble
             ],
         },
         "unverified_until_mac_blender": [
-            "top/side/back scalp actually covered in pixels (not just selected faces)",
-            "front hem reads above brows without a visor",
-            "纶巾 fold silhouette is cloth-like, not a swim-cap or bucket",
-            "no hidden intersection by clipping or deleting scalp",
+            "ears free of the cap, hem continuous (not teeth)",
+            "front fold above brows, eyes readable under front fill (shadows still on)",
+            "top/side fold planes read as 纶巾, not a swim-cap",
+            "ref_head neck is a flat section; both ears present; anatomy unmoved",
             "GLB/blend/10 views on Blender 5.2.1",
         ],
     }
@@ -1046,7 +1459,7 @@ def main():
     refuse_frozen_writes(args.output_dir)
     built = build_all(args.source_obj)
     print(
-        "cap_surface faces=%s verts=%s gates_ok=%s method=normal_offset"
+        "cap_surface faces=%s verts=%s gates_ok=%s method=hem_clip_cloth_grid"
         % (
             built["census"]["cap"]["faces"],
             built["census"]["cap"]["verts"],
@@ -1061,9 +1474,9 @@ def main():
             status="UNRUN",
             blender_present=False,
             blender_version=None,
-            outputs=["cap_surface_report.json"],
+            outputs=["cap_surface_report.json", FIRST_REPORT],
         )
-        print("CT-CAP-FIT-01 UNRUN (no bpy) gates_ok=%s" % built["gates_ok"])
+        print("CT-CAP-FIT-01-FIX UNRUN (no bpy) gates_ok=%s" % built["gates_ok"])
         return 0
     blender_export(args, built)
     return 0

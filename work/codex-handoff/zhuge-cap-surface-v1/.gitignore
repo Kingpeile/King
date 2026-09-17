@@ -1,4 +1,5 @@
 out/*
 !out/cap_surface_report.json
+!out/cap_surface_report_3620dc7.json
 __pycache__/
 *.pyc
