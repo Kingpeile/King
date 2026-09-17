@@ -1,0 +1,98 @@
+{
+  "task": "CT-ROBE-ASSET-ROUTE-01",
+  "exact_match_found": false,
+  "target": {
+    "garment": "adult Chinese scholar robe (daopao/zhishen/yuanlingpao) with real draped sleeves",
+    "license_must_allow": ["modification", "redistribution_in_web_app"],
+    "exclude": ["NC", "ND", "unknown_license", "purchase", "account_gate", "install_gate"]
+  },
+  "search_stopped": "two_verified_candidates_no_exact_match",
+  "candidates": [
+    {
+      "id": "qixiong_ruqun_01",
+      "title": "Qixiong ruqun 01",
+      "author": "squeekimamouse",
+      "source_url": "http://www.makehumancommunity.org/clothes/qixiong_ruqun_01.html",
+      "preview_url": "http://www.makehumancommunity.org/clothes/qixiong_ruqun_01.html",
+      "geometry_url": "http://www.makehumancommunity.org/sites/default/files/clothes/8018/923050192/qixiong_ruqun_01.obj",
+      "format": "Wavefront OBJ (MakeClothes 2); also MHCLO/MHMAT on author page",
+      "geometry_verified": true,
+      "geometry_evidence": "Live OBJ retrieved from official files host; header author squeekimamouse license CC0; vertex records present.",
+      "license": {
+        "name": "CC0 1.0",
+        "page_text": "CC0 - Creative Commons Zero",
+        "file_header": "license: CC0",
+        "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "legalcode_url": "https://creativecommons.org/publicdomain/zero/1.0/legalcode",
+        "allows_modification": true,
+        "allows_web_app_redistribution": true,
+        "nc": false,
+        "nd": false
+      },
+      "rig_pose_status": "MakeHuman hm08 clothing bind via MHCLO; no walk armature",
+      "style_mismatch": "Female Tang chest-high ruqun for Toph fanart; not male scholar jiaoling robe",
+      "adaptation_effort": "high_new_cut",
+      "recommendation": "reject_drop_in_closest_hanfu_drape_reference_only",
+      "closest": true
+    },
+    {
+      "id": "donitz_monk_robe",
+      "title": "Monk's robe",
+      "author": "Donitz",
+      "source_url": "http://www.makehumancommunity.org/clothes/monks_robe.html",
+      "preview_url": "https://static.makehumancommunity.org/assets/assetpacks/donitz_monk_robe.png",
+      "geometry_url": "https://files2.makehumancommunity.org/asset_packs/suits02/suits02_cc0.zip",
+      "format": "MakeHuman clothes inside official CC0 zip pack (183 MB); isolated OBJ URL not found",
+      "geometry_verified": true,
+      "geometry_evidence": "files2 zip HTTP 200 application/zip 192511027 bytes; pack page lists donitz_monk_robe CC0. Zip not unpacked.",
+      "preview_evidence": "PNG HTTP 200 38175 bytes",
+      "license": {
+        "name": "CC0 1.0",
+        "page_text": "CC0 - Creative Commons Zero",
+        "pack_page": "https://static.makehumancommunity.org/assets/assetpacks/suits02.html",
+        "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "legalcode_url": "https://creativecommons.org/publicdomain/zero/1.0/legalcode",
+        "allows_modification": true,
+        "allows_web_app_redistribution": true,
+        "nc": false,
+        "nd": false
+      },
+      "rig_pose_status": "MakeHuman clothes; optional hoods; no walk armature",
+      "style_mismatch": "Medieval European monk habit, not hanfu scholar robe",
+      "adaptation_effort": "high_recut_to_daopao",
+      "recommendation": "reject_drop_in",
+      "closest": false
+    }
+  ],
+  "closest_id": "qixiong_ruqun_01",
+  "remaining_work": [
+    "Do not put the female ruqun on the male body.",
+    "Build a new male 交领右衽 outer robe with pipa/draped sleeves, 摆, 缘, 绦.",
+    "Fit frozen anatomy; retopo; 宫苑 four-view vs 03.",
+    "NewHanfu daopao drawings https://www.newhanfu.com/20090.html are the right cut but CC BY-NC-SA 4.0 (NC) — not a web-app basis.",
+    "Skin-offset and tube robes are not a finished robe."
+  ],
+  "excluded": [
+    {
+      "id": "arabic_male_gown_abaya",
+      "source_url": "http://www.makehumancommunity.org/clothes/arabic_male_gown_abaya.html",
+      "reason": "Author page says CC0 but bisth.mhclo header is AGPL3 (author Sami Meqbel). License conflict; treat as unknown."
+    },
+    {
+      "id": "style3d_tang_chest_hanfu",
+      "source_url": "https://sketchfab.com/3d-models/tang-dynasty-chest-length-printed-hanfu-427e40b1f7134b2b8ca2e79b8651b236",
+      "license_url": "http://creativecommons.org/licenses/by/4.0/",
+      "reason": "CC BY 4.0 and Sketchfab isDownloadable=true, but geometry is gated by account/email/Atelier install; female 齐胸 not scholar."
+    },
+    {
+      "id": "meshy_hanfu_gallery",
+      "source_url": "https://www.meshy.ai/tags/hanfu",
+      "reason": "Account required; generated meshes."
+    },
+    {
+      "id": "newhanfu_daopao_patterns",
+      "source_url": "https://www.newhanfu.com/20090.html",
+      "reason": "Correct daopao/zhishen cut drawings, but CC BY-NC-SA 4.0 (NC)."
+    }
+  ]
+}
