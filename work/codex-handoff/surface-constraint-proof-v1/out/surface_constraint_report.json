@@ -1,0 +1,368 @@
+{
+  "anatomy_commit": "624e008349a447859ed58417394c68f382e9b887",
+  "art_approval": false,
+  "blender_export": {
+    "status": "UNRUN"
+  },
+  "blender_present": false,
+  "blender_version_actual": null,
+  "cap_evidence": {
+    "anatomy_commit_pin": "624e008349a447859ed58417394c68f382e9b887",
+    "cap_commit_pin": "4b81dc46a1f843749cae2351151e1ab55a4923d8",
+    "cap_script": "/tmp/zhuge-cap-verify/work/codex-handoff/zhuge-cap-surface-v1/build_cap_surface.py",
+    "cap_script_sha256": "8d74d3a002c43a450603134c652b955809ade1b8ab62b87ed670e8c26f1de952",
+    "census": {
+      "cap": {
+        "bbox": {
+          "max": [
+            0.088756,
+            0.203281,
+            1.8116
+          ],
+          "min": [
+            -0.088133,
+            -0.020951,
+            1.634119
+          ]
+        },
+        "components": 1,
+        "faces": 420,
+        "name": "cap",
+        "open_edges": 0,
+        "tris": 784,
+        "verts": 394,
+        "zero_area_faces": 0
+      },
+      "ref_head": {
+        "bbox": {
+          "max": [
+            0.224071,
+            0.210193,
+            1.78
+          ],
+          "min": [
+            -0.224071,
+            -0.033921,
+            1.448
+          ]
+        },
+        "components": 1,
+        "faces": 9176,
+        "name": "ref_head",
+        "open_edges": 0,
+        "tris": 9176,
+        "verts": 4590,
+        "zero_area_faces": 0
+      }
+    },
+    "edited_builder": false,
+    "exact_intersection": {
+      "cap_inner_vs_ref_head": {
+        "aabb_candidates": 4130,
+        "exact_tests": 4130,
+        "examples": [
+          {
+            "a": 0,
+            "b": 327,
+            "detail": "edge_pierce",
+            "kind": "PENETRATING"
+          },
+          {
+            "a": 0,
+            "b": 3098,
+            "detail": "edge_pierce",
+            "kind": "PENETRATING"
+          },
+          {
+            "a": 1,
+            "b": 327,
+            "detail": "edge_pierce",
+            "kind": "PENETRATING"
+          },
+          {
+            "a": 1,
+            "b": 3097,
+            "detail": "edge_pierce",
+            "kind": "PENETRATING"
+          },
+          {
+            "a": 1,
+            "b": 3698,
+            "detail": "edge_pierce",
+            "kind": "PENETRATING"
+          },
+          {
+            "a": 2,
+            "b": 328,
+            "detail": "edge_pierce",
+            "kind": "PENETRATING"
+          },
+          {
+            "a": 2,
+            "b": 3026,
+            "detail": "edge_pierce",
+            "kind": "PENETRATING"
+          },
+          {
+            "a": 2,
+            "b": 3027,
+            "detail": "edge_pierce",
+            "kind": "PENETRATING"
+          }
+        ],
+        "note": "AABB is a filter. Every candidate is exact-tested. Non-candidates are SEPARATED.",
+        "penetrating_pairs": 548,
+        "separated_or_noncandidate": true,
+        "unknown_pairs": 0
+      },
+      "cap_outer_vs_ref_head": {
+        "aabb_candidates": 2659,
+        "exact_tests": 2659,
+        "examples": [
+          {
+            "a": 36,
+            "b": 8942,
+            "detail": "edge_pierce",
+            "kind": "PENETRATING"
+          },
+          {
+            "a": 36,
+            "b": 8943,
+            "detail": "edge_pierce",
+            "kind": "PENETRATING"
+          },
+          {
+            "a": 37,
+            "b": 8942,
+            "detail": "edge_pierce",
+            "kind": "PENETRATING"
+          },
+          {
+            "a": 37,
+            "b": 8943,
+            "detail": "edge_pierce",
+            "kind": "PENETRATING"
+          },
+          {
+            "a": 38,
+            "b": 5864,
+            "detail": "edge_pierce",
+            "kind": "PENETRATING"
+          },
+          {
+            "a": 38,
+            "b": 5865,
+            "detail": "edge_pierce",
+            "kind": "PENETRATING"
+          },
+          {
+            "a": 38,
+            "b": 5860,
+            "detail": "edge_pierce",
+            "kind": "PENETRATING"
+          },
+          {
+            "a": 38,
+            "b": 5861,
+            "detail": "edge_pierce",
+            "kind": "PENETRATING"
+          }
+        ],
+        "note": "AABB is a filter. Every candidate is exact-tested. Non-candidates are SEPARATED.",
+        "penetrating_pairs": 174,
+        "separated_or_noncandidate": true,
+        "unknown_pairs": 0
+      },
+      "note": "Not BVH-only. AABB candidates are enumerated then exact-tested."
+    },
+    "gates_ok_from_builder": true,
+    "immutable_builder": true,
+    "note_gates_ok_is_not_projection_proof": true,
+    "sample_cloth_grid": {
+      "labels": {
+        "OFF_SURFACE": 190,
+        "ON_BOUNDARY": 2,
+        "ON_TRIANGLE": 1,
+        "UNKNOWN": 4
+      },
+      "n": 197,
+      "note": "Each sample_cloth_grid point is re-projected onto real scalp triangles. Residual is metres from the weighted-average mix to the closest point on a triangle. UNKNOWN = closest feature is an open hem/ear cut. OFF_SURFACE = mix was not on a face.",
+      "off_surface_examples": [
+        {
+          "barycentric": [
+            0.008964,
+            0.575254,
+            0.415782
+          ],
+          "dist_m": 0.00033139,
+          "h": 0.0,
+          "region": "interior",
+          "th": -2.6927937030769655,
+          "tri_index": 245
+        },
+        {
+          "barycentric": [
+            0.003075,
+            0.996925,
+            0.0
+          ],
+          "dist_m": 3.946e-05,
+          "h": 0.0,
+          "region": "edge_ab",
+          "th": -2.4683942278205517,
+          "tri_index": 189
+        },
+        {
+          "barycentric": [
+            0.018258,
+            0.981742,
+            0.0
+          ],
+          "dist_m": 3.55e-05,
+          "h": 0.0,
+          "region": "edge_ab",
+          "th": -2.243994752564138,
+          "tri_index": 258
+        },
+        {
+          "barycentric": [
+            0.084574,
+            0.59275,
+            0.322675
+          ],
+          "dist_m": 0.00040169,
+          "h": 0.0,
+          "region": "interior",
+          "th": -2.019595277307724,
+          "tri_index": 265
+        },
+        {
+          "barycentric": [
+            0.392188,
+            0.5988,
+            0.009012
+          ],
+          "dist_m": 0.00111035,
+          "h": 0.0,
+          "region": "interior",
+          "th": -1.7951958020513104,
+          "tri_index": 266
+        },
+        {
+          "barycentric": [
+            0.392188,
+            0.009012,
+            0.5988
+          ],
+          "dist_m": 0.00111035,
+          "h": 0.0,
+          "region": "interior",
+          "th": -1.3463968515384828,
+          "tri_index": 686
+        }
+      ],
+      "residual_m": {
+        "max": 0.024599278906287544,
+        "median": 0.003309159413730779,
+        "min": 0.0,
+        "n_gt_1cm": 22,
+        "n_gt_1mm": 169
+      }
+    },
+    "scalp_patch": {
+      "open_edges": 156,
+      "open_verts": 156,
+      "tris": 838,
+      "verts": 498
+    },
+    "status": "RAN"
+  },
+  "controls": {
+    "failed": [],
+    "n": 11,
+    "pass": true,
+    "tests": [
+      {
+        "detail": "bary=(0.3333333333333332, 0.33333333333333337, 0.3333333333333334) dist=2.45327e-18 region=interior",
+        "name": "project_centroid_interior",
+        "pass": true
+      },
+      {
+        "detail": "bary=(1.0, 0.0, 0.0) region=vert_a",
+        "name": "project_vertex_a",
+        "pass": true
+      },
+      {
+        "detail": "bary=(0.3333333333333332, 0.33333333333333337, 0.3333333333333334) dist=0.01",
+        "name": "project_offplane_residual",
+        "pass": true
+      },
+      {
+        "detail": "bary=(0.5, 0.5, 0.0) region=edge_ab q=(0.02, 0.0, 0.0)",
+        "name": "project_outside_edge_ab",
+        "pass": true
+      },
+      {
+        "detail": "true_dist=2.45327e-18 mix_to_centroid=0.0120185",
+        "name": "weighted_average_is_not_projection",
+        "pass": true
+      },
+      {
+        "detail": "PENETRATING edge_pierce",
+        "name": "control_penetrating",
+        "pass": true
+      },
+      {
+        "detail": "SEPARATED no_interior_intersection",
+        "name": "control_separated",
+        "pass": true
+      },
+      {
+        "detail": "SEPARATED no_interior_intersection",
+        "name": "control_shared_vertex_not_pierce",
+        "pass": true
+      },
+      {
+        "detail": "label=UNKNOWN region=edge_ab",
+        "name": "open_boundary_unknown",
+        "pass": true
+      },
+      {
+        "detail": "label=ON_TRIANGLE",
+        "name": "open_mesh_interior_not_unknown",
+        "pass": true
+      },
+      {
+        "detail": "UNKNOWN open_boundary_contact",
+        "name": "open_edge_contact_unknown",
+        "pass": true
+      }
+    ]
+  },
+  "edited_pr20_builder": false,
+  "limitations": [
+    "Cloud has no bpy; Blender 5.2.1 export/render is UNRUN.",
+    "Float64 predicates, not exact rational arithmetic. Degenerate slivers use EPS.",
+    "AABB grid is a reject filter; it does not count as an intersection.",
+    "Open-boundary contacts are UNKNOWN, not PENETRATING or SEPARATED.",
+    "Does not patch sample_cloth_grid. Does not emit a new cap mesh.",
+    "gates_ok from the builder is recorded as a number, not coverage proof."
+  ],
+  "new_art_mesh": false,
+  "not_a_zhuge_product": true,
+  "physics": {
+    "status": "UNRUN"
+  },
+  "pr20_builder_commit": "4b81dc46a1f843749cae2351151e1ab55a4923d8",
+  "render": {
+    "status": "UNRUN"
+  },
+  "task_id": "CT-SURFACE-VERIFY-01-CODE",
+  "title": "Independent surface-constraint diagnostics (not an art PASS, not a new \u7eb6\u5dfe)",
+  "whitelist": [
+    "work/codex-handoff/surface-constraint-proof-v1/surface_constraint_proof.py",
+    "work/codex-handoff/surface-constraint-proof-v1/README.md",
+    "work/codex-handoff/surface-constraint-proof-v1/.gitignore",
+    "work/codex-handoff/surface-constraint-proof-v1/out/surface_constraint_report.json"
+  ]
+}

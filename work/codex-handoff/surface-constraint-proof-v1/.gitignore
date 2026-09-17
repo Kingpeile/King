@@ -1,0 +1,4 @@
+out/*
+!out/surface_constraint_report.json
+__pycache__/
+*.pyc
