@@ -1,0 +1,1 @@
+{"task":"CT-GLB-INTAKE-01","tests_run":6,"failures":0,"errors":0,"ok":true,"not_proven":["geometric quality","art quality","walking"],"controls":{"valid_cube":"DECODED extents, ignores accessor min/max","truncated_buffer":"malformed, bounds fail, extents UNKNOWN","external_resource":"uri listed, extents UNKNOWN","transformed_mesh":"DECODED after node TRS, not accessor min/max"}}

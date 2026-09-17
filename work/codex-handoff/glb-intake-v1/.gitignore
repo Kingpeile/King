@@ -1,0 +1,6 @@
+out/*
+!out/glb_intake_report.json
+!out/delivery_manifest.json
+!out/self_test.json
+__pycache__/
+*.pyc
