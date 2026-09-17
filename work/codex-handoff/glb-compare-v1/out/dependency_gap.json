@@ -1,0 +1,27 @@
+{
+  "task": "CT-GLB-COMPARE-01",
+  "three_js": "MISSING on this branch",
+  "gltf_loader": "MISSING on this branch",
+  "searched": [
+    "work/codex-handoff/glb-compare-v1/vendor/three/** (not present)",
+    "default tree webapp/ miniprogram/ (no three, no GLTFLoader)",
+    "work/codex-handoff/* Court packs (Python only)"
+  ],
+  "not_reused": [
+    {
+      "path": "energy-ball/package.json",
+      "why": "Closed PR5. npm three ^0.170.0, Vite, no GLTFLoader, needs install + port. Out of ownership."
+    },
+    {
+      "path": "renovation/esports-room-3d/package.json",
+      "why": "Draft PR15. npm three ^0.175.0, OrbitControls, no GLTFLoader, needs install + port 5173. Out of ownership."
+    },
+    {
+      "path": "work/codex-handoff/glb-intake-v1/",
+      "why": "PR22 metadata inspector. Kept unchanged. Different pack."
+    }
+  ],
+  "reused": [],
+  "fallback": "bounded WebGL in js/webgl-pane.js for embedded FLOAT VEC3 triangles",
+  "policy": "no installs, no CDN, no new service or port"
+}

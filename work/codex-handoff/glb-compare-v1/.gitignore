@@ -1,0 +1,6 @@
+out/*
+!out/self_test.json
+!out/dependency_gap.json
+__pycache__/
+*.pyc
+.DS_Store
