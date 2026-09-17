@@ -43,7 +43,9 @@ cd work/codex-handoff/glb-compare-v1
 python3 test_glb_compare.py
 ```
 
-Open `index.html` in a browser as **file://** (do not start a port). Choose a GLB for A and for B. Optional `index.html?fixtures=1` loads the bundled cubes for a smoke view. `?selftest=1` runs in-page behavioral checks.
+Open `index.html` in a browser as **file://** (do not start a port). Choose a GLB for A and for B. Optional `index.html?fixtures=1` loads the bundled cubes for a smoke view. `?selftest=1` runs in-page behavioral checks. `?error=1` loads invalid A + fixture B.
+
+Cloud Chrome 148: in-page selftest **25/25 PASS**. Screenshots under `screenshots/` (`desktop-dual.png`, `narrow.png`, `empty.png`, `error-invalid.png`). See `screenshots/BROWSER-STATUS.txt`.
 
 ## Shared view
 

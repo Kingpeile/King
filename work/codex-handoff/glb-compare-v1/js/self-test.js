@@ -135,5 +135,14 @@
     window.addEventListener("load", function () {
       setTimeout(loadDemo, 50);
     });
+  } else if (qtrue("error")) {
+    window.addEventListener("load", function () {
+      setTimeout(async function () {
+        var app = root.__GLB_COMPARE__;
+        app.setPreset("front");
+        await app.onBytes("B", fixtureU8("b.glb"), "b.glb");
+        await app.onBytes("A", fixtureU8("invalid.glb"), "invalid.glb");
+      }, 50);
+    });
   }
 })(typeof globalThis !== "undefined" ? globalThis : this);

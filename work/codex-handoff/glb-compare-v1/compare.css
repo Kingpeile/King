@@ -95,7 +95,7 @@ canvas { width: 100%; height: 100%; display: block; touch-action: none; }
 .overlay {
   position: absolute;
   inset: 0;
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: center;
   text-align: center;
@@ -103,11 +103,13 @@ canvas { width: 100%; height: 100%; display: block; touch-action: none; }
   color: var(--muted);
   pointer-events: none;
 }
+.overlay.is-on { display: flex; }
 .overlay.error {
   color: var(--bad);
   background: rgba(20, 8, 8, 0.55);
   font-weight: 600;
 }
+.overlay[hidden] { display: none !important; }
 .scale-badge {
   position: absolute;
   left: 8px;

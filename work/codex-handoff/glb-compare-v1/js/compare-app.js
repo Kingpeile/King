@@ -33,6 +33,14 @@
     var preset = "front";
     var raf = 0;
 
+    function requestDraw() {
+      if (raf) return;
+      raf = root.requestAnimationFrame(function () {
+        raf = 0;
+        renderAll();
+      });
+    }
+
     function gpuDispose(side) {
       var pane = panes[side.id];
       if (pane && pane.dispose) pane.dispose();
@@ -79,9 +87,13 @@
       var emptyEl = $("empty-" + id);
       var errEl = $("error-" + id);
       var scaleEl = $("scale-" + id);
-      if (emptyEl) emptyEl.hidden = !s.empty || !!s.error;
+      if (emptyEl) {
+        emptyEl.hidden = !s.empty || !!s.error;
+        emptyEl.classList.toggle("is-on", s.empty && !s.error);
+      }
       if (errEl) {
         errEl.hidden = !s.error;
+        errEl.classList.toggle("is-on", !!s.error);
         errEl.textContent = s.error || "";
       }
       if (scaleEl) {
@@ -111,12 +123,7 @@
         : "OFF — shared world scale, node TRS kept";
       $("material-live").textContent = materialMode;
       $("preset-live").textContent = preset;
-      renderAll();
-    }
-
-    function tick() {
-      renderAll();
-      raf = root.requestAnimationFrame(tick);
+      requestDraw();
     }
 
     async function onFile(id, file) {
@@ -169,7 +176,7 @@
       ["A", "B"].forEach(function (id) {
         var canvas = $("canvas-" + id);
         panes[id] = root.GlbCompareWebGL.createPane(canvas);
-        root.GlbCompareCamera.bindPointer(canvas, rig, renderAll);
+        root.GlbCompareCamera.bindPointer(canvas, rig, requestDraw);
         var input = $("file-" + id);
         input.addEventListener("change", function () {
           var f = input.files && input.files[0];
@@ -185,7 +192,7 @@
       $("normalize").addEventListener("change", function (e) {
         setNormalize(e.target.checked);
       });
-      window.addEventListener("resize", renderAll);
+      window.addEventListener("resize", requestDraw);
     }
 
     function fillProbeBanner() {
@@ -209,7 +216,34 @@
     setMaterial("original");
     setNormalize(false);
     refresh();
-    tick();
+
+    function queryFlag(name) {
+      try {
+        return new URLSearchParams(location.search).get(name) === "1";
+      } catch (e) {
+        return false;
+      }
+    }
+    function fixtureU8(name) {
+      return root.GlbCompareParse.b64ToU8(root.GLB_COMPARE_FIXTURES[name].b64);
+    }
+    if (queryFlag("fixtures") && root.GLB_COMPARE_FIXTURES) {
+      Promise.all([
+        onBytes("A", fixtureU8("a1.glb"), "a1.glb"),
+        onBytes("B", fixtureU8("b.glb"), "b.glb")
+      ]).then(function () {
+        document.documentElement.setAttribute("data-glb-compare-ready", "fixtures");
+      });
+    } else if (queryFlag("error") && root.GLB_COMPARE_FIXTURES) {
+      Promise.all([
+        onBytes("B", fixtureU8("b.glb"), "b.glb"),
+        onBytes("A", fixtureU8("invalid.glb"), "invalid.glb")
+      ]).then(function () {
+        document.documentElement.setAttribute("data-glb-compare-ready", "error");
+      });
+    } else if (!queryFlag("selftest")) {
+      document.documentElement.setAttribute("data-glb-compare-ready", "idle");
+    }
 
     var api = {
       sides: sides,
