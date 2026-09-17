@@ -1,0 +1,10 @@
+BROWSER: RUN (file:// Google Chrome 148 headless, no new app port)
+
+- 2026-09-17 cloud VM. DISPLAY :1 present; captures used `google-chrome --headless=new --enable-webgl` on `file:///…/index.html`. Chrome dump-dom/screenshot processes were killed with `timeout` after writing files (headless does not always exit).
+- In-page `?selftest=1`: **SELFTEST PASS 25/25** (see `selftest-dump.html`). Includes rapid A1→A2 cancel, invalid file, external URI block, skin/anim counts, normalize badge, gap probe.
+- `desktop-dual.png`: A red cube + B green scaled box, WORLD SCALE badges, triangles 12/12, skins 0, animations 0.
+- `narrow.png`: 390×844 stacked panes; A cube still visible, controls wrap.
+- `empty.png`: both empty prompts, stats em-dash.
+- `error-invalid.png`: A `bad magic: expected glTF`; B remains loaded.
+
+Not claimed: art PASS, walking, G1–G5, scholar/Kimi files (never opened).

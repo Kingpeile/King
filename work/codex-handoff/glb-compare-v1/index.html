@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>CT-GLB-COMPARE-01 双 GLB 对照（离线）</title>
+  <link rel="stylesheet" href="compare.css" />
+</head>
+<body>
+  <header class="top">
+    <div>
+      <h1>双 GLB 对照 <span class="muted">offline · file:// · no upload</span></h1>
+      <p class="lede">两窗共享相机 / 轨道 / 平移 / 缩放 / 灯光。默认保留世界变换与共用世界尺度。计数只报三角、蒙皮、动画，<strong>不声称美术 PASS，不声称能走</strong>。</p>
+    </div>
+    <p id="dep-banner" class="banner"></p>
+    <p id="selftest-banner" class="banner" hidden></p>
+  </header>
+
+  <section class="toolbar" aria-label="shared controls">
+    <div class="group">
+      <span class="group-label">视角</span>
+      <button type="button" data-preset="front" class="active">前</button>
+      <button type="button" data-preset="45">45°</button>
+      <button type="button" data-preset="side">侧</button>
+      <button type="button" data-preset="back">后</button>
+      <span class="live">preset <b id="preset-live">front</b></span>
+    </div>
+    <div class="group">
+      <span class="group-label">材质</span>
+      <button type="button" data-material="original" class="active">原材质</button>
+      <button type="button" data-material="gray">中性灰</button>
+      <button type="button" data-material="wire">线框</button>
+      <span class="live">mode <b id="material-live">original</b></span>
+    </div>
+    <div class="group normalize-group">
+      <label class="normalize-label" for="normalize">
+        <input type="checkbox" id="normalize" />
+        <span>显式归一化各模型到单位盒（<strong>非默认</strong>；会覆盖世界变换）</span>
+      </label>
+      <span class="live">normalize <b id="normalize-label-live">OFF</b></span>
+    </div>
+  </section>
+
+  <main class="panes">
+    <section class="pane" data-side="A">
+      <header class="pane-head">
+        <h2>A</h2>
+        <label class="file-btn">选择 GLB
+          <input id="file-A" type="file" accept=".glb,model/gltf-binary,model/gltf+json" />
+        </label>
+      </header>
+      <div class="stage">
+        <canvas id="canvas-A"></canvas>
+        <div id="empty-A" class="overlay is-on">选择一个<strong>自包含</strong> .glb（不读本机学者/Kimi 路径）</div>
+        <div id="error-A" class="overlay error" hidden></div>
+        <div id="scale-A" class="scale-badge" hidden>WORLD SCALE (transforms preserved)</div>
+      </div>
+      <dl class="stats">
+        <div><dt>文件</dt><dd id="stat-name-A">—</dd></div>
+        <div><dt>triangles</dt><dd id="stat-tri-A">—</dd></div>
+        <div><dt>skins</dt><dd id="stat-skin-A">—</dd></div>
+        <div><dt>animations</dt><dd id="stat-anim-A">—</dd></div>
+        <div><dt>bytes</dt><dd id="stat-bytes-A">—</dd></div>
+        <div><dt>sha256</dt><dd id="stat-sha-A">—</dd></div>
+      </dl>
+    </section>
+    <section class="pane" data-side="B">
+      <header class="pane-head">
+        <h2>B</h2>
+        <label class="file-btn">选择 GLB
+          <input id="file-B" type="file" accept=".glb,model/gltf-binary,model/gltf+json" />
+        </label>
+      </header>
+      <div class="stage">
+        <canvas id="canvas-B"></canvas>
+        <div id="empty-B" class="overlay is-on">选择一个<strong>自包含</strong> .glb</div>
+        <div id="error-B" class="overlay error" hidden></div>
+        <div id="scale-B" class="scale-badge" hidden>WORLD SCALE (transforms preserved)</div>
+      </div>
+      <dl class="stats">
+        <div><dt>文件</dt><dd id="stat-name-B">—</dd></div>
+        <div><dt>triangles</dt><dd id="stat-tri-B">—</dd></div>
+        <div><dt>skins</dt><dd id="stat-skin-B">—</dd></div>
+        <div><dt>animations</dt><dd id="stat-anim-B">—</dd></div>
+        <div><dt>bytes</dt><dd id="stat-bytes-B">—</dd></div>
+        <div><dt>sha256</dt><dd id="stat-sha-B">—</dd></div>
+      </dl>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <p>拖拽旋转 · 滚轮缩放 · 右键/Shift 拖拽平移 · 任一窗操作两窗一起动。外部 buffer/image URI 会被拒绝，不会请求网络。</p>
+    <p class="muted">本地学者网格（他人报告）1475201 tris；Kimi 交付（他人报告）119999 tris / 18.35MB / 0 skins / 0 animations，待根美术审。本工具未打开那些文件，未判定 PASS。</p>
+    <pre id="selftest-json" hidden></pre>
+  </footer>
+
+  <script src="js/glb-parse.js"></script>
+  <script src="js/load-session.js"></script>
+  <script src="js/camera-rig.js"></script>
+  <script src="js/webgl-pane.js"></script>
+  <script src="js/three-probe.js"></script>
+  <script src="js/embedded-fixtures.js"></script>
+  <script src="js/compare-app.js"></script>
+  <script src="js/self-test.js"></script>
+</body>
+</html>

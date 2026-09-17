@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>CT-GLB-COMPARE-01 双 GLB 对照（离线）</title>
+  <link rel="stylesheet" href="compare.css">
+</head>
+<body>
+  <header class="top">
+    <div>
+      <h1>双 GLB 对照 <span class="muted">offline · file:// · no upload</span></h1>
+      <p class="lede">两窗共享相机 / 轨道 / 平移 / 缩放 / 灯光。默认保留世界变换与共用世界尺度。计数只报三角、蒙皮、动画，<strong>不声称美术 PASS，不声称能走</strong>。</p>
+    </div>
+    <p id="dep-banner" class="banner"><strong>Three.js / GLTFLoader gap.</strong> No checked-in <code>three</code> module or <code>GLTFLoader.js</code> on this branch. Panes use a bounded WebGL fallback for embedded FLOAT VEC3 triangles. No npm install, no CDN, no new port. No Three.js module and no GLTFLoader.js are checked into this branch. Default tree, Court work/codex-handoff/*, and this pack contain neither file. Unrelated PRs declare npm three but are out of scope, not vendored, and would need install + a port.</p>
+    <p id="selftest-banner" class="banner ok">SELFTEST PASS 25/25</p>
+  </header>
+
+  <section class="toolbar" aria-label="shared controls">
+    <div class="group">
+      <span class="group-label">视角</span>
+      <button type="button" data-preset="front" class="active">前</button>
+      <button type="button" data-preset="45">45°</button>
+      <button type="button" data-preset="side" class="">侧</button>
+      <button type="button" data-preset="back">后</button>
+      <span class="live">preset <b id="preset-live">front</b></span>
+    </div>
+    <div class="group">
+      <span class="group-label">材质</span>
+      <button type="button" data-material="original" class="active">原材质</button>
+      <button type="button" data-material="gray" class="">中性灰</button>
+      <button type="button" data-material="wire" class="">线框</button>
+      <span class="live">mode <b id="material-live">original</b></span>
+    </div>
+    <div class="group normalize-group">
+      <label class="normalize-label" for="normalize">
+        <input type="checkbox" id="normalize">
+        <span>显式归一化各模型到单位盒（<strong>非默认</strong>；会覆盖世界变换）</span>
+      </label>
+      <span class="live">normalize <b id="normalize-label-live">OFF — shared world scale, node TRS kept</b></span>
+    </div>
+  </section>
+
+  <main class="panes">
+    <section class="pane" data-side="A">
+      <header class="pane-head">
+        <h2>A</h2>
+        <label class="file-btn">选择 GLB
+          <input id="file-A" type="file" accept=".glb,model/gltf-binary,model/gltf+json">
+        </label>
+      </header>
+      <div class="stage">
+        <canvas id="canvas-A"></canvas>
+        <div id="empty-A" class="overlay" hidden="">选择一个<strong>自包含</strong> .glb（不读本机学者/Kimi 路径）</div>
+        <div id="error-A" class="overlay error" hidden=""></div>
+        <div id="scale-A" class="scale-badge">WORLD SCALE (transforms preserved)</div>
+      </div>
+      <dl class="stats">
+        <div><dt>文件</dt><dd id="stat-name-A">a1.glb</dd></div>
+        <div><dt>triangles</dt><dd id="stat-tri-A">12</dd></div>
+        <div><dt>skins</dt><dd id="stat-skin-A">0</dd></div>
+        <div><dt>animations</dt><dd id="stat-anim-A">0</dd></div>
+        <div><dt>bytes</dt><dd id="stat-bytes-A">940</dd></div>
+        <div><dt>sha256</dt><dd id="stat-sha-A">f7cab1b8749a…994bf39b</dd></div>
+      </dl>
+    </section>
+    <section class="pane" data-side="B">
+      <header class="pane-head">
+        <h2>B</h2>
+        <label class="file-btn">选择 GLB
+          <input id="file-B" type="file" accept=".glb,model/gltf-binary,model/gltf+json">
+        </label>
+      </header>
+      <div class="stage">
+        <canvas id="canvas-B"></canvas>
+        <div id="empty-B" class="overlay" hidden="">选择一个<strong>自包含</strong> .glb</div>
+        <div id="error-B" class="overlay error" hidden=""></div>
+        <div id="scale-B" class="scale-badge">WORLD SCALE (transforms preserved)</div>
+      </div>
+      <dl class="stats">
+        <div><dt>文件</dt><dd id="stat-name-B">b.glb</dd></div>
+        <div><dt>triangles</dt><dd id="stat-tri-B">12</dd></div>
+        <div><dt>skins</dt><dd id="stat-skin-B">0</dd></div>
+        <div><dt>animations</dt><dd id="stat-anim-B">0</dd></div>
+        <div><dt>bytes</dt><dd id="stat-bytes-B">984</dd></div>
+        <div><dt>sha256</dt><dd id="stat-sha-B">17161711c04f…44aa0dc5</dd></div>
+      </dl>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <p>拖拽旋转 · 滚轮缩放 · 右键/Shift 拖拽平移 · 任一窗操作两窗一起动。外部 buffer/image URI 会被拒绝，不会请求网络。</p>
+    <p class="muted">本地学者网格（他人报告）1475201 tris；Kimi 交付（他人报告）119999 tris / 18.35MB / 0 skins / 0 animations，待根美术审。本工具未打开那些文件，未判定 PASS。</p>
+    <pre id="selftest-json" hidden="">{
+  "task": "CT-GLB-COMPARE-01",
+  "ok": true,
+  "tests_run": 25,
+  "failures": 0,
+  "results": [
+    {
+      "name": "probe-reports-gap",
+      "ok": true,
+      "detail": "No Three.js module and no GLTFLoader.js are checked into this branch. Default tree, Court work/codex-handoff/*, and this pack contain neither file. Unrelated PRs declare npm three but are out of scope, not vendored, and would need install + a port."
+    },
+    {
+      "name": "normalize-default-off",
+      "ok": true,
+      "detail": "default must preserve world scale"
+    },
+    {
+      "name": "a1-triangles-12",
+      "ok": true,
+      "detail": "12"
+    },
+    {
+      "name": "a1-skins-0",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "a1-anims-0",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "b-triangles-12",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "b-not-empty",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "rapid-a1-cancelled-or-stale",
+      "ok": true,
+      "detail": "{\"cancelled\":true,\"token\":2,\"side\":\"A\"}"
+    },
+    {
+      "name": "rapid-a2-ok",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "rapid-final-is-a2-4-tris",
+      "ok": true,
+      "detail": "4"
+    },
+    {
+      "name": "rapid-b-untouched",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "invalid-error",
+      "ok": true,
+      "detail": "bad magic: expected glTF"
+    },
+    {
+      "name": "invalid-empty-side",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "invalid-does-not-clear-b",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "external-blocked",
+      "ok": true,
+      "detail": "Blocked external resources (no fetch/upload): mesh.bin, albedo.png"
+    },
+    {
+      "name": "external-empty",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "skin-count-1",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "anim-count-1",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "skin-not-claimed-walking",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "normalize-explicit-on",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "normalize-badge-visible",
+      "ok": true,
+      "detail": "NORMALIZED (not world scale)"
+    },
+    {
+      "name": "normalize-off-world-label",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "preset-side",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "material-wire",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "material-gray",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "not_proven": [
+    "geometric quality",
+    "art quality",
+    "walking",
+    "G1-G5"
+  ],
+  "browser": "selftest"
+}</pre>
+  </footer>
+
+  <script src="js/glb-parse.js"></script>
+  <script src="js/load-session.js"></script>
+  <script src="js/camera-rig.js"></script>
+  <script src="js/webgl-pane.js"></script>
+  <script src="js/three-probe.js"></script>
+  <script src="js/embedded-fixtures.js"></script>
+  <script src="js/compare-app.js"></script>
+  <script src="js/self-test.js"></script>
+
+
+</body></html>
